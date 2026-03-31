@@ -61,7 +61,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date() }));
 // ─── Serve frontend (React build) ────────────────────────────────────────────
 const DIST_DIR = join(__dirname, '..', 'dist');
 app.use(express.static(DIST_DIR));
-app.get('*', (req, res) => {
+app.get('/{*path}', (req, res) => {
   res.sendFile(join(DIST_DIR, 'index.html'));
 });
 
