@@ -1,0 +1,62 @@
+Quiero mejorar el sistema de gestión de usuarios y roles en este proyecto React + Base44. El sistema actualmente tiene tres módulos: Comercial, Producción y Operarios. Necesito que implementes las siguientes mejoras:
+
+1. Nuevos permisos por módulo
+Agrega estos permisos al sistema de roles en src/components/settings/RoleManager.jsx y en src/components/providers/SessionProvider.jsx:
+Módulo Producción:
+
+produccion_view — Acceso completo al módulo de producción
+
+Módulo Operarios:
+
+operarios_view — Acceso básico (ver entregas, cotizador, solicitudes)
+operarios_admin — Acceso administrativo (empleados, pagos, transferencias, auditoría)
+
+Estos permisos deben aparecer como opciones seleccionables cuando se crea o edita un rol.
+
+2. Mejoras en la pantalla de Usuarios (src/pages/Users.jsx)
+
+Mostrar una columna "Módulos con acceso" en la tabla de usuarios, que muestre badges de colores indicando a qué módulos tiene acceso cada usuario según sus permisos:
+
+🔵 Comercial
+🟢 Producción
+🟣 Operarios
+
+
+Agregar un filtro por módulo en la barra de búsqueda para poder ver solo los usuarios de cada módulo.
+Al crear o editar un usuario, mostrar un selector de Módulo principal (Comercial / Producción / Operarios) que preseleccione automáticamente los permisos básicos del módulo elegido.
+
+
+3. Mejoras en la pantalla de Roles (src/components/settings/RoleManager.jsx)
+
+Organizar los permisos en tres secciones visuales claramente separadas:
+
+Sección "Comercial" — todos los permisos actuales existentes
+Sección "Producción" — produccion_view
+Sección "Operarios" — operarios_view, operarios_admin
+
+
+Mostrar un resumen de cuántos usuarios tiene asignado cada rol.
+Agregar un botón "Duplicar rol" para copiar un rol existente con otro nombre.
+
+
+4. Roles predefinidos sugeridos
+Crea estos roles por defecto si no existen, con sus permisos ya configurados:
+RolPermisosAdministradorTodos los permisosVendedorpos_sales, sales_view, customers_view, products_viewCajeropos_sales, sales_view, expenses_viewEncargado de Producciónproduccion_viewSupervisor de Operariosoperarios_view, operarios_adminOperariooperarios_view
+
+5. Validaciones
+
+Al guardar un usuario, validar que tenga al menos un permiso asignado o un rol seleccionado. Si no tiene ninguno, mostrar una alerta de advertencia (no bloquear el guardado, solo advertir).
+Al eliminar un rol, verificar si hay usuarios con ese rol asignado y mostrar un mensaje de confirmación indicando cuántos usuarios se verán afectados.
+
+
+Contexto técnico importante
+
+El sistema de permisos vive en src/components/providers/SessionProvider.jsx
+Los permisos se almacenan como un array de strings en la entidad Role (campo permissions)
+Los usuarios tienen role_id que referencia a un Role
+El usuario con role === 'admin' siempre tiene acceso total sin importar los permisos
+Los permisos del módulo Comercial ya existen; solo hay que agregar los de Producción y Operarios
+El Layout unificado en src/Layout.jsx ya filtra la navegación según produccion_view, operarios_view y operarios_admin
+
+
+Con estas mejoras el sistema quedará completamente integrado para los tres módulos con control de acceso granular por rol.

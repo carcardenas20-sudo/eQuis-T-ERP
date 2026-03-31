@@ -1,0 +1,307 @@
+import express from 'express';
+import cors from 'cors';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { pool } from './db.js';
+import { JWT_SECRET } from './config.js';
+import { ENTITY_SCHEMAS, buildCreateTableSQL, buildIndexSQL } from './entitySchemas.js';
+import authRoutes from './routes/auth.js';
+import entityRoutes from './routes/entities.js';
+import uploadRoutes from './routes/upload.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const app = express();
+const PORT = process.env.API_PORT || 3001;
+
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
+
+// Permissive middleware: parses token if present, doesn't block
+const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.userId = decoded.id;
+      req.userEmail = decoded.email;
+      req.userRole = decoded.role || null;
+    } catch {}
+  }
+  next();
+};
+
+// Strict middleware: rejects unauthenticated requests, attaches role to req
+const requireAuth = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'No autenticado' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.id;
+    req.userEmail = decoded.email;
+    req.userRole = decoded.role || null;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Token inválido o expirado' });
+  }
+};
+
+app.use(authMiddleware);
+app.use('/api/auth', authRoutes);
+app.use('/api/entities', requireAuth, entityRoutes);
+app.use('/api/upload', requireAuth, uploadRoutes);
+app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date() }));
+
+async function initDB() {
+  const client = await pool.connect();
+  try {
+    // ─── Shared tables ───────────────────────────────────────────────────────
+    await client.query(`
+      -- Generic JSONB table (kept as fallback + migration source)
+      CREATE TABLE IF NOT EXISTS app_entities (
+        id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        data JSONB NOT NULL DEFAULT '{}',
+        created_date TIMESTAMPTZ DEFAULT NOW(),
+        updated_date TIMESTAMPTZ DEFAULT NOW(),
+        created_by_id TEXT,
+        PRIMARY KEY (id, entity_type)
+      );
+      CREATE INDEX IF NOT EXISTS idx_entities_type ON app_entities(entity_type);
+      CREATE INDEX IF NOT EXISTS idx_entities_data ON app_entities USING gin(data);
+
+      -- Dedicated user table
+      CREATE TABLE IF NOT EXISTS app_users (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT,
+        full_name TEXT,
+        role TEXT DEFAULT 'user',
+        role_id TEXT,
+        location_id TEXT,
+        is_active BOOLEAN DEFAULT true,
+        data JSONB DEFAULT '{}',
+        created_date TIMESTAMPTZ DEFAULT NOW(),
+        updated_date TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      -- Migration tracking
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        name TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // ─── Per-entity tables ───────────────────────────────────────────────────
+    for (const [entityType, schema] of Object.entries(ENTITY_SCHEMAS)) {
+      await client.query(buildCreateTableSQL(entityType, schema));
+      for (const indexSQL of buildIndexSQL(schema)) {
+        await client.query(indexSQL);
+      }
+    }
+    console.log(`✅ Per-entity tables created (${Object.keys(ENTITY_SCHEMAS).length} types)`);
+
+    // ─── Idempotent sync: copy any new rows from app_entities → per-entity tables ─
+    // Runs on every startup with ON CONFLICT DO NOTHING, so it's safe to repeat.
+    // This ensures data imported via scripts always reaches per-entity tables.
+    {
+      let migrated = 0;
+      for (const [entityType, schema] of Object.entries(ENTITY_SCHEMAS)) {
+        const typedCols = Object.keys(schema.typed);
+        const typedTypes = schema.typed;
+
+        // Build SELECT expressions with proper type casting and NULLIF for empty strings
+        const selectExprs = typedCols.map(col => {
+          const colType = typedTypes[col].split(' ')[0].toUpperCase().replace(/\(.*\)/, '');
+          const rawExpr = `NULLIF(data->>'${col}', '')`;
+          if (colType === 'TIMESTAMPTZ') {
+            return `${rawExpr}::TIMESTAMPTZ`;
+          } else if (colType === 'NUMERIC') {
+            return `${rawExpr}::NUMERIC`;
+          } else if (colType === 'INTEGER') {
+            return `${rawExpr}::INTEGER`;
+          } else if (colType === 'BOOLEAN') {
+            return `(NULLIF(data->>'${col}', ''))::BOOLEAN`;
+          } else {
+            return rawExpr;
+          }
+        });
+
+        // Remove typed fields from remaining JSONB data
+        const removeKeys = typedCols.map(c => `'${c}'`).join(', ');
+        const dataExpr = typedCols.length > 0
+          ? `data - ARRAY[${removeKeys}]`
+          : 'data';
+
+        const selectCols = ['id', ...typedCols, 'data', 'created_date', 'updated_date', 'created_by_id'].join(', ');
+        const selectValues = [`ae.id`, ...selectExprs, dataExpr, `ae.created_date`, `ae.updated_date`, `ae.created_by_id`].join(', ');
+
+        const sql = `
+          INSERT INTO ${schema.table} (${selectCols})
+          SELECT ${selectValues}
+          FROM app_entities ae
+          WHERE ae.entity_type = '${entityType}'
+          ON CONFLICT (id) DO NOTHING
+        `;
+
+        const result = await client.query(sql);
+        migrated += result.rowCount || 0;
+      }
+
+      if (migrated > 0) console.log(`✅ Synced ${migrated} new records to per-entity tables`);
+    }
+
+    console.log('✅ DB schema initialized');
+
+    // ─── Auto-import historical data if DB is empty ─────────────────────────
+    await seedExportsData(client);
+
+    // ─── Auto-seed admin user if no users exist ──────────────────────────────
+    await seedAdminUser(client);
+
+  } finally {
+    client.release();
+  }
+}
+
+async function seedAdminUser(client) {
+  // Check if any user already exists — if so, skip
+  const existing = await client.query('SELECT COUNT(*) FROM app_users');
+  const count = parseInt(existing.rows[0].count, 10);
+  if (count > 0) {
+    console.log(`ℹ️  Usuarios existentes: ${count} — seed omitido`);
+    return;
+  }
+
+  // Use ADMIN_PASSWORD env var if set; otherwise generate a secure random one
+  const plainPassword = process.env.ADMIN_PASSWORD || crypto.randomBytes(10).toString('hex');
+  const hash = await bcrypt.hash(plainPassword, 10);
+  const adminId = 'admin-seed-001';
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@equist.local';
+
+  await client.query(`
+    INSERT INTO app_users (id, email, password_hash, full_name, role, is_active)
+    VALUES ($1, $2, $3, $4, 'admin', true)
+    ON CONFLICT (email) DO NOTHING
+  `, [adminId, adminEmail, hash, 'Administrador']);
+
+  console.log('');
+  console.log('╔══════════════════════════════════════════════════╗');
+  console.log('║         ✅ USUARIO ADMIN CREADO                  ║');
+  console.log('╠══════════════════════════════════════════════════╣');
+  console.log(`║  Email:      ${adminEmail.padEnd(36)}║`);
+  console.log(`║  Contraseña: ${plainPassword.padEnd(36)}║`);
+  if (!process.env.ADMIN_PASSWORD) {
+    console.log('║                                                  ║');
+    console.log('║  ⚠️  Contraseña generada aleatoriamente.          ║');
+    console.log('║  Define ADMIN_PASSWORD en las variables de       ║');
+    console.log('║  entorno para usar una contraseña fija.          ║');
+  }
+  console.log('╚══════════════════════════════════════════════════╝');
+  console.log('');
+}
+
+
+async function seedExportsData(client) {
+  // Only runs if app_entities table is completely empty (first deploy)
+  const check = await client.query('SELECT COUNT(*) FROM app_entities');
+  const total = parseInt(check.rows[0].count, 10);
+  if (total > 0) {
+    console.log(`ℹ️  Datos existentes: ${total} registros en app_entities — import omitido`);
+    return;
+  }
+
+  const fs = await import('fs');
+  const path = await import('path');
+  const { fileURLToPath } = await import('url');
+  const __dirname2 = path.default.dirname(fileURLToPath(import.meta.url));
+  const EXPORTS_DIR = path.default.join(__dirname2, '..', 'scripts', 'exports');
+
+  if (!fs.default.existsSync(EXPORTS_DIR)) {
+    console.log('ℹ️  No se encontró scripts/exports/ — import de datos omitido');
+    return;
+  }
+
+  const ENTITY_MAP = {
+    'equistpos': [
+      'AccountPayable','BankAccount','Credit','Customer','Expense','ExpenseTask',
+      'Inventory','InventoryMovement','Location','PayableInstallment','PayablePayment',
+      'PriceList','Product','Purchase','PurchaseItem','Role','SaleItem','Sale',
+      'StockMovement','SyncInbox','SystemSettings'
+    ],
+    'produccionequist': [
+      'Delivery','Dispatch','Employee','EmployeePurchase','Payment','PaymentRequest'
+    ],
+    'chaquetas-pro': [
+      'Color','Compra','MateriaPrima','Operacion','Presupuesto','Producto','Proveedor','Remision'
+    ]
+  };
+
+  console.log('');
+  console.log('📦 Base de datos vacía detectada — importando datos históricos...');
+  let totalImported = 0;
+  let totalSkipped = 0;
+
+  for (const [app, entities] of Object.entries(ENTITY_MAP)) {
+    for (const entityType of entities) {
+      const filePath = path.default.join(EXPORTS_DIR, app, `${entityType}.json`);
+      if (!fs.default.existsSync(filePath)) continue;
+
+      let records;
+      try {
+        records = JSON.parse(fs.default.readFileSync(filePath, 'utf8'));
+      } catch { continue; }
+
+      if (!Array.isArray(records) || records.length === 0) continue;
+
+      let count = 0;
+      for (const record of records) {
+        const { id, created_date, updated_date, created_by_id, created_by, is_sample, ...data } = record;
+        if (!id) continue;
+        try {
+          await client.query(
+            `INSERT INTO app_entities (id, entity_type, data, created_date, updated_date, created_by_id)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id, entity_type) DO NOTHING`,
+            [
+              id, entityType, JSON.stringify(data),
+              created_date || new Date().toISOString(),
+              updated_date || new Date().toISOString(),
+              created_by_id || null
+            ]
+          );
+          count++;
+        } catch { totalSkipped++; }
+      }
+      if (count > 0) {
+        console.log(`  ✅ ${app}/${entityType}: ${count} registros`);
+        totalImported += count;
+      }
+    }
+  }
+
+  console.log('');
+  console.log('╔══════════════════════════════════════════════════╗');
+  console.log('║       📊 DATOS HISTÓRICOS IMPORTADOS             ║');
+  console.log('╠══════════════════════════════════════════════════╣');
+  console.log(`║  Registros importados: ${String(totalImported).padEnd(26)}║`);
+  if (totalSkipped > 0)
+    console.log(`║  Omitidos (duplicados): ${String(totalSkipped).padEnd(25)}║`);
+  console.log('╚══════════════════════════════════════════════════╝');
+  console.log('');
+}
+
+initDB().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ API server running on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('❌ DB init failed:', err.message);
+  process.exit(1);
+});

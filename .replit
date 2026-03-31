@@ -1,0 +1,57 @@
+modules = ["nodejs-20", "web", "postgresql-16"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+VITE_BASE44_APP_ID = "68cefbef60300e08a2b75e37"
+VITE_BASE44_APP_BASE_URL = "https://equistpos.base44.app"
+VITE_BASE44_CHAQUETAS_APP_ID = "68c1717a4cea263da7fab679"
+VITE_BASE44_PRODUCCION_APP_ID = "68bb1f9e2f334abd798d7294"
+VITE_BASE44_CHAQUETAS_APP_BASE_URL = "https://chaquetas-pro.base44.app"
+VITE_BASE44_PRODUCCION_APP_BASE_URL = "https://produccionequist.base44.app"
+
+[deployment]
+deploymentTarget = "static"
+build = ["npm", "run", "build"]
+publicDir = "dist"

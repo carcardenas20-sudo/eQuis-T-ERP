@@ -1,0 +1,1 @@
+export { MateriaPrima } from './all';
