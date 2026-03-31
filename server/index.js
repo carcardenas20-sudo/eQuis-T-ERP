@@ -58,6 +58,13 @@ app.use('/api/entities', requireAuth, entityRoutes);
 app.use('/api/upload', requireAuth, uploadRoutes);
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date() }));
 
+// ─── Serve frontend (React build) ────────────────────────────────────────────
+const DIST_DIR = join(__dirname, '..', 'dist');
+app.use(express.static(DIST_DIR));
+app.get('*', (req, res) => {
+  res.sendFile(join(DIST_DIR, 'index.html'));
+});
+
 async function initDB() {
   const client = await pool.connect();
   try {
