@@ -1,5 +1,16 @@
 [
   {
+    "name": "Carlos Cardenas ",
+    "phone": "3155925280",
+    "is_active": true,
+    "id": "69cbdd4d53b9ffd3b283ed53",
+    "created_date": "2026-03-31T14:42:21.105000",
+    "updated_date": "2026-03-31T14:42:21.105000",
+    "created_by_id": "68e538eeb62228c77b63edab",
+    "created_by": "paolah.equist@gmail.com",
+    "is_sample": false
+  },
+  {
     "name": "Luis Castañeda",
     "phone": "3147509029",
     "is_active": true,

@@ -1,5 +1,403 @@
 [
   {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 92500,
+    "product_reference": null,
+    "employee_id": "003",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 10,
+        "unit_price": 8500,
+        "total_amount": 85000,
+        "product_reference": "004"
+      },
+      {
+        "quantity": 1,
+        "unit_price": 7500,
+        "total_amount": 7500,
+        "product_reference": "003"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd5eca7a58436815346efc",
+    "created_date": "2026-04-01T18:07:06.654000",
+    "updated_date": "2026-04-01T18:07:06.654000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 399500,
+    "product_reference": null,
+    "employee_id": "022",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 47,
+        "unit_price": 8500,
+        "total_amount": 399500,
+        "product_reference": "004"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd58d2325dcc23207a6c61",
+    "created_date": "2026-04-01T17:41:38.840000",
+    "updated_date": "2026-04-01T17:41:38.840000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 102000,
+    "product_reference": null,
+    "employee_id": "011",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 12,
+        "unit_price": 8500,
+        "total_amount": 102000,
+        "product_reference": "004"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd56d4dffa97527faa1637",
+    "created_date": "2026-04-01T17:33:08.459000",
+    "updated_date": "2026-04-01T17:33:08.459000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 280500,
+    "product_reference": null,
+    "employee_id": "020",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 33,
+        "unit_price": 8500,
+        "total_amount": 280500,
+        "product_reference": "004"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd527446acec8c90bf93c2",
+    "created_date": "2026-04-01T17:14:28.577000",
+    "updated_date": "2026-04-01T17:14:28.577000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 160000,
+    "product_reference": null,
+    "employee_id": "019",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 20,
+        "unit_price": 8000,
+        "total_amount": 160000,
+        "product_reference": "001"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd51035aa567d23f49d732",
+    "created_date": "2026-04-01T17:08:19.176000",
+    "updated_date": "2026-04-01T17:08:19.176000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 138000,
+    "product_reference": null,
+    "employee_id": "025",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 4,
+        "unit_price": 8500,
+        "total_amount": 34000,
+        "product_reference": "004"
+      },
+      {
+        "quantity": 13,
+        "unit_price": 8000,
+        "total_amount": 104000,
+        "product_reference": "001"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd4e8491add6117fa41df4",
+    "created_date": "2026-04-01T16:57:40.746000",
+    "updated_date": "2026-04-01T19:40:08.853000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 204000,
+    "product_reference": null,
+    "employee_id": "010",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 24,
+        "unit_price": 8500,
+        "total_amount": 204000,
+        "product_reference": "004"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd4d06f2f79da894a60c38",
+    "created_date": "2026-04-01T16:51:18.260000",
+    "updated_date": "2026-04-01T16:51:18.260000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 110000,
+    "product_reference": null,
+    "employee_id": "007",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 12,
+        "unit_price": 8500,
+        "total_amount": 102000,
+        "product_reference": "004"
+      },
+      {
+        "quantity": 1,
+        "unit_price": 8000,
+        "total_amount": 8000,
+        "product_reference": "001"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd4aa62e0f422056477f48",
+    "created_date": "2026-04-01T16:41:10.646000",
+    "updated_date": "2026-04-01T16:41:10.646000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 170000,
+    "product_reference": null,
+    "employee_id": "001",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 20,
+        "unit_price": 8500,
+        "total_amount": 170000,
+        "product_reference": "004"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd4686432f39dfdbb4742a",
+    "created_date": "2026-04-01T16:23:34.212000",
+    "updated_date": "2026-04-01T16:23:34.212000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 340000,
+    "product_reference": null,
+    "employee_id": "023",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 40,
+        "unit_price": 8500,
+        "total_amount": 340000,
+        "product_reference": "004"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd4225c23c05e9c45d0031",
+    "created_date": "2026-04-01T16:04:53.409000",
+    "updated_date": "2026-04-01T16:04:53.409000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 85000,
+    "product_reference": null,
+    "employee_id": "016",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 10,
+        "unit_price": 8500,
+        "total_amount": 85000,
+        "product_reference": "004"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd405ecdffb770540f595f",
+    "created_date": "2026-04-01T15:57:18.384000",
+    "updated_date": "2026-04-01T15:58:57.950000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 102000,
+    "product_reference": null,
+    "employee_id": "026",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 12,
+        "unit_price": 8500,
+        "total_amount": 102000,
+        "product_reference": "004"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd4006e717e2761d356a8f",
+    "created_date": "2026-04-01T15:55:50.250000",
+    "updated_date": "2026-04-01T15:55:50.250000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 387500,
+    "product_reference": null,
+    "employee_id": "006",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 23,
+        "unit_price": 8500,
+        "total_amount": 195500,
+        "product_reference": "004"
+      },
+      {
+        "quantity": 24,
+        "unit_price": 8000,
+        "total_amount": 192000,
+        "product_reference": "001"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd3d21a3816bacb1f1285b",
+    "created_date": "2026-04-01T15:43:29.829000",
+    "updated_date": "2026-04-01T15:43:29.829000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 391000,
+    "product_reference": null,
+    "employee_id": "005",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 46,
+        "unit_price": 8500,
+        "total_amount": 391000,
+        "product_reference": "004"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd3a00d89481447a1cea77",
+    "created_date": "2026-04-01T15:30:08.940000",
+    "updated_date": "2026-04-01T17:16:09.330000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 160000,
+    "product_reference": null,
+    "employee_id": "013",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 20,
+        "unit_price": 8000,
+        "total_amount": 160000,
+        "product_reference": "001"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd365e9a68d723d0d2a655",
+    "created_date": "2026-04-01T15:14:38.098000",
+    "updated_date": "2026-04-01T15:14:38.098000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "delivery_date": "2026-04-01",
+    "quantity": null,
+    "total_amount": 603000,
+    "product_reference": null,
+    "employee_id": "008",
+    "unit_price": null,
+    "items": [
+      {
+        "quantity": 70,
+        "unit_price": 8500,
+        "total_amount": 595000,
+        "product_reference": "004"
+      },
+      {
+        "quantity": 1,
+        "unit_price": 8000,
+        "total_amount": 8000,
+        "product_reference": "001"
+      }
+    ],
+    "status": "pendiente",
+    "id": "69cd32a9f99cd14b9fea9cc4",
+    "created_date": "2026-04-01T14:58:49.834000",
+    "updated_date": "2026-04-01T14:58:49.834000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
     "delivery_date": "2026-03-27",
     "quantity": null,
     "total_amount": 214000,
