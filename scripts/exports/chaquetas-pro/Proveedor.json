@@ -1,0 +1,324 @@
+[
+  {
+    "direccion": "",
+    "observaciones": "",
+    "contactos": [],
+    "nombre": "Revolution",
+    "ciudad": "Bogotá",
+    "activo": true,
+    "id": "698e23258ae23f887cfd49b1",
+    "created_date": "2026-02-12T18:59:49.001000",
+    "updated_date": "2026-02-12T18:59:49.001000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "nombre": "Mercado Libre",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e9484b43afb04d2e60a2",
+    "created_date": "2025-09-11T15:22:48.884000",
+    "updated_date": "2025-09-11T15:22:48.884000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Cintas y Texturas",
+    "contactos": [
+      {
+        "nombre": "General",
+        "cargo": "",
+        "telefono": "3124982303",
+        "email": "",
+        "es_principal": true
+      }
+    ],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e80888d0cc7d576163a1",
+    "created_date": "2025-09-11T15:17:28.526000",
+    "updated_date": "2025-09-11T15:17:28.526000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Comerfilm SAS",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e6bcdf9c23c7242457b4",
+    "created_date": "2025-09-11T15:11:56.051000",
+    "updated_date": "2025-09-11T15:11:56.051000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "DTF Policarpa",
+    "contactos": [
+      {
+        "nombre": "Fredy",
+        "cargo": "",
+        "telefono": "3124244375",
+        "email": "",
+        "es_principal": true
+      }
+    ],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e5854044c301ef84c09b",
+    "created_date": "2025-09-11T15:06:45.097000",
+    "updated_date": "2025-09-11T15:06:45.097000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Createx",
+    "contactos": [
+      {
+        "nombre": "Mercy",
+        "cargo": "Vendedora",
+        "telefono": "3112742179",
+        "email": "",
+        "es_principal": true
+      }
+    ],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e4644451951c2adb0168",
+    "created_date": "2025-09-11T15:01:56.878000",
+    "updated_date": "2025-09-11T15:01:56.878000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Jose Paramo",
+    "contactos": [
+      {
+        "nombre": "Jose Paramo",
+        "cargo": "Gerente",
+        "telefono": "3143658765",
+        "email": "",
+        "es_principal": true
+      }
+    ],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e282a42946d80d2364d7",
+    "created_date": "2025-09-11T14:53:54.240000",
+    "updated_date": "2025-09-11T14:53:54.240000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Hilos Bufalo",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e249191d7955dc5e7b14",
+    "created_date": "2025-09-11T14:52:57.261000",
+    "updated_date": "2025-09-11T14:52:57.261000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Ojalete Restrepo",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e2344b43afb04d2e21ce",
+    "created_date": "2025-09-11T14:52:36.259000",
+    "updated_date": "2025-09-11T14:52:36.259000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Leonzi",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e2252b80f086a93167b9",
+    "created_date": "2025-09-11T14:52:21.086000",
+    "updated_date": "2025-09-11T14:52:21.086000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Carmen Embone",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e21aa42946d80d236127",
+    "created_date": "2025-09-11T14:52:10.154000",
+    "updated_date": "2025-09-11T14:52:10.154000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Portela",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e20ed914de0599b425a0",
+    "created_date": "2025-09-11T14:51:58.081000",
+    "updated_date": "2025-09-11T14:51:58.081000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Wii Tecnology",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e200205c22f52c277bf1",
+    "created_date": "2025-09-11T14:51:44.972000",
+    "updated_date": "2025-09-11T14:51:44.972000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "RPR",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e1ed621e1793e412d4b4",
+    "created_date": "2025-09-11T14:51:25.727000",
+    "updated_date": "2025-09-11T14:51:25.727000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Riperme",
+    "contactos": [],
+    "direccion": "",
+    "ciudad": "",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e1dea6c247e71efc90cc",
+    "created_date": "2025-09-11T14:51:10.667000",
+    "updated_date": "2025-09-11T14:51:31.147000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Dolphin Cremalleras",
+    "contactos": [
+      {
+        "nombre": "Dolphin",
+        "cargo": "General",
+        "telefono": "3152216659",
+        "email": "",
+        "es_principal": true
+      },
+      {
+        "nombre": "Brayan Martin",
+        "cargo": "Gerente",
+        "telefono": "3182346380",
+        "email": "",
+        "es_principal": false
+      }
+    ],
+    "direccion": "Carrera 11a # 46 Sur 3",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2e1a8205c22f52c277a33",
+    "created_date": "2025-09-11T14:50:16.816000",
+    "updated_date": "2025-09-11T14:50:16.816000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Cimatex",
+    "contactos": [
+      {
+        "nombre": "Jose Barrero",
+        "cargo": "Gerente",
+        "telefono": "3158009505",
+        "email": "",
+        "es_principal": true
+      },
+      {
+        "nombre": "Luis Bernal",
+        "cargo": "Subgerente",
+        "telefono": "3124155243",
+        "email": "",
+        "es_principal": false
+      }
+    ],
+    "direccion": "Carrera 22 # 13 22",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2de21bf0579ef5760e9f6",
+    "created_date": "2025-09-11T14:35:13.930000",
+    "updated_date": "2025-09-11T14:35:13.930000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Estandar Textil",
+    "contactos": [
+      {
+        "nombre": "Omar Solarte",
+        "cargo": "Gerente",
+        "telefono": "3213642835",
+        "email": "",
+        "es_principal": true
+      }
+    ],
+    "direccion": "",
+    "ciudad": "Bogotá",
+    "observaciones": "",
+    "activo": true,
+    "id": "68c2dbe0efc73b2040c2b523",
+    "created_date": "2025-09-11T14:25:36.397000",
+    "updated_date": "2025-09-11T14:45:52.430000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  }
+]

@@ -1,0 +1,3163 @@
+[
+  {
+    "delivery_payments": [],
+    "amount": 1543500,
+    "payment_type": "avance",
+    "employee_id": "006",
+    "delivery_ids": [],
+    "description": "Solicitud aprobada (2026-03-27)",
+    "payment_date": "2026-03-27",
+    "status": "registrado",
+    "id": "69c6f646a64b1945427ad059",
+    "created_date": "2026-03-27T21:27:34.391000",
+    "updated_date": "2026-03-27T21:27:34.391000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [],
+    "amount": 1184000,
+    "payment_type": "avance",
+    "employee_id": "010",
+    "delivery_ids": [],
+    "description": "Solicitud aprobada (2026-03-27)",
+    "payment_date": "2026-03-27",
+    "status": "registrado",
+    "id": "69c6f6450c7f39e1f8abc3d5",
+    "created_date": "2026-03-27T21:27:33.753000",
+    "updated_date": "2026-03-27T21:27:33.753000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [],
+    "amount": 651500,
+    "payment_type": "avance",
+    "employee_id": "019",
+    "delivery_ids": [],
+    "description": "Solicitud aprobada (2026-03-27)",
+    "payment_date": "2026-03-27",
+    "status": "registrado",
+    "id": "69c6f645de355f1e97aff0cc",
+    "created_date": "2026-03-27T21:27:33.231000",
+    "updated_date": "2026-03-27T21:27:33.231000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [],
+    "amount": 192000,
+    "payment_type": "avance",
+    "employee_id": "025",
+    "delivery_ids": [],
+    "description": "Solicitud aprobada (2026-03-27)",
+    "payment_date": "2026-03-27",
+    "status": "registrado",
+    "id": "69c6f64485ec5659674eba1e",
+    "created_date": "2026-03-27T21:27:32.723000",
+    "updated_date": "2026-03-27T21:27:32.723000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [],
+    "amount": 456000,
+    "payment_type": "avance",
+    "employee_id": "016",
+    "delivery_ids": [],
+    "description": "Solicitud aprobada (2026-03-27)",
+    "payment_date": "2026-03-27",
+    "status": "registrado",
+    "id": "69c6f644a89ae4e101f5a391",
+    "created_date": "2026-03-27T21:27:32.218000",
+    "updated_date": "2026-03-27T21:27:32.218000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [],
+    "amount": 2406500,
+    "payment_type": "avance",
+    "employee_id": "023",
+    "delivery_ids": [],
+    "description": "Solicitud aprobada (2026-03-27)",
+    "payment_date": "2026-03-27",
+    "status": "registrado",
+    "id": "69c6f6437d275a6cda561c67",
+    "created_date": "2026-03-27T21:27:31.665000",
+    "updated_date": "2026-03-27T21:27:31.665000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [],
+    "amount": 1029000,
+    "payment_type": "avance",
+    "employee_id": "001",
+    "delivery_ids": [],
+    "description": "Solicitud aprobada (2026-03-27)",
+    "payment_date": "2026-03-27",
+    "status": "registrado",
+    "id": "69c6f643c898a5c432d01f33",
+    "created_date": "2026-03-27T21:27:31.144000",
+    "updated_date": "2026-03-27T21:27:31.144000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 672000,
+        "delivery_id": "69bf2eda6cfacc79e6662a9b"
+      },
+      {
+        "amount": 712000,
+        "delivery_id": "69bc0b191dca5c7081f9a4de"
+      }
+    ],
+    "amount": 1384000,
+    "payment_type": "avance",
+    "employee_id": "005",
+    "delivery_ids": [],
+    "description": "Pago de $1.384.000",
+    "payment_date": "2026-03-30",
+    "status": "registrado",
+    "id": "69bf391eb218d9790ec4ee21",
+    "created_date": "2026-03-22T00:34:38.860000",
+    "updated_date": "2026-03-22T00:34:38.860000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 112000,
+        "delivery_id": "69bf2eda6cfacc79e6662aa6"
+      }
+    ],
+    "amount": 112000,
+    "payment_type": "avance",
+    "employee_id": "014",
+    "delivery_ids": [],
+    "description": "Pago de $112.000",
+    "payment_date": "2026-03-30",
+    "status": "registrado",
+    "id": "69bf38d871b73ed81a0cf8d0",
+    "created_date": "2026-03-22T00:33:28.170000",
+    "updated_date": "2026-03-22T00:33:28.170000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 208000,
+        "delivery_id": "69bf2eda6cfacc79e6662aa7"
+      },
+      {
+        "amount": 16000,
+        "delivery_id": "69bc0bf4664340948004995a"
+      },
+      {
+        "amount": 336000,
+        "delivery_id": "69bc0bc101968f90413b9ef2"
+      },
+      {
+        "amount": 323000,
+        "delivery_id": "69a6e94b9d0514b659977fd7"
+      },
+      {
+        "amount": 165000,
+        "delivery_id": "699cce4aa10281fae15621e4"
+      }
+    ],
+    "amount": 1048000,
+    "payment_type": "avance",
+    "employee_id": "011",
+    "delivery_ids": [],
+    "description": "Pago de $1.048.000",
+    "payment_date": "2026-03-30",
+    "status": "registrado",
+    "id": "69bf38b7f0240916156d96c6",
+    "created_date": "2026-03-22T00:32:55.857000",
+    "updated_date": "2026-03-22T00:32:55.857000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 552000,
+        "delivery_id": "69bc0a11d48f5e1bde6d4308"
+      },
+      {
+        "amount": 688000,
+        "delivery_id": "69bf2eda6cfacc79e6662aa0"
+      }
+    ],
+    "amount": 1240000,
+    "payment_type": "avance",
+    "employee_id": "008",
+    "delivery_ids": [],
+    "description": "Pago de $1.240.000",
+    "payment_date": "2026-03-30",
+    "status": "registrado",
+    "id": "69bf385b30448d99af845263",
+    "created_date": "2026-03-22T00:31:23.531000",
+    "updated_date": "2026-03-22T00:31:23.531000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 328000,
+        "delivery_id": "69bc0a65ed6ea5f598b38ed4"
+      }
+    ],
+    "amount": 328000,
+    "payment_type": "avance",
+    "employee_id": "025",
+    "delivery_ids": [],
+    "description": "Pago de $328.000",
+    "payment_date": "2026-03-23",
+    "status": "ejecutado",
+    "id": "69bc0f94f4bb0f75c8d2e2e3",
+    "created_date": "2026-03-19T15:00:36.255000",
+    "updated_date": "2026-03-24T14:32:05.638000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 330000,
+        "delivery_id": "699cce241241bbd44e6ab975"
+      },
+      {
+        "amount": 172500,
+        "delivery_id": "69a6e92d5a4b17dea6ba7957"
+      },
+      {
+        "amount": 172500,
+        "delivery_id": "69b2c53660d1e1f9b3a5859a"
+      },
+      {
+        "amount": 872000,
+        "delivery_id": "69bc0c5ef18e0ad25a13dbb4"
+      }
+    ],
+    "amount": 1547000,
+    "payment_type": "avance",
+    "employee_id": "014",
+    "delivery_ids": [],
+    "description": "Pago de $1.547.000",
+    "payment_date": "2026-03-23",
+    "status": "ejecutado",
+    "id": "69bc0f78a388ee011ca51012",
+    "created_date": "2026-03-19T15:00:08.303000",
+    "updated_date": "2026-03-25T16:45:55.915000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 50500,
+        "delivery_id": "69a6eabcfdb4ab606ecf39d2"
+      },
+      {
+        "amount": 212500,
+        "delivery_id": "698a15012cf8c4b93607e109"
+      }
+    ],
+    "amount": 263000,
+    "payment_type": "avance",
+    "employee_id": "1000366163",
+    "delivery_ids": [],
+    "description": "Pago de $263.000",
+    "payment_date": "2026-03-15",
+    "status": "ejecutado",
+    "id": "69b2efe6d4a56fd54bbbbf08",
+    "created_date": "2026-03-12T16:55:02.136000",
+    "updated_date": "2026-03-16T21:27:07.772000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 112000,
+        "delivery_id": "69b2e7740d6c8de00c94da0c"
+      },
+      {
+        "amount": 280000,
+        "delivery_id": "69aee3efcfec098b6326d64c"
+      },
+      {
+        "amount": 643500,
+        "delivery_id": "69aee3e2c948f7c56535e64d"
+      },
+      {
+        "amount": 540000,
+        "delivery_id": "69a6e8074da93b13c9b8e73f"
+      }
+    ],
+    "amount": 1575500,
+    "payment_type": "avance",
+    "employee_id": "005",
+    "delivery_ids": [],
+    "description": "Pago de $1.575.500",
+    "payment_date": "2026-03-15",
+    "status": "ejecutado",
+    "id": "69b2e789bf5f2733d3000087",
+    "created_date": "2026-03-12T16:19:21.857000",
+    "updated_date": "2026-03-28T17:34:18.131000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 445000,
+        "delivery_id": "69b2c4072a42f8db886cb88c"
+      },
+      {
+        "amount": 135000,
+        "delivery_id": "69a6e97a529252b33553d27f"
+      },
+      {
+        "amount": 369000,
+        "delivery_id": "699ccea9a4294ded04864176"
+      }
+    ],
+    "amount": 949000,
+    "payment_type": "avance",
+    "employee_id": "019",
+    "delivery_ids": [],
+    "description": "Pago de $949.000",
+    "payment_date": "2026-03-15",
+    "status": "ejecutado",
+    "id": "69b2e2556f6ce756c5d33c63",
+    "created_date": "2026-03-12T15:57:09.983000",
+    "updated_date": "2026-03-21T00:06:41.421000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 802500,
+        "delivery_id": "69a6ea13426b0db698bc7aa7"
+      },
+      {
+        "amount": 288000,
+        "delivery_id": "69b2c5cd47b67e80f8b53bc2"
+      },
+      {
+        "amount": 600500,
+        "delivery_id": "69b2c486fc9463526997858f"
+      }
+    ],
+    "amount": 1691000,
+    "payment_type": "avance",
+    "employee_id": "008",
+    "delivery_ids": [],
+    "description": "Pago de $1.691.000",
+    "payment_date": "2026-03-15",
+    "status": "ejecutado",
+    "id": "69b2e1faae72e358abc7900f",
+    "created_date": "2026-03-12T15:55:38.579000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 165000,
+        "delivery_id": "69aee4a3d7ca80138f320a1a"
+      }
+    ],
+    "amount": 165000,
+    "payment_type": "avance",
+    "employee_id": "002",
+    "delivery_ids": [],
+    "description": "Pago de $165.000",
+    "payment_date": "2026-03-15",
+    "status": "registrado",
+    "id": "69b2dd98c3ceb43e9bb70a2c",
+    "created_date": "2026-03-12T15:36:56.340000",
+    "updated_date": "2026-03-12T15:36:56.340000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 297500,
+        "delivery_id": "69b2c568d66403fcd9cb7eb9"
+      },
+      {
+        "amount": 727500,
+        "delivery_id": "69a6ea4624fd8fee17a016e3"
+      },
+      {
+        "amount": 215500,
+        "delivery_id": "698a169071ca79149a337ebe"
+      },
+      {
+        "amount": 245800,
+        "delivery_id": "6980dee6b8e34c27869e2a8e"
+      },
+      {
+        "amount": 396900,
+        "delivery_id": "697cb5a613f3f4232556871c"
+      },
+      {
+        "amount": 160000,
+        "delivery_id": "6958f38a0d45b1f81d3247e3"
+      }
+    ],
+    "amount": 2043200,
+    "payment_type": "avance",
+    "employee_id": "003",
+    "delivery_ids": [],
+    "description": "Pago de $2.043.200",
+    "payment_date": "2026-03-12",
+    "status": "ejecutado",
+    "id": "69b2db61a57f7ad729451858",
+    "created_date": "2026-03-12T15:27:29.657000",
+    "updated_date": "2026-03-20T21:52:39.986000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 172500,
+        "delivery_id": "69a6e845db4d6eeb30a891f4"
+      },
+      {
+        "amount": 172500,
+        "delivery_id": "69932af50242b24c2da50311"
+      },
+      {
+        "amount": 320000,
+        "delivery_id": "698a1461d7088d7c5ee4685c"
+      },
+      {
+        "amount": 160000,
+        "delivery_id": "6980dd5ce1f47f0e78a61472"
+      }
+    ],
+    "amount": 825000,
+    "payment_type": "avance",
+    "employee_id": "002",
+    "delivery_ids": [],
+    "description": "Pago de $825.000",
+    "payment_date": "2026-03-09",
+    "status": "ejecutado",
+    "id": "69a9b154d78b45e5347a26f9",
+    "created_date": "2026-03-05T16:37:40.957000",
+    "updated_date": "2026-03-07T23:13:25.672000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 7500,
+        "delivery_id": "696642be9ad98bdda6c328e8"
+      }
+    ],
+    "amount": 7500,
+    "payment_type": "avance",
+    "employee_id": "1006515896",
+    "delivery_ids": [],
+    "description": "Pago de $7.500",
+    "payment_date": "2026-03-09",
+    "status": "ejecutado",
+    "id": "69a7525deb84058b8f1502d4",
+    "created_date": "2026-03-03T21:27:57.512000",
+    "updated_date": "2026-03-12T15:27:53.188000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 150000,
+        "delivery_id": "69a6e90c22ed8cc70406dbb8"
+      },
+      {
+        "amount": 110500,
+        "delivery_id": "69932c3a15d92c00fd2cb797"
+      },
+      {
+        "amount": 117000,
+        "delivery_id": "698a153453b83c92b09573eb"
+      },
+      {
+        "amount": 178000,
+        "delivery_id": "6980ddaf1bc1a6349e7b231d"
+      },
+      {
+        "amount": 109200,
+        "delivery_id": "6972838bf28a283834a5698c"
+      }
+    ],
+    "amount": 664700,
+    "payment_type": "avance",
+    "employee_id": "016",
+    "delivery_ids": [],
+    "description": "Pago de $664.700",
+    "payment_date": "2026-03-09",
+    "status": "ejecutado",
+    "id": "69a7522ec95137edc25b69c1",
+    "created_date": "2026-03-03T21:27:10.739000",
+    "updated_date": "2026-03-20T21:52:45.635000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 172500,
+        "delivery_id": "69a6ea709f512eb8febf3b03"
+      },
+      {
+        "amount": 722000,
+        "delivery_id": "699cd04a9c544c54ec8bdfd7"
+      },
+      {
+        "amount": 695500,
+        "delivery_id": "69932f9e3890312b462d07a2"
+      },
+      {
+        "amount": 510000,
+        "delivery_id": "698a169e622e4ebdd924d82d"
+      }
+    ],
+    "amount": 2100000,
+    "payment_type": "avance",
+    "employee_id": "023",
+    "delivery_ids": [],
+    "description": "Pago de $2.100.000",
+    "payment_date": "2026-03-09",
+    "status": "ejecutado",
+    "id": "69a751632f3cd6327b0449cf",
+    "created_date": "2026-03-03T21:23:47.895000",
+    "updated_date": "2026-03-20T21:52:50.786000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 127500,
+        "delivery_id": "69a6e9d47f98073a34b6e5cf"
+      },
+      {
+        "amount": 337500,
+        "delivery_id": "699ccf3e3d7ef5dded3f6ec0"
+      },
+      {
+        "amount": 365600,
+        "delivery_id": "69932efcb7bfa4d63d0c0b28"
+      },
+      {
+        "amount": 340000,
+        "delivery_id": "698a16493fb98435a31fe38a"
+      },
+      {
+        "amount": 372600,
+        "delivery_id": "6980de6c306e5e66952104a2"
+      }
+    ],
+    "amount": 1543200,
+    "payment_type": "avance",
+    "employee_id": "020",
+    "delivery_ids": [],
+    "description": "Pago de $1.543.200",
+    "payment_date": "2026-03-09",
+    "status": "ejecutado",
+    "id": "69a74ffedfca0913455d615f",
+    "created_date": "2026-03-03T21:17:50.026000",
+    "updated_date": "2026-03-20T21:52:28.810000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 180000,
+        "delivery_id": "69a6e9b27164d96829bc6f2c"
+      }
+    ],
+    "amount": 180000,
+    "payment_type": "avance",
+    "employee_id": "025",
+    "delivery_ids": [],
+    "description": "Pago de $180.000",
+    "payment_date": "2026-03-09",
+    "status": "ejecutado",
+    "id": "69a74fd058d4f0823d0b9d6b",
+    "created_date": "2026-03-03T21:17:04.734000",
+    "updated_date": "2026-03-20T21:52:55.225000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 150500,
+        "delivery_id": "69a6e9f93d3942194df17b85"
+      },
+      {
+        "amount": 307500,
+        "delivery_id": "699ccfc975ff98ac396e38dd"
+      },
+      {
+        "amount": 255000,
+        "delivery_id": "69932f1f70f7b13e82a2230e"
+      },
+      {
+        "amount": 255000,
+        "delivery_id": "698a165a355cb6d4e905be43"
+      },
+      {
+        "amount": 232000,
+        "delivery_id": "6980de8c5a8a2080ca2cdf1e"
+      }
+    ],
+    "amount": 1200000,
+    "payment_type": "avance",
+    "employee_id": "022",
+    "delivery_ids": [],
+    "description": "Pago de $1.200.000",
+    "payment_date": "2026-03-09",
+    "status": "ejecutado",
+    "id": "69a74e5fe871b84e0462f799",
+    "created_date": "2026-03-03T21:10:55.663000",
+    "updated_date": "2026-03-20T21:52:59.842000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 855000,
+        "delivery_id": "699cccc06b1b9c806fccc997"
+      },
+      {
+        "amount": 952500,
+        "delivery_id": "69932aa4877d8d25b2462759"
+      }
+    ],
+    "amount": 1807500,
+    "payment_type": "avance",
+    "employee_id": "005",
+    "delivery_ids": [],
+    "description": "Pago de $1.807.500",
+    "payment_date": "2026-03-01",
+    "id": "699cd6ec2df018d3515bb572",
+    "created_date": "2026-02-23T22:38:36.571000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 149500,
+        "delivery_id": "699cce6c259c71fca890e76b"
+      },
+      {
+        "amount": 119000,
+        "delivery_id": "69932e48fc3a64a44ae953cf"
+      },
+      {
+        "amount": 203500,
+        "delivery_id": "698a15afeacfc42d236adf26"
+      },
+      {
+        "amount": 205200,
+        "delivery_id": "6980de0fafff19681e6997b4"
+      },
+      {
+        "amount": 109200,
+        "delivery_id": "697cb47b4a20549a0f2520cf"
+      },
+      {
+        "amount": 80000,
+        "delivery_id": "6972842b0215e2ff2619f5dd"
+      }
+    ],
+    "amount": 866400,
+    "payment_type": "avance",
+    "employee_id": "013",
+    "delivery_ids": [],
+    "description": "Pago de $866.400",
+    "payment_date": "2026-03-01",
+    "id": "699cd6bbdbca6d16f76212dc",
+    "created_date": "2026-02-23T22:37:47.277000",
+    "updated_date": "2026-03-20T21:52:37.711000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 98500,
+        "delivery_id": "699ccd8ca3f0ae6c999f73c2"
+      },
+      {
+        "amount": 246500,
+        "delivery_id": "698a148320634ab9b4456716"
+      },
+      {
+        "amount": 70200,
+        "delivery_id": "6980dd721bb4f027a0a2075b"
+      },
+      {
+        "amount": 202800,
+        "delivery_id": "697cb3e427f012371fd1a65a"
+      },
+      {
+        "amount": 257400,
+        "delivery_id": "697282fdbaa3dd95a5e683c7"
+      },
+      {
+        "amount": 202800,
+        "delivery_id": "6958f2970b558ff505d5974f"
+      },
+      {
+        "amount": 32000,
+        "delivery_id": "6958f281c78827a113a4394c"
+      }
+    ],
+    "amount": 1110200,
+    "payment_type": "avance",
+    "employee_id": "007",
+    "delivery_ids": [],
+    "description": "Pago de $1.110.200",
+    "payment_date": "2026-03-01",
+    "id": "699cd69b04ea7923a2c367a8",
+    "created_date": "2026-02-23T22:37:15.560000",
+    "updated_date": "2026-03-20T21:52:47.627000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 926000,
+        "delivery_id": "69932f6ed248e0538d5f859d"
+      },
+      {
+        "amount": 919500,
+        "delivery_id": "699cd00123db8d628ffb3ad4"
+      }
+    ],
+    "amount": 1845500,
+    "payment_type": "avance",
+    "employee_id": "008",
+    "delivery_ids": [],
+    "description": "Pago de $1.845.500",
+    "payment_date": "2026-03-01",
+    "id": "699cd66dfec9cb18345a9691",
+    "created_date": "2026-02-23T22:36:29.616000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 7800,
+        "delivery_id": "69932b647193706e193d2975"
+      },
+      {
+        "amount": 93600,
+        "delivery_id": "697cb3fb1fd469c4ccc3f4bd"
+      }
+    ],
+    "amount": 101400,
+    "payment_type": "avance",
+    "employee_id": "40376217",
+    "delivery_ids": [],
+    "description": "Pago de $101.400",
+    "payment_date": "2026-02-21",
+    "id": "69933e4fc2ce1d4cfa55e80a",
+    "created_date": "2026-02-16T15:57:03.128000",
+    "updated_date": "2026-02-16T15:57:03.128000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 316000,
+        "delivery_id": "69932e30f324c501bc1c4fda"
+      },
+      {
+        "amount": 239000,
+        "delivery_id": "698a158f04674e2f8b29e6e5"
+      },
+      {
+        "amount": 190000,
+        "delivery_id": "6980ddec3950f7a8e74ac10b"
+      },
+      {
+        "amount": 140400,
+        "delivery_id": "697cb466ed244e69fb53cd9b"
+      },
+      {
+        "amount": 202800,
+        "delivery_id": "69728417ec6b15641df2ae48"
+      }
+    ],
+    "amount": 1088200,
+    "payment_type": "avance",
+    "employee_id": "011",
+    "delivery_ids": [],
+    "description": "Pago de $1.088.200",
+    "payment_date": "2026-02-21",
+    "id": "69933d17ce89e033d88f4c6a",
+    "created_date": "2026-02-16T15:51:51.413000",
+    "updated_date": "2026-03-20T21:52:25.203000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 475000,
+        "delivery_id": "69932ace8461866afa7ac116"
+      },
+      {
+        "amount": 400000,
+        "delivery_id": "698a1436aca9b4993078291f"
+      },
+      {
+        "amount": 367500,
+        "delivery_id": "6980dd4d9eac41dd259b3121"
+      },
+      {
+        "amount": 190000,
+        "delivery_id": "69777c24afe66ae055484a8f"
+      },
+      {
+        "amount": 405600,
+        "delivery_id": "697282db166d5d9cf6e83d8a"
+      }
+    ],
+    "amount": 1838100,
+    "payment_type": "avance",
+    "employee_id": "006",
+    "delivery_ids": [],
+    "description": "Pago de $1.838.100",
+    "payment_date": "2026-02-21",
+    "id": "69933cee3a2d1ce7c3b611df",
+    "created_date": "2026-02-16T15:51:10.384000",
+    "updated_date": "2026-03-20T21:52:21.971000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 367000,
+        "delivery_id": "6980ddd258fa8d4da2237a4a"
+      },
+      {
+        "amount": 545000,
+        "delivery_id": "698a156db292c46afe485436"
+      },
+      {
+        "amount": 499500,
+        "delivery_id": "699336c85539397bc473fb63"
+      },
+      {
+        "amount": 418400,
+        "delivery_id": "697cb4525e5e61a7dbd8c1ae"
+      },
+      {
+        "amount": 413400,
+        "delivery_id": "6972839c1fdb5b5441531c1d"
+      },
+      {
+        "amount": 8500,
+        "delivery_id": "697283bff27065ae1ec3a95f"
+      },
+      {
+        "amount": 8000,
+        "delivery_id": "697283ce0bfcef592533924a"
+      }
+    ],
+    "amount": 2259800,
+    "payment_type": "avance",
+    "employee_id": "014",
+    "delivery_ids": [],
+    "description": "Pago de $2.259.800",
+    "payment_date": "2026-02-21",
+    "id": "69933c96eee33b6e1a18f16d",
+    "created_date": "2026-02-16T15:49:42.911000",
+    "updated_date": "2026-03-21T00:05:54.475000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 127500,
+        "delivery_id": "69932c0ca881e26718d21096"
+      },
+      {
+        "amount": 40000,
+        "delivery_id": "698e1f949001ccbdde142d63"
+      },
+      {
+        "amount": 112000,
+        "delivery_id": "698a14c8ebf105c25a064f1e"
+      },
+      {
+        "amount": 80000,
+        "delivery_id": "6980dd8af8e3e00e482b183e"
+      }
+    ],
+    "amount": 359500,
+    "payment_type": "avance",
+    "employee_id": "026",
+    "delivery_ids": [],
+    "description": "Pago de $359.500",
+    "payment_date": "2026-02-21",
+    "id": "69933bf412958f4c7a541064",
+    "created_date": "2026-02-16T15:47:00.668000",
+    "updated_date": "2026-03-21T23:18:53.884000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 337000,
+        "delivery_id": "69932e8f111f2488fbb0056c"
+      },
+      {
+        "amount": 326500,
+        "delivery_id": "698a15e2c8cdb6391cd4d110"
+      },
+      {
+        "amount": 355000,
+        "delivery_id": "6980de4904192669ca8d1691"
+      }
+    ],
+    "amount": 1018500,
+    "payment_type": "avance",
+    "employee_id": "019",
+    "delivery_ids": [],
+    "description": "Pago de $1.018.500",
+    "payment_date": "2026-02-21",
+    "id": "69933bc2bcdabbfa1c0a7a69",
+    "created_date": "2026-02-16T15:46:10.239000",
+    "updated_date": "2026-03-20T21:52:27.248000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 929500,
+        "delivery_id": "698a140d3752d102fffe22ac"
+      },
+      {
+        "amount": 855000,
+        "delivery_id": "6980dd2055d26463c49a5c37"
+      }
+    ],
+    "amount": 1784500,
+    "payment_type": "avance",
+    "employee_id": "005",
+    "delivery_ids": [],
+    "description": "Pago de $1.784.500",
+    "payment_date": "2026-02-14",
+    "id": "698b9e7d003e267eb4d9db17",
+    "created_date": "2026-02-10T21:09:17.581000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 996500,
+        "delivery_id": "698a167769487b0aab54877f"
+      },
+      {
+        "amount": 1120000,
+        "delivery_id": "6980dec7985ead007cac67cd"
+      }
+    ],
+    "amount": 2116500,
+    "payment_type": "avance",
+    "employee_id": "008",
+    "delivery_ids": [],
+    "description": "Pago de $2.116.500",
+    "payment_date": "2026-02-14",
+    "id": "698b9e14fc55918350e446c5",
+    "created_date": "2026-02-10T21:07:32.078000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 218400,
+        "delivery_id": "6980df56b1dbb425e21318f3"
+      },
+      {
+        "amount": 160000,
+        "delivery_id": "697284afd2ec87ee78a366ba"
+      },
+      {
+        "amount": 320000,
+        "delivery_id": "6966433558005ea1513c40e3"
+      }
+    ],
+    "amount": 698400,
+    "payment_type": "avance",
+    "employee_id": "001",
+    "delivery_ids": [],
+    "description": "Pago de $698.400",
+    "payment_date": "2026-02-07",
+    "id": "6980e7ea3643cb1a12f2885d",
+    "created_date": "2026-02-02T18:07:38.432000",
+    "updated_date": "2026-02-02T18:07:38.432000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "delivery_payments": [
+      {
+        "amount": 749800,
+        "delivery_id": "6980df2eaf1f4d6d9d17121b"
+      },
+      {
+        "amount": 546000,
+        "delivery_id": "697cb5b4f430ccdc74a58338"
+      },
+      {
+        "amount": 530400,
+        "delivery_id": "69728498ba7fd433e44ab2e5"
+      },
+      {
+        "amount": 132600,
+        "delivery_id": "6966469f40105234262c55a7"
+      }
+    ],
+    "amount": 1958800,
+    "payment_type": "avance",
+    "employee_id": "023",
+    "delivery_ids": [],
+    "description": "Pago de $1.958.800",
+    "payment_date": "2026-02-07",
+    "id": "6980e788e32ed9adf8c94f1a",
+    "created_date": "2026-02-02T18:06:00.574000",
+    "updated_date": "2026-03-20T21:52:50.786000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1632400,
+    "payment_date": "2026-02-02",
+    "payment_type": "avance",
+    "description": "Pago de $1.632.400",
+    "delivery_ids": [],
+    "delivery_payments": [
+      {
+        "delivery_id": "69777c0ea586857bfaa6d1db",
+        "amount": 790000
+      },
+      {
+        "delivery_id": "697282c87ac11ef7021715c5",
+        "amount": 842400
+      }
+    ],
+    "id": "697cd857f4ec7a3c1773f5f7",
+    "created_date": "2026-01-30T16:12:07.165000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "019",
+    "amount": 724500,
+    "payment_date": "2026-02-02",
+    "payment_type": "avance",
+    "description": "Pago de $724.500",
+    "delivery_ids": [],
+    "delivery_payments": [
+      {
+        "delivery_id": "697cb4a323860c8cbb495e26",
+        "amount": 276500
+      },
+      {
+        "delivery_id": "6972844bb5e3f3d3522455f4",
+        "amount": 304000
+      },
+      {
+        "delivery_id": "6958f31c2aad4a690cd1ead6",
+        "amount": 144000
+      }
+    ],
+    "id": "697cd33d72f08a0387fb444a",
+    "created_date": "2026-01-30T15:50:21.048000",
+    "updated_date": "2026-03-20T21:52:27.248000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "020",
+    "amount": 2009400,
+    "payment_date": "2026-02-02",
+    "payment_type": "avance",
+    "description": "Pago de $2.009.400",
+    "delivery_ids": [],
+    "delivery_payments": [
+      {
+        "delivery_id": "697cb4b74526ddae2e17a827",
+        "amount": 585000
+      },
+      {
+        "delivery_id": "69664219edd083fafa077a4b",
+        "amount": 608400
+      },
+      {
+        "delivery_id": "6958f33fb0c241d69b853f96",
+        "amount": 400000
+      },
+      {
+        "delivery_id": "69491dd3946864556cd2a214",
+        "amount": 416000
+      }
+    ],
+    "id": "697cd31e600d16b34218b493",
+    "created_date": "2026-01-30T15:49:50.346000",
+    "updated_date": "2026-03-20T21:52:28.810000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 319800,
+    "payment_date": "2026-01-30",
+    "payment_type": "avance",
+    "description": "Pago de $319.800",
+    "delivery_ids": [],
+    "delivery_payments": [
+      {
+        "delivery_id": "6972847b339dc064da78aedc",
+        "amount": 319800
+      }
+    ],
+    "id": "697cd2a69881cf2f606a95db",
+    "created_date": "2026-01-30T15:47:50.499000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 719800,
+    "payment_date": "2026-01-30",
+    "payment_type": "avance",
+    "description": "Pago de $719.800",
+    "delivery_ids": [],
+    "delivery_payments": [
+      {
+        "delivery_id": "697cb4e1e85c4b7de3fd88a2",
+        "amount": 719800
+      }
+    ],
+    "id": "697cd299338546282910198a",
+    "created_date": "2026-01-30T15:47:37.302000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1000366163",
+    "amount": 507000,
+    "payment_date": "2026-02-02",
+    "payment_type": "avance",
+    "description": "Pago de $507.000",
+    "delivery_ids": [],
+    "delivery_payments": [
+      {
+        "delivery_id": "697cb4332d7df703c5331e3d",
+        "amount": 72000
+      },
+      {
+        "delivery_id": "69728372341b1a70536d7293",
+        "amount": 240000
+      },
+      {
+        "delivery_id": "69664197573a0841ad77cd98",
+        "amount": 97500
+      },
+      {
+        "delivery_id": "693aedb4cbcaa0a8cb16440d",
+        "amount": 97500
+      }
+    ],
+    "id": "697cd22fab9d989538ffaac4",
+    "created_date": "2026-01-30T15:45:51.732000",
+    "updated_date": "2026-01-30T15:45:51.732000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "40376217",
+    "amount": 518900,
+    "payment_date": "2026-01-24",
+    "payment_type": "avance",
+    "description": "Pago de $518.900",
+    "delivery_ids": [],
+    "delivery_payments": [
+      {
+        "delivery_id": "6972835fe8e8b2a565341c3a",
+        "amount": 32000
+      },
+      {
+        "delivery_id": "69728352f028f70282c7df35",
+        "amount": 101400
+      },
+      {
+        "delivery_id": "6966417ce42dfcfa41f718d1",
+        "amount": 48000
+      },
+      {
+        "delivery_id": "6958f2dc6a98aa5913cd860e",
+        "amount": 80000
+      },
+      {
+        "delivery_id": "69491ba26861ac51e2096051",
+        "amount": 128000
+      },
+      {
+        "delivery_id": "694003f2948822b22ef2f7f1",
+        "amount": 32000
+      },
+      {
+        "delivery_id": "694003db09a385864fed22b8",
+        "amount": 97500
+      }
+    ],
+    "id": "69729665064fd41dc8b2d66e",
+    "created_date": "2026-01-22T21:28:05.817000",
+    "updated_date": "2026-01-22T21:28:05.817000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "010",
+    "amount": 1068400,
+    "payment_date": "2026-01-24",
+    "payment_type": "avance",
+    "description": "Pago de $1.068.400",
+    "delivery_ids": [],
+    "delivery_payments": [
+      {
+        "delivery_id": "697283165a2f2d4a3240c8a1",
+        "amount": 218400
+      },
+      {
+        "delivery_id": "6966416014a04bf9cc90bfc2",
+        "amount": 128000
+      },
+      {
+        "delivery_id": "6958f2b3247574dca5e29f02",
+        "amount": 128000
+      },
+      {
+        "delivery_id": "694003467ef44e17b446ab42",
+        "amount": 195000
+      },
+      {
+        "delivery_id": "693aec89d2dba45f74abc32f",
+        "amount": 195000
+      },
+      {
+        "delivery_id": "693148aadc11750ffbb271f8",
+        "amount": 204000
+      }
+    ],
+    "id": "697295c00a8aa8c2f0665122",
+    "created_date": "2026-01-22T21:25:20.014000",
+    "updated_date": "2026-03-20T21:52:30.863000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1599900,
+    "payment_date": "2026-01-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "69664111beac3d281c38e234",
+      "696640ffecaa212a3917eeee",
+      "696640ef19c08cbcf66f1d6b",
+      "6958f23a9eede9deeee9ec7c"
+    ],
+    "id": "696649f73b200d0d2e53794a",
+    "created_date": "2026-01-13T13:34:47.317000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "016",
+    "amount": 546200,
+    "payment_date": "2026-01-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "696641cfccb63759098d2414",
+      "696641bce150a492e25b16d9",
+      "69491d60471950d26db5f1ab",
+      "69491d4dc305deb07cac8592",
+      "6940043ff820222b726f3e70"
+    ],
+    "id": "696649eb20c05b89c96458fd",
+    "created_date": "2026-01-13T13:34:35.892000",
+    "updated_date": "2026-03-20T21:52:45.635000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "006",
+    "amount": 1735900,
+    "payment_date": "2026-01-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 6 entregas.",
+    "delivery_ids": [
+      "69664150d29ddc9d2fd6fb30",
+      "6958f26287898e4cb0c79181",
+      "6958f253bc6e7e5022dc8b94",
+      "694919e3258b770530f96695",
+      "694003103305c4b9d4efd8dd",
+      "694003048548910da5d144d7"
+    ],
+    "id": "696649c6758210ac24b37620",
+    "created_date": "2026-01-13T13:33:58.554000",
+    "updated_date": "2026-03-20T21:52:21.971000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 655600,
+    "payment_date": "2026-01-17",
+    "payment_type": "avance",
+    "description": "Pago por 9 entregas seleccionadas.",
+    "delivery_ids": [],
+    "id": "696649a991830e67cfd75578",
+    "created_date": "2026-01-13T13:33:29.632000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "011",
+    "amount": 1098900,
+    "payment_date": "2026-01-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 7 entregas.",
+    "delivery_ids": [
+      "6966420208b8a56f4a1b8ce8",
+      "696641e7a95092f5096fab1b",
+      "6958f2fbd838b25d1d042b22",
+      "69491d7b23c089bfc288f8e0",
+      "694004761f822dc08397057c",
+      "693aee1686b5adf8e4edf035",
+      "693aee0a6786678d948277a0"
+    ],
+    "id": "6966498ef8c58c10514c5042",
+    "created_date": "2026-01-13T13:33:02.801000",
+    "updated_date": "2026-03-20T21:52:25.203000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "46672904",
+    "amount": 480000,
+    "payment_date": "2026-01-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 1 entregas.",
+    "delivery_ids": [
+      "69664250fef82a926399e4ca"
+    ],
+    "id": "696649843b7f622337f2f36a",
+    "created_date": "2026-01-13T13:32:52.242000",
+    "updated_date": "2026-01-13T13:32:52.242000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "023",
+    "amount": 2394600,
+    "payment_date": "2026-01-09",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 6 entregas.",
+    "delivery_ids": [
+      "6966427b845d653983be5e95",
+      "6966426a9ad98bdda6c328b1",
+      "6958f3ea1e80010101cec9d9",
+      "6958f3b18540bf099ed8958f",
+      "69491e3f0d892dff10b80649",
+      "6940059de2cbd897a4d55db6"
+    ],
+    "id": "69664681ce3013890f263a43",
+    "created_date": "2026-01-13T13:20:01.675000",
+    "updated_date": "2026-03-20T21:52:50.786000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "013",
+    "amount": 782000,
+    "payment_date": "2026-01-03",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 10 entregas.",
+    "delivery_ids": [
+      "69491da35588ea062712dad0",
+      "69491d94ae6e1f210797c102",
+      "69400497d4b86ca7787574be",
+      "6940048906b982823b85fc6a",
+      "693aee28f7066a5e97d0b6a9",
+      "693149f9958acc483fc94ac7",
+      "692497951347369be56b9e3e",
+      "69125722749eb60ece692516",
+      "6911f1106c031d40ccac0a57",
+      "6911f0fd746ccdbec02155bf"
+    ],
+    "id": "6958fa7167b33caff8239cce",
+    "created_date": "2026-01-03T11:16:01.365000",
+    "updated_date": "2026-03-20T21:52:37.711000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 1218400,
+    "payment_date": "2026-01-03",
+    "payment_type": "avance",
+    "description": "Pago por 7 entregas seleccionadas.",
+    "delivery_ids": [],
+    "id": "6958f8aed261d3706ca7389e",
+    "created_date": "2026-01-03T11:08:30.454000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "001",
+    "amount": 891000,
+    "payment_date": "2026-01-03",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "6958f42511ea9e57b960269d",
+      "69491e4f92a9f5d37a305f3a",
+      "694005b174cec1528497ec9e",
+      "693aef2773324a918d2c1cfa",
+      "693aeef5221790df35d7804d"
+    ],
+    "id": "6958f731a30f1e68c85bc9da",
+    "created_date": "2026-01-03T11:02:09.902000",
+    "updated_date": "2026-01-03T11:02:09.902000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "003",
+    "amount": 3047500,
+    "payment_date": "2025-12-22",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 21 entregas.",
+    "delivery_ids": [
+      "69491e121af513a50c95770f",
+      "6940058d51fa06c84cc17573",
+      "69400572f764e7b9c3ac2663",
+      "693aeed339be09e67a720993",
+      "693aeec8e22fb310ee3aafb2",
+      "693aeebb3aae2d9ab15ecc79",
+      "69314b10cb65e7d1bbeeed3e",
+      "69314aea822a94cdab179fba",
+      "69286b5b3dbed7d91dea2b05",
+      "692498962ead2853ffe35f85",
+      "69249885e4eb82a7ffcaa21e",
+      "6911f1bac0424d1a76e42c05",
+      "6904d4ca7a8faf96d3070e63",
+      "6904d4b97bacf4b56a0a3a2c",
+      "6904d4a731bbf2d55b6d6ea7",
+      "68f7586a7e56faff550ddcd3",
+      "68f75858b9532bd35d72fbbb",
+      "68f349be478db28c6a6760b6",
+      "68e580661b12f60d5f219a10",
+      "68d1c529d096901559c7be1d",
+      "68cd7139678e5c97749455e3"
+    ],
+    "id": "69492199bc5dd1d4b2500fed",
+    "created_date": "2025-12-22T10:46:49.514000",
+    "updated_date": "2026-03-20T21:52:39.986000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1006515896",
+    "amount": 811600,
+    "payment_date": "2025-12-26",
+    "payment_type": "avance",
+    "description": "Pago por 3 entregas seleccionadas.",
+    "delivery_ids": [],
+    "id": "6949211026cfa9de9b2e8be2",
+    "created_date": "2025-12-22T10:44:32.093000",
+    "updated_date": "2025-12-22T10:44:32.093000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "019",
+    "amount": 1150000,
+    "payment_date": "2025-12-26",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 3 entregas.",
+    "delivery_ids": [
+      "69491dbb12ba2bd12510361c",
+      "694004bb7ab9ffbef66c5b81",
+      "693aee545f62bf0f999dbfb1"
+    ],
+    "id": "694920c82005d8d541918fb0",
+    "created_date": "2025-12-22T10:43:20.567000",
+    "updated_date": "2026-03-20T21:52:27.248000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "022",
+    "amount": 390000,
+    "payment_date": "2025-12-26",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 2 entregas.",
+    "delivery_ids": [
+      "69491deb535218db4fcf04b1",
+      "6940051ad65361d8854b8ea0"
+    ],
+    "id": "69492097cce7a02c6ce8c643",
+    "created_date": "2025-12-22T10:42:31.970000",
+    "updated_date": "2026-03-20T21:52:59.842000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1715500,
+    "payment_date": "2025-12-26",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "694919c48ba76ff28fc0dc9f",
+      "694919b0e1bd3edc3aafb5ac",
+      "694919a13969c6c759a21d83",
+      "694002f0f759aea15a65d6bc"
+    ],
+    "id": "69492068bc7a7cdec982baa9",
+    "created_date": "2025-12-22T10:41:44.613000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "007",
+    "amount": 1697700,
+    "payment_date": "2025-12-26",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 14 entregas.",
+    "delivery_ids": [
+      "694919f52fd2345a2fba7b99",
+      "69400336e1a6f5b123ffc62f",
+      "6940032a60ee02631f045e36",
+      "693aec4a28d8fe7ccc7cb8da",
+      "693aec383171747420803ac0",
+      "69314895f4e73e7514416459",
+      "693148768305e35fbc127a9b",
+      "6924294df24d38dbb3f7c374",
+      "69242930e7a9a9728f2666dc",
+      "6912550905cfba1bd756d825",
+      "691254fb7c505b3a7f54f384",
+      "691254e91b72e276dedcce4f",
+      "6911efde1cbc0895b02463b4",
+      "6904d12e766535cdc748f1ad"
+    ],
+    "id": "694920281b8038452c8cb558",
+    "created_date": "2025-12-22T10:40:40.012000",
+    "updated_date": "2026-03-20T21:52:47.627000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "46672904",
+    "amount": 382500,
+    "payment_date": "2025-12-26",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 1 entregas.",
+    "delivery_ids": [
+      "69491e26083957ba1237bfb6"
+    ],
+    "id": "69491fe9c3729043b3268043",
+    "created_date": "2025-12-22T10:39:37.969000",
+    "updated_date": "2025-12-22T10:39:37.969000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "018",
+    "amount": 831400,
+    "payment_date": "2025-12-26",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 10 entregas.",
+    "delivery_ids": [
+      "69491bc79579c333083e99de",
+      "69400419350e6290cfeb5988",
+      "69400405b3f3639d4780e65b",
+      "693aed7d72563341b4f30168",
+      "693aed1d314f207c6214cf35",
+      "693148eadf47e7ed49064aa5",
+      "693148d90cdd293287d6792a",
+      "69286a61acb4abd0f059f51f",
+      "69242a79965275e6e12cc53a",
+      "69242a5afbe26890ae55af6f"
+    ],
+    "id": "69491fb70ff7c8f72b845c7f",
+    "created_date": "2025-12-22T10:38:47.755000",
+    "updated_date": "2026-03-20T21:52:34.736000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 1639000,
+    "payment_date": "2025-12-20",
+    "payment_type": "avance",
+    "description": "Pago por 4 entregas seleccionadas.",
+    "delivery_ids": [],
+    "id": "69400ac3dbf204036118e471",
+    "created_date": "2025-12-15T13:18:59.766000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "020",
+    "amount": 2183000,
+    "payment_date": "2025-12-20",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 8 entregas.",
+    "delivery_ids": [
+      "694004fce03f3e0071549c95",
+      "694004e6f87e16180f675c01",
+      "693aee7121dced94ca2d1542",
+      "69314a35f6a8365e41adab2d",
+      "69314a21dd720605a5669017",
+      "69286b1f0c160590a190da13",
+      "692497f81347369be56b9ec0",
+      "692497edc5b3fe0b44d93ac8"
+    ],
+    "id": "69400a924dac6458c7d54e7a",
+    "created_date": "2025-12-15T13:18:10.860000",
+    "updated_date": "2026-03-20T21:52:28.810000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "014",
+    "amount": 2048500,
+    "payment_date": "2025-12-20",
+    "payment_type": "avance",
+    "description": "Pago por 6 entregas seleccionadas.",
+    "delivery_ids": [],
+    "id": "69400a6286c67b810cd3b575",
+    "created_date": "2025-12-15T13:17:22.787000",
+    "updated_date": "2026-03-21T00:05:54.475000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1768000,
+    "payment_date": "2025-12-12",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 3 entregas.",
+    "delivery_ids": [
+      "693aeb8e0a82103667c083ae",
+      "693aeb60462cd73cd021ae67",
+      "6931481996e193f126e32306"
+    ],
+    "id": "693afe666f58d11e6d9a821a",
+    "created_date": "2025-12-11T17:24:54.717000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "40376217",
+    "amount": 645600,
+    "payment_date": "2025-12-11",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 10 entregas.",
+    "delivery_ids": [
+      "693aed054f85a3ded2e625dc",
+      "693aecf81987406201c5f422",
+      "693148c9d250bf3b89822ebf",
+      "69286a51c47cf23c9486695b",
+      "69286a452d8bdce2696743de",
+      "6912555816b84b8cffbc6a1f",
+      "6912553372cd6c641af59ebc",
+      "6911f00d3449476887a4dcc5",
+      "6904d1839d03d69d587b72fb",
+      "6904d16e6865a1514060a3bf"
+    ],
+    "id": "693afdc5a096c1a472cfabf2",
+    "created_date": "2025-12-11T17:22:13.675000",
+    "updated_date": "2025-12-11T17:22:13.675000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1006515896",
+    "amount": 1334000,
+    "payment_date": "2025-12-12",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "693aedca0791d64224d83bb3",
+      "693149553597a9977e59e6af",
+      "69286a9013e98c5d145f13d4",
+      "69242b02aeb75f2f5c35e629"
+    ],
+    "id": "693afb7b221790df35d791a1",
+    "created_date": "2025-12-11T17:12:27.106000",
+    "updated_date": "2025-12-11T17:15:12.267000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "016",
+    "amount": 527000,
+    "payment_date": "2025-12-12",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "693aede2ca425ee35815747f",
+      "6931497bf3b9162084f5a5ac",
+      "693149666253d13a5f692efb",
+      "69286ac7483c21aa27554cc0",
+      "69286ab9005f4163f46feea0"
+    ],
+    "id": "693afb4a61148d8324b24f70",
+    "created_date": "2025-12-11T17:11:38.746000",
+    "updated_date": "2026-03-20T21:52:45.635000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "006",
+    "amount": 1669000,
+    "payment_date": "2025-12-12",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 7 entregas.",
+    "delivery_ids": [
+      "693aec143278781758e82072",
+      "693aebf05bb8e856a394db2c",
+      "693148541fcbba62a04dd72b",
+      "6931484496beb9b17cc3501c",
+      "69286a10e8b19b17f9244076",
+      "69242919ee1900821dcf8000",
+      "69242905a09f69d26d6f0a3e"
+    ],
+    "id": "693afb0aef978d7693794b84",
+    "created_date": "2025-12-11T17:10:34.083000",
+    "updated_date": "2026-03-20T21:52:21.971000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "023",
+    "amount": 1767000,
+    "payment_date": "2025-12-11",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "693aef4813ebe23775f195e4",
+      "693aef3cc1908cb94d074d3a",
+      "69314d132907ce1cdd3ec397",
+      "69286b7eb853316084e24a99"
+    ],
+    "id": "693afaa2306f9902e5e3db09",
+    "created_date": "2025-12-11T17:08:50.420000",
+    "updated_date": "2026-03-20T21:52:50.786000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "022",
+    "amount": 1233600,
+    "payment_date": "2025-12-06",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "69125796909f882d2fb388f8",
+      "691257a61b72e276dedcd063",
+      "692498193afbf1c5a5b88d03",
+      "69286b2e74eeefe23ceca2d8",
+      "69314a4bcf4a3df3af77f3d3"
+    ],
+    "id": "693152d01f807d6e08c9c005",
+    "created_date": "2025-12-04T09:22:24.601000",
+    "updated_date": "2026-03-20T21:52:59.842000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 1848500,
+    "payment_date": "2025-12-06",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 3 entregas.",
+    "delivery_ids": [
+      "69286b4791648696ea82357d",
+      "69314a66e831ee026eaae502",
+      "69314aa30ca294a0fc36be77"
+    ],
+    "id": "693152a71939bbd3b8ffc5b0",
+    "created_date": "2025-12-04T09:21:43.242000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "019",
+    "amount": 1002800,
+    "payment_date": "2025-12-06",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "692497d3be313f07a4cab4cd",
+      "69286b047174940535fb3563",
+      "69286b112735eb7a4d983991",
+      "69314a11e0b82cebad3eacae"
+    ],
+    "id": "6931526acf4a3df3af7804e6",
+    "created_date": "2025-12-04T09:20:42.220000",
+    "updated_date": "2026-03-20T21:52:27.248000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "011",
+    "amount": 1707700,
+    "payment_date": "2025-12-04",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 9 entregas.",
+    "delivery_ids": [
+      "6904d3b9cc1e7c26318157df",
+      "690541a93e5eea562670535e",
+      "6911f0e6115cec67e20e3c33",
+      "691256bf8481339c04d1e690",
+      "691256d3e4be4eabdf51667f",
+      "6924977a367b57b9c4758d3f",
+      "69286af0eaa85013deb3d939",
+      "693149d19d28a5212bd29c0b",
+      "693149e69d0aa33ecaf0314b"
+    ],
+    "id": "693152419cf386f059b21622",
+    "created_date": "2025-12-04T09:20:01.129000",
+    "updated_date": "2026-03-20T21:52:25.203000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "001",
+    "amount": 809700,
+    "payment_date": "2025-12-06",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 7 entregas.",
+    "delivery_ids": [
+      "6912491e2f05db0386a9df83",
+      "69124930e20b8bafc4cb407d",
+      "691257ea53c4b54092e2e592",
+      "691257f94360cc0f406d4aec",
+      "692499cb395fb03e4cf61bda",
+      "69286b6cb853316084e24a91",
+      "69314bb26247526c60e5fb65"
+    ],
+    "id": "693151e8b8381124866a8259",
+    "created_date": "2025-12-04T09:18:32.026000",
+    "updated_date": "2025-12-04T09:18:32.026000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1000366163",
+    "amount": 989000,
+    "payment_date": "2025-12-06",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 10 entregas.",
+    "delivery_ids": [
+      "68e57f2aac51a6b10b832363",
+      "68f7559c3098e8021be1df2d",
+      "68f755b2188367c19d827bcd",
+      "68f755c0d22268a394b8d502",
+      "6904d30631eac4fdbcad8c46",
+      "6912556fae611f3b0c2efe7b",
+      "69286a766cdb8e054a0a96a0",
+      "6931490e0d63bf1bda0f79ff",
+      "69314920c70c6367c9bd2640",
+      "693149333ca98c0033c4e30d"
+    ],
+    "id": "69315182dd720605a566a2ba",
+    "created_date": "2025-12-04T09:16:50.517000",
+    "updated_date": "2025-12-04T09:16:50.517000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "46672904",
+    "amount": 459500,
+    "payment_date": "2025-12-06",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 2 entregas.",
+    "delivery_ids": [
+      "69314b62f84ad6589e857f05",
+      "69314b8b281315ee8825f799"
+    ],
+    "id": "69315105d946e08d1b415c09",
+    "created_date": "2025-12-04T09:14:45.147000",
+    "updated_date": "2025-12-04T09:14:45.147000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1742100,
+    "payment_date": "2025-11-22",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "692428b27b41942b32225b47",
+      "692428c2abcfeb32a16f872f",
+      "692869de96023b196f4ba031",
+      "692869f07200dce492bed8d9"
+    ],
+    "id": "69286f9793a7bb87fdffdf4b",
+    "created_date": "2025-11-27T15:34:47.913000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "010",
+    "amount": 1075200,
+    "payment_date": "2025-11-29",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "6904d156ba2c6f768a3d5733",
+      "6911eff606ddef30de90fc6c",
+      "6912552093301c770a439465",
+      "6924299a47ca0e28cfeb89fa",
+      "69286a26de859285cd61f537"
+    ],
+    "id": "69286f4b918a822d624bb343",
+    "created_date": "2025-11-27T15:33:31.833000",
+    "updated_date": "2026-03-20T21:52:30.863000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1006515896",
+    "amount": 30000,
+    "payment_date": "2025-11-27",
+    "payment_type": "avance",
+    "description": "Avance de pago.",
+    "delivery_ids": [],
+    "id": "69286aa017ec5318bf52932a",
+    "created_date": "2025-11-27T15:13:36.778000",
+    "updated_date": "2025-11-27T15:13:36.778000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1006515896",
+    "amount": 30000,
+    "payment_date": "2025-11-24",
+    "payment_type": "avance",
+    "description": "Avance de pago.",
+    "delivery_ids": [],
+    "id": "6924a864bb7294fdd3eb5978",
+    "created_date": "2025-11-24T18:48:04.947000",
+    "updated_date": "2025-11-24T18:48:04.947000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 1569400,
+    "payment_date": "2025-11-24",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "691257b9b437d27bc12cfee2",
+      "691257d5daace8025fe469ff",
+      "69249836dfb530a853b34783",
+      "6924984b32d7246a760245a4"
+    ],
+    "id": "6924a6389c458eb228d36daf",
+    "created_date": "2025-11-24T18:38:48.475000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "46672904",
+    "amount": 583500,
+    "payment_date": "2025-11-24",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 2 entregas.",
+    "delivery_ids": [
+      "692499a1d5ce8ca0a699fdea",
+      "692499b8f9697274a06efbf8"
+    ],
+    "id": "6924a626bba7b869d11d7a89",
+    "created_date": "2025-11-24T18:38:30.847000",
+    "updated_date": "2025-11-24T18:38:30.847000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "016",
+    "amount": 385800,
+    "payment_date": "2025-11-24",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "6911f09cc032fb803d65cf67",
+      "6911f0b0a128a67d927ee08b",
+      "6912563b976d164dc3dc7f36",
+      "69242b6996a81766df35626c",
+      "69242b933d768da8f2370a43"
+    ],
+    "id": "6924a61069071f18ca5e42ce",
+    "created_date": "2025-11-24T18:38:08.072000",
+    "updated_date": "2026-03-20T21:52:45.635000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1777400,
+    "payment_date": "2025-11-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "6911ef98cd3d89ca4c81e185",
+      "6911efad155ae14aa2a77497",
+      "69125495dd5eb2cde9b79f12",
+      "691254af53c4b54092e2e073"
+    ],
+    "id": "691ae92b70db4c192a15cb17",
+    "created_date": "2025-11-17T09:21:47.236000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "006",
+    "amount": 1919000,
+    "payment_date": "2025-11-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 9 entregas.",
+    "delivery_ids": [
+      "68f3484816848ac97a694f8e",
+      "68f3487783a604fd76208f69",
+      "68f754a4ebfd26aa6bcbfa96",
+      "68f754bd0366dee0f2b0009d",
+      "6904d1006eb8c50a3f85ceda",
+      "6904d117e13d4d2669123066",
+      "6911efc772af74af7f67d0cc",
+      "691254bf39afeb1e4dc17c64",
+      "691254d6de56ba0b0407a0d0"
+    ],
+    "id": "691ae8f7cd361ba3fd72c778",
+    "created_date": "2025-11-17T09:20:55.539000",
+    "updated_date": "2026-03-20T21:52:21.971000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "014",
+    "amount": 1493100,
+    "payment_date": "2025-11-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 6 entregas.",
+    "delivery_ids": [
+      "68f75694ae9b208f3adf77ad",
+      "68f756a536475f3f53c4725c",
+      "6904d3800752476b34915210",
+      "6911f0d5e593429bd3e67452",
+      "6912565edaace8025fe4664a",
+      "6912566c638d5d1a01ee6277"
+    ],
+    "id": "691ae8bca24379d9b290759f",
+    "created_date": "2025-11-17T09:19:56.078000",
+    "updated_date": "2026-03-21T00:05:54.475000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "019",
+    "amount": 1020100,
+    "payment_date": "2025-11-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 6 entregas.",
+    "delivery_ids": [
+      "6904d3d600dea1be91bad62e",
+      "6911f13e9a844b534914c7a0",
+      "6911f1507719a7322954d2d6",
+      "6912573716b84b8cffbc701b",
+      "691257485bf4a2549259618d",
+      "69125758eace01fa292d3e60"
+    ],
+    "id": "691ae815b00ffa843b4b70bb",
+    "created_date": "2025-11-17T09:17:09.092000",
+    "updated_date": "2026-03-20T21:52:27.248000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "020",
+    "amount": 1518000,
+    "payment_date": "2025-11-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 7 entregas.",
+    "delivery_ids": [
+      "68f757dd2bc4b22cd46a7600",
+      "68f757ec3d48274a951e455d",
+      "6904d3e68542c449493592f7",
+      "6904d3f2c1f2f33094ed58a6",
+      "6911f1641cbc0895b02464c5",
+      "69125768ac373db02e8f55c8",
+      "69125777b1cb2c401f4a7e11"
+    ],
+    "id": "691ae80865b4d87f1bf0a0ca",
+    "created_date": "2025-11-17T09:16:56.277000",
+    "updated_date": "2026-03-20T21:52:28.810000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1006515896",
+    "amount": 1621200,
+    "payment_date": "2025-11-17",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "6904d316ebfb365f882dccd3",
+      "6911f0517719a7322954cdd7",
+      "691256078b39641ea2c7dbde",
+      "69125619b437d27bc12cfa90"
+    ],
+    "id": "691ae7fbd006dcdaa2ac3e9b",
+    "created_date": "2025-11-17T09:16:43.325000",
+    "updated_date": "2025-11-17T09:16:43.325000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "018",
+    "amount": 763400,
+    "payment_date": "2025-11-10",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 6 entregas.",
+    "delivery_ids": [
+      "68e57f109c1e41c661107a4c",
+      "68f348e3cfecb7ae20ada808",
+      "68f7558454025104d4155ab2",
+      "6904d2c2304f90ead6ef0613",
+      "6904d2d72126d6b2fade0fe2",
+      "6911f02e8019bda0b1579919"
+    ],
+    "id": "69125e62f64a912332476e19",
+    "created_date": "2025-11-10T21:51:30.188000",
+    "updated_date": "2026-03-20T21:52:34.736000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 1374600,
+    "payment_date": "2025-11-10",
+    "payment_type": "avance",
+    "description": "Pago por 3 entregas seleccionadas.",
+    "delivery_ids": [
+      "6904d08b53cee96aba70cfe7",
+      "6904d0ce3d8e825bd0a08749",
+      "6911f1969b321ddc0e874ee2"
+    ],
+    "id": "69125cd5e4be4eabdf516e35",
+    "created_date": "2025-11-10T21:44:53.895000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "022",
+    "amount": 1302300,
+    "payment_date": "2025-11-10",
+    "payment_type": "avance",
+    "description": "Pago por 5 entregas seleccionadas.",
+    "delivery_ids": [
+      "68e58029f0fd7acb5d562d73",
+      "68f349aaf25636a3fff6b13d",
+      "68f75819ad184313bab87f58",
+      "6904d456a4ead35c4f794cdd",
+      "6911f183e9f3a7d23b295ac4"
+    ],
+    "id": "69125bddad74f3d0df201d23",
+    "created_date": "2025-11-10T21:40:45.763000",
+    "updated_date": "2026-03-20T21:52:59.842000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "014",
+    "amount": 60000,
+    "payment_date": "2025-11-07",
+    "payment_type": "avance",
+    "description": "Descuento por 2 chaquetas",
+    "delivery_ids": [],
+    "id": "691256a05cc3bb2eb2e1ba1d",
+    "created_date": "2025-11-10T21:18:24.535000",
+    "updated_date": "2026-03-21T00:05:54.475000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "001",
+    "amount": 708600,
+    "payment_date": "2025-10-31",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "68e5807b958b744d6c545c9d",
+      "68f34bb119860315590ff067",
+      "68f7588334ae70e5d27bf0f7",
+      "6904d46c5bc15c1074b8e0e3",
+      "6904d4959e0a6194aa463829"
+    ],
+    "id": "69054b9d050c299009836212",
+    "created_date": "2025-10-31T23:51:57.145000",
+    "updated_date": "2025-10-31T23:51:57.145000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "013",
+    "amount": 691000,
+    "payment_date": "2025-10-31",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "68d1c3aab62798a998e510a1",
+      "68d9824dc0162c1df8c2dc88",
+      "68e57fe2a2502ca9f801fc0e",
+      "68f3495b9b8db9977628e788",
+      "68f756e6f9047c8ba999527e"
+    ],
+    "id": "69054b616a7b98fee9be7187",
+    "created_date": "2025-10-31T23:50:57.698000",
+    "updated_date": "2026-03-20T21:52:37.711000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1443700,
+    "payment_date": "2025-10-31",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "68f75318f9047c8ba9991cc7",
+      "68f75476ca6db0d9e6732740",
+      "6904d056c991f89cfe7ffb5f",
+      "6904d06c30c3da53c94fc93f"
+    ],
+    "id": "69054b028a4849468cd13e5a",
+    "created_date": "2025-10-31T23:49:22.030000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "016",
+    "amount": 491900,
+    "payment_date": "2025-10-31",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "68f34933ab5d554fb8ee7a2c",
+      "68f34941baf004dcc7174cb9",
+      "68f7565636475f3f53c46fb9",
+      "6904d325d45892c70c99828f",
+      "6904d334edc9541458e85524"
+    ],
+    "id": "69054ad2fc23fcf0b55f6e76",
+    "created_date": "2025-10-31T23:48:34.074000",
+    "updated_date": "2026-03-20T21:52:45.635000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 30000,
+    "payment_date": "2025-10-24",
+    "payment_type": "avance",
+    "description": "Avance de pago.",
+    "delivery_ids": [],
+    "id": "6905410ad2fea110a5743bad",
+    "created_date": "2025-10-31T23:06:50.998000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "40376217",
+    "amount": 444500,
+    "payment_date": "2025-10-25",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "68d1c1cc07bd070f1fbbc758",
+      "68d981c9a017772381ff965a",
+      "68e57ed779c4ec1171517fb2",
+      "68f348cd367178e13e3fc877",
+      "68f7554a809be68f876e1ce2"
+    ],
+    "id": "68fceecee4a51b11b9fa6592",
+    "created_date": "2025-10-25T15:37:50.398000",
+    "updated_date": "2025-10-25T15:37:50.398000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 1333000,
+    "payment_date": "2025-10-25",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "68f34a4389e5176dc74d9e46",
+      "68f34a53ec3470718f0b83fb",
+      "68f34a6c367178e13e3fcfce",
+      "68f7584330d654584d11f9cd"
+    ],
+    "id": "68f9fd921326f72cc4a325ec",
+    "created_date": "2025-10-23T10:04:02.357000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "010",
+    "amount": 1000000,
+    "payment_date": "2025-10-25",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "68d981b7e96c281623f217ff",
+      "68e57ec26f745b1876f4b515",
+      "68f348ae138fe26a44b38686",
+      "68f75535e1785b36ed57a152"
+    ],
+    "id": "68f9fd7f1e9d7ba43ffd866a",
+    "created_date": "2025-10-23T10:03:43.768000",
+    "updated_date": "2026-03-20T21:52:30.863000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "011",
+    "amount": 1192300,
+    "payment_date": "2025-10-25",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 6 entregas.",
+    "delivery_ids": [
+      "68d1c3761e0480511e94e793",
+      "68d9823aa75077e98aff9d6d",
+      "68e57fb812e038f52697a54f",
+      "68e57fc8d836903cae2302ff",
+      "68f756c279496df3a590a332",
+      "68f756d16541838d7a507e7c"
+    ],
+    "id": "68f9fd6c2282d19038540e69",
+    "created_date": "2025-10-23T10:03:24.154000",
+    "updated_date": "2026-03-20T21:52:25.203000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "007",
+    "amount": 1102300,
+    "payment_date": "2025-10-25",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 11 entregas.",
+    "delivery_ids": [
+      "68c0885f639ac3756409820d",
+      "68cd6d4578c9f8d7950f1114",
+      "68d1c12e555e9d53096b0e61",
+      "68d1c14007bd070f1fbbc2ce",
+      "68d981a540b96adb9cd383c5",
+      "68e57e93d872112a7f86a6ee",
+      "68e57eae95971986072b9020",
+      "68f3488b89e5176dc74d920a",
+      "68f3489cf25636a3fff6ae77",
+      "68f754e0f598814d1db0dbd2",
+      "68f754ff0366dee0f2b002a2"
+    ],
+    "id": "68f9fd594ae917596657160e",
+    "created_date": "2025-10-23T10:03:05.114000",
+    "updated_date": "2026-03-20T21:52:47.627000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "019",
+    "amount": 759000,
+    "payment_date": "2025-10-25",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "68e57ff94382cedf2b0814d6",
+      "68f34972baf004dcc7174df1",
+      "68f75710542973f60764f9c8",
+      "68f75758eacc695938b09832",
+      "68f7576697aab2697222e145"
+    ],
+    "id": "68f9fd4c1e9d7ba43ffd85e0",
+    "created_date": "2025-10-23T10:02:52.571000",
+    "updated_date": "2026-03-20T21:52:27.248000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1006515896",
+    "amount": 1264500,
+    "payment_date": "2025-10-25",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "68f348fd4ff4ae0962464692",
+      "68f34908f2cf4b2c8a329a0e",
+      "68f34913d915995680980be1",
+      "68f755e00fe199373ca72add",
+      "68f755f5dd4ef7e865703a99"
+    ],
+    "id": "68f9fd1653db749579680723",
+    "created_date": "2025-10-23T10:01:58.331000",
+    "updated_date": "2025-10-23T10:01:58.331000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1033774462",
+    "amount": 107000,
+    "payment_date": "2025-10-18",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 2 entregas.",
+    "delivery_ids": [
+      "68f34a8189e5176dc74d9fc1",
+      "68f34a8ecfecb7ae20adb099"
+    ],
+    "id": "68f3562b83a604fd7620b09e",
+    "created_date": "2025-10-18T08:56:11.566000",
+    "updated_date": "2025-10-18T08:56:11.566000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "002",
+    "amount": 142500,
+    "payment_date": "2025-10-18",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 2 entregas.",
+    "delivery_ids": [
+      "68f34b97e3e44ae94b444306",
+      "68f34ca9a3af2a56e3e4f94b"
+    ],
+    "id": "68f35621e5545fd925e109c9",
+    "created_date": "2025-10-18T08:56:01.769000",
+    "updated_date": "2025-10-18T08:56:01.769000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1877000,
+    "payment_date": "2025-10-18",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "68e57e219ee10203a2c19dc4",
+      "68e57e3ccda87d067077bb7d",
+      "68f3475935cde2d444678242",
+      "68f3477fdd51b2598aff5c9f",
+      "68f347add7a84372451d5c43"
+    ],
+    "id": "68f3552a4333a44289263b53",
+    "created_date": "2025-10-18T08:51:54.641000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1877000,
+    "payment_date": "2025-10-18",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "68e57e219ee10203a2c19dc4",
+      "68e57e3ccda87d067077bb7d",
+      "68f3475935cde2d444678242",
+      "68f3477fdd51b2598aff5c9f",
+      "68f347add7a84372451d5c43"
+    ],
+    "id": "68f35529efe0bfb64d1096e5",
+    "created_date": "2025-10-18T08:51:53.426000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "46672904",
+    "amount": 465000,
+    "payment_date": "2025-10-18",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 1 entregas.",
+    "delivery_ids": [
+      "68f349d5d915995680980ef6"
+    ],
+    "id": "68f35459baf004dcc717912b",
+    "created_date": "2025-10-18T08:48:25.729000",
+    "updated_date": "2025-10-18T08:48:25.729000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "020",
+    "amount": 1967700,
+    "payment_date": "2025-10-18",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 8 entregas.",
+    "delivery_ids": [
+      "68cd6fadc4f38f0249061903",
+      "68cd6fc5ac003454d8b90dc7",
+      "68d1c486045cf1c58eb0a8e6",
+      "68d982947bb1fbe61567b9fc",
+      "68e5800899e45e8da804aa9f",
+      "68e58017afebcdc523c6ec6e",
+      "68f349863d175c3bde27d1f8",
+      "68f349993514810e04bc2aa2"
+    ],
+    "id": "68f353ecb5a83f8ff6124dc1",
+    "created_date": "2025-10-18T08:46:36.746000",
+    "updated_date": "2026-03-20T21:52:28.810000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "020",
+    "amount": 1967700,
+    "payment_date": "2025-10-18",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 8 entregas.",
+    "delivery_ids": [
+      "68cd6fadc4f38f0249061903",
+      "68cd6fc5ac003454d8b90dc7",
+      "68d1c486045cf1c58eb0a8e6",
+      "68d982947bb1fbe61567b9fc",
+      "68e5800899e45e8da804aa9f",
+      "68e58017afebcdc523c6ec6e",
+      "68f349863d175c3bde27d1f8",
+      "68f349993514810e04bc2aa2"
+    ],
+    "id": "68f353eba7f2328ac810468e",
+    "created_date": "2025-10-18T08:46:35.484000",
+    "updated_date": "2026-03-20T21:52:28.810000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1006515896",
+    "amount": 1312500,
+    "payment_date": "2025-10-10",
+    "payment_type": "avance",
+    "description": "Se pagan 1.222.500 en transferencia y se descuentan 90mil de 3 devoluciones.",
+    "delivery_ids": [
+      "68d981fbd803fe3b9e72d58b",
+      "68e57f3b958b744d6c5454f5"
+    ],
+    "id": "68e59ae501ae15f58fdac975",
+    "created_date": "2025-10-07T22:57:41.287000",
+    "updated_date": "2025-10-07T22:57:41.287000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "006",
+    "amount": 1082300,
+    "payment_date": "2025-10-10",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "68d1c0e98743e4956611a990",
+      "68d9818e225dd504f441db6b",
+      "68e57e4fcda87d067077bc2e",
+      "68e57e609f81028cc3b46577"
+    ],
+    "id": "68e598b39ba1c016e6761e32",
+    "created_date": "2025-10-07T22:48:19.236000",
+    "updated_date": "2026-03-20T21:52:21.971000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "016",
+    "amount": 484800,
+    "payment_date": "2025-10-10",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 5 entregas.",
+    "delivery_ids": [
+      "68cd6ea0b61c1d24f4d00259",
+      "68d1c2f2045cf1c58eaff6b4",
+      "68d1c3023be7f0d886397032",
+      "68d98210969cdfc27dc420fb",
+      "68e57f4ef0fd7acb5d56253f"
+    ],
+    "id": "68e5989e78a5dcab83dcbe52",
+    "created_date": "2025-10-07T22:47:58.234000",
+    "updated_date": "2026-03-20T21:52:45.635000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 1353000,
+    "payment_date": "2025-10-10",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 2 entregas.",
+    "delivery_ids": [
+      "68d982ff9f69d5833359acfe",
+      "68e58044278ba5dcc2f432b6"
+    ],
+    "id": "68e598794307465eff6f0820",
+    "created_date": "2025-10-07T22:47:21.688000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "014",
+    "amount": 786700,
+    "payment_date": "2025-10-10",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 4 entregas.",
+    "delivery_ids": [
+      "68c08253e62c0960115b4e32",
+      "68d1c33c6c6f71a9504b52fa",
+      "68d98222ec2d3d01b659b07f",
+      "68e57f5fdd943bf4be045d44"
+    ],
+    "id": "68e598234382cedf2b08fe14",
+    "created_date": "2025-10-07T22:45:55.397000",
+    "updated_date": "2026-03-21T00:05:54.475000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1033774462",
+    "amount": 601500,
+    "payment_date": "2025-10-08",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 3 entregas.",
+    "delivery_ids": [
+      "68d981506f162fba4c7871d2",
+      "68e57defa2502ca9f801f0cb",
+      "68e57e035dcb37ef037bbbfe"
+    ],
+    "id": "68e598055bf9176bf6d23dff",
+    "created_date": "2025-10-07T22:45:25.494000",
+    "updated_date": "2025-10-07T22:45:25.494000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "019",
+    "amount": 544700,
+    "payment_date": "2025-10-04",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 2 entregas.",
+    "delivery_ids": [
+      "68d1c3e0992c056c93487b9e",
+      "68d982807fa7012e6eddf932"
+    ],
+    "id": "68dea7ff99614f600960f773",
+    "created_date": "2025-10-02T16:27:43.665000",
+    "updated_date": "2026-03-20T21:52:27.248000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "018",
+    "amount": 102000,
+    "payment_date": "2025-10-04",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 1 entregas.",
+    "delivery_ids": [
+      "68d981da225dd504f441dd8e"
+    ],
+    "id": "68dea7bfcc559d3418d324e9",
+    "created_date": "2025-10-02T16:26:39.535000",
+    "updated_date": "2026-03-20T21:52:34.736000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1000366163",
+    "amount": 391700,
+    "payment_date": "2025-10-04",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 3 entregas.",
+    "delivery_ids": [
+      "68cd6e4101d8204c4f446414",
+      "68d1c25eeea92eb696e9a0e4",
+      "68d981eb9f69d5833359a4bf"
+    ],
+    "id": "68dea7acce9f4cce8191b3b6",
+    "created_date": "2025-10-02T16:26:20.925000",
+    "updated_date": "2025-10-02T16:26:20.925000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "022",
+    "amount": 581700,
+    "payment_date": "2025-10-04",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 3 entregas.",
+    "delivery_ids": [
+      "68cd70150f655a62ff5f5375",
+      "68d1c4b0f67831d88dc57a95",
+      "68d982c1bf5725b7685f6b3c"
+    ],
+    "id": "68dea7914fe0e498bdcb0662",
+    "created_date": "2025-10-02T16:25:53.643000",
+    "updated_date": "2026-03-20T21:52:59.842000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1726200,
+    "payment_date": "2025-10-02",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 2 entregas.",
+    "delivery_ids": [
+      "68d1c09b34a8d699ee3c863a",
+      "68d98166caef098e57c864b4"
+    ],
+    "id": "68dea760ada98db050d63666",
+    "created_date": "2025-10-02T16:25:04.720000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "003",
+    "amount": 333000,
+    "payment_date": "2025-09-29",
+    "payment_type": "avance",
+    "description": "Pago por 2 entregas seleccionadas.",
+    "delivery_ids": [
+      "68d1c538594d04a724f656a3",
+      "68d983126f162fba4c787c53"
+    ],
+    "id": "68dad8708c8ad12986a6a9d8",
+    "created_date": "2025-09-29T19:05:20.886000",
+    "updated_date": "2026-03-20T21:52:39.986000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "010",
+    "amount": 156000,
+    "payment_date": "2025-09-28",
+    "payment_type": "avance",
+    "description": "Pago por 1 entregas seleccionadas.",
+    "delivery_ids": [
+      "68cd6d7eb2f543ae4e2b5a51"
+    ],
+    "id": "68d98afbe3296028514aa5f4",
+    "created_date": "2025-09-28T19:22:35.197000",
+    "updated_date": "2026-03-20T21:52:30.863000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1006515896",
+    "amount": 623200,
+    "payment_date": "2025-09-28",
+    "payment_type": "avance",
+    "description": "Pago por 1 entregas seleccionadas.",
+    "delivery_ids": [
+      "68d1c27fa838208f6e30137e"
+    ],
+    "id": "68d98a939d51a784d51becae",
+    "created_date": "2025-09-28T19:20:51.852000",
+    "updated_date": "2025-09-28T19:20:51.852000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1033774462",
+    "amount": 418200,
+    "payment_date": "2025-09-28",
+    "payment_type": "avance",
+    "description": "Pago por 1 entregas seleccionadas.",
+    "delivery_ids": [
+      "68d1c016efecfbba6e3a4994"
+    ],
+    "id": "68d98a6d8dd236acf3fde017",
+    "created_date": "2025-09-28T19:20:13.446000",
+    "updated_date": "2025-09-28T19:20:13.446000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "008",
+    "amount": 951200,
+    "payment_date": "2025-09-28",
+    "payment_type": "avance",
+    "description": "Pago por 2 entregas seleccionadas.",
+    "delivery_ids": [
+      "68cd704de889dc5c28d3b586",
+      "68d1c4dfb62798a998e5212e"
+    ],
+    "id": "68d989fd1209e7faff8b1094",
+    "created_date": "2025-09-28T19:18:21.111000",
+    "updated_date": "2026-03-20T21:52:20.382000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "005",
+    "amount": 1319600,
+    "payment_date": "2025-09-19",
+    "payment_type": "avance",
+    "description": "Pago por 3 entregas seleccionadas.",
+    "delivery_ids": [
+      "68c0891ce1d2aa591fc1db5c",
+      "68c089dfb03863544602c105",
+      "68cd6cbeac003454d8b8f477"
+    ],
+    "id": "68cd739365d302839fbe8c80",
+    "created_date": "2025-09-19T15:15:31.108000",
+    "updated_date": "2026-03-20T21:52:18.066000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "011",
+    "amount": 156000,
+    "payment_date": "2025-09-19",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 2 entregas.",
+    "delivery_ids": [
+      "68c08612f96bf548cf989e17",
+      "68cd6f2a6d6359846bcf6520"
+    ],
+    "id": "68cd72b6f14e4db388cca31b",
+    "created_date": "2025-09-19T15:11:50.609000",
+    "updated_date": "2026-03-20T21:52:25.203000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1006515896",
+    "amount": 288600,
+    "payment_date": "2025-09-13",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 1 entregas.",
+    "delivery_ids": [
+      "68c082daf96bf548cf987022"
+    ],
+    "id": "68c49bf6192b199eface3b02",
+    "created_date": "2025-09-12T22:17:26.360000",
+    "updated_date": "2025-09-12T22:17:26.360000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "020",
+    "amount": 117000,
+    "payment_date": "2025-09-13",
+    "payment_type": "pago_completo",
+    "description": "Pago completo por 1 entregas.",
+    "delivery_ids": [
+      "68c08032f96bf548cf984b28"
+    ],
+    "id": "68c49adf039d20160c952d8e",
+    "created_date": "2025-09-12T22:12:47.323000",
+    "updated_date": "2026-03-20T21:52:28.810000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1024543179",
+    "amount": 72500,
+    "payment_date": "2025-09-05",
+    "payment_type": "avance",
+    "description": "Avance de pago.",
+    "delivery_ids": [],
+    "id": "68bb97e927f178ea3a472756",
+    "created_date": "2025-09-06T02:09:45.348000",
+    "updated_date": "2025-09-06T02:09:45.348000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1024543179",
+    "amount": 2500,
+    "payment_date": "2025-09-05",
+    "payment_type": "avance",
+    "description": "Avance de pago.",
+    "delivery_ids": [],
+    "id": "68bb979071ede55ade7a51b8",
+    "created_date": "2025-09-06T02:08:16.132000",
+    "updated_date": "2025-09-06T02:08:16.132000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1024543179",
+    "amount": 137500,
+    "payment_date": "2025-09-05",
+    "payment_type": "avance",
+    "description": "Avance de pago.",
+    "delivery_ids": [],
+    "id": "68bb97178279c4279459745a",
+    "created_date": "2025-09-06T02:06:15.789000",
+    "updated_date": "2025-09-06T02:06:15.789000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1024543179",
+    "amount": 50000,
+    "payment_date": "2025-09-05",
+    "payment_type": "avance",
+    "description": "Avance de pago.",
+    "delivery_ids": [],
+    "id": "68bb96ebfafd84bbdd1e8b3d",
+    "created_date": "2025-09-06T02:05:31.250000",
+    "updated_date": "2025-09-06T02:05:31.250000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1024543179",
+    "amount": 100000,
+    "payment_date": "2025-09-05",
+    "payment_type": "avance",
+    "description": "Avance de pago.",
+    "delivery_ids": [],
+    "id": "68bb95cce0ae3f627e5451bf",
+    "created_date": "2025-09-06T02:00:44.111000",
+    "updated_date": "2025-09-06T02:00:44.111000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "employee_id": "1024543179",
+    "amount": 200000,
+    "payment_date": "2025-09-05",
+    "payment_type": "avance",
+    "description": "Avance de pago.",
+    "delivery_ids": [],
+    "id": "68bb94d1cb1b1cb959d39135",
+    "created_date": "2025-09-06T01:56:33.863000",
+    "updated_date": "2025-09-06T01:56:33.863000",
+    "created_by_id": "68bb1f9f2f334abd798d7295",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  }
+]

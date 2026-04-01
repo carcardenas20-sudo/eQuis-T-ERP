@@ -1,0 +1,948 @@
+[
+  {
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e200205c22f52c277bf1",
+        "tipo": "primario",
+        "precio_especial": 1000,
+        "proveedor_nombre": "Wii Tecnology"
+      }
+    ],
+    "color_por_defecto": "Azul",
+    "color": "Azul",
+    "precio_por_unidad": 1000,
+    "unidad_medida": "unidad",
+    "stock_minimo": 0,
+    "tipo_material": "otro",
+    "observaciones": "",
+    "proveedor": "Wii Tecnology",
+    "color_fijo": true,
+    "nombre": "Aplique TPU 3 Rayas",
+    "id": "699ce03cf29749943697860a",
+    "created_date": "2026-02-23T23:18:20.158000",
+    "updated_date": "2026-02-23T23:18:20.158000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e200205c22f52c277bf1",
+        "tipo": "primario",
+        "precio_especial": 6000,
+        "proveedor_nombre": "Wii Tecnology"
+      }
+    ],
+    "color_por_defecto": "Amarillo",
+    "color": "Amarillo",
+    "precio_por_unidad": 6000,
+    "unidad_medida": "metro",
+    "stock_minimo": 0,
+    "tipo_material": "otro",
+    "observaciones": "",
+    "proveedor": "Wii Tecnology",
+    "color_fijo": true,
+    "nombre": "Calandra",
+    "id": "699cdfb6f21be59ceb0abb6c",
+    "created_date": "2026-02-23T23:16:06.523000",
+    "updated_date": "2026-02-23T23:16:06.523000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "proveedores": [
+      {
+        "proveedor_id": "698e23258ae23f887cfd49b1",
+        "tipo": "primario",
+        "precio_especial": 16000,
+        "proveedor_nombre": "Revolution"
+      }
+    ],
+    "color_por_defecto": "",
+    "color": "",
+    "precio_por_unidad": 16000,
+    "unidad_medida": "metro",
+    "stock_minimo": 0,
+    "tipo_material": "tela",
+    "observaciones": "",
+    "proveedor": "Revolution",
+    "color_fijo": false,
+    "nombre": "Piel de Conejo Fusionado",
+    "id": "698e230bbe93b4170d2296d8",
+    "created_date": "2026-02-12T18:59:23.095000",
+    "updated_date": "2026-02-12T19:00:06.922000",
+    "created_by_id": "anonymous",
+    "created_by": "anonymous",
+    "is_sample": false
+  },
+  {
+    "nombre": "Cremallera Continua Inferior",
+    "color": "Blanco",
+    "precio_por_unidad": 250,
+    "unidad_medida": "metro",
+    "tipo_material": "cremallera",
+    "color_fijo": true,
+    "color_por_defecto": "Blanco",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e1a8205c22f52c277a33",
+        "proveedor_nombre": "Dolphin Cremalleras",
+        "tipo": "primario",
+        "precio_especial": 250
+      },
+      {
+        "proveedor_id": "68c2e282a42946d80d2364d7",
+        "proveedor_nombre": "Jose Paramo",
+        "tipo": "secundario",
+        "precio_especial": 250
+      }
+    ],
+    "proveedor": "Dolphin Cremalleras",
+    "stock_minimo": 2000,
+    "observaciones": "",
+    "id": "68c413eb49b2b03938820787",
+    "created_date": "2025-09-12T12:36:59.443000",
+    "updated_date": "2025-09-15T19:15:24.961000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Tinta DTF Cordon",
+    "color": "",
+    "precio_por_unidad": 20000,
+    "unidad_medida": "metro",
+    "tipo_material": "accesorio",
+    "color_fijo": false,
+    "color_por_defecto": "",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e200205c22f52c277bf1",
+        "proveedor_nombre": "Wii Tecnology",
+        "tipo": "primario",
+        "precio_especial": 20000
+      },
+      {
+        "proveedor_id": "68c2e5854044c301ef84c09b",
+        "proveedor_nombre": "DTF Policarpa",
+        "tipo": "secundario",
+        "precio_especial": 20000
+      }
+    ],
+    "proveedor": "Wii Tecnology",
+    "stock_minimo": 10,
+    "observaciones": "",
+    "id": "68c41388c312315a5439bd90",
+    "created_date": "2025-09-12T12:35:20.412000",
+    "updated_date": "2025-09-18T18:10:57.903000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Embone",
+    "color": "",
+    "precio_por_unidad": 120,
+    "unidad_medida": "metro",
+    "tipo_material": "accesorio",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e21aa42946d80d236127",
+        "proveedor_nombre": "Carmen Embone",
+        "tipo": "primario",
+        "precio_especial": 120
+      },
+      {
+        "proveedor_id": "68c2e20ed914de0599b425a0",
+        "proveedor_nombre": "Portela",
+        "tipo": "secundario",
+        "precio_especial": 140
+      }
+    ],
+    "proveedor": "Carmen Embone",
+    "stock_minimo": 1000,
+    "observaciones": "",
+    "id": "68c2ea77ba331ff849fa8b7f",
+    "created_date": "2025-09-11T15:27:51.061000",
+    "updated_date": "2025-09-12T00:11:51.511000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Rotulo",
+    "color": "Blanco",
+    "precio_por_unidad": 6,
+    "unidad_medida": "unidad",
+    "tipo_material": "accesorio",
+    "color_fijo": true,
+    "color_por_defecto": "Blanco",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e9484b43afb04d2e60a2",
+        "proveedor_nombre": "Mercado Libre",
+        "tipo": "primario",
+        "precio_especial": 6
+      }
+    ],
+    "proveedor": "Mercado Libre",
+    "stock_minimo": 40000,
+    "observaciones": "",
+    "id": "68c2e96f4b43afb04d2e61ff",
+    "created_date": "2025-09-11T15:23:27.314000",
+    "updated_date": "2025-09-11T22:38:12.814000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Resina Marquilla",
+    "color": "Negro",
+    "precio_por_unidad": 123,
+    "unidad_medida": "metro",
+    "tipo_material": "accesorio",
+    "color_fijo": true,
+    "color_por_defecto": "Negro",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e80888d0cc7d576163a1",
+        "proveedor_nombre": "Cintas y Texturas",
+        "tipo": "primario",
+        "precio_especial": 123
+      }
+    ],
+    "proveedor": "Cintas y Texturas",
+    "stock_minimo": 3000,
+    "observaciones": "",
+    "id": "68c2e89cfa22c48412c4dbde",
+    "created_date": "2025-09-11T15:19:56.932000",
+    "updated_date": "2025-09-11T22:38:51.903000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Nylon Marquilla",
+    "color": "Blanco ",
+    "precio_por_unidad": 113,
+    "unidad_medida": "metro",
+    "tipo_material": "accesorio",
+    "color_fijo": true,
+    "color_por_defecto": "Blanco ",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e80888d0cc7d576163a1",
+        "proveedor_nombre": "Cintas y Texturas",
+        "tipo": "primario",
+        "precio_especial": 113
+      }
+    ],
+    "proveedor": "Cintas y Texturas",
+    "stock_minimo": 3000,
+    "observaciones": "",
+    "id": "68c2e85fdf9c23c724246364",
+    "created_date": "2025-09-11T15:18:55.189000",
+    "updated_date": "2025-09-11T22:39:09.682000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Forro Yersilon",
+    "color": "",
+    "precio_por_unidad": 4700,
+    "unidad_medida": "metro",
+    "tipo_material": "forro",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2de21bf0579ef5760e9f6",
+        "proveedor_nombre": "Cimatex",
+        "tipo": "primario",
+        "precio_especial": 4700
+      }
+    ],
+    "proveedor": "Cimatex",
+    "stock_minimo": 0,
+    "observaciones": "",
+    "id": "68c2e7c829639f566e00c590",
+    "created_date": "2025-09-11T15:16:24.319000",
+    "updated_date": "2025-09-18T18:11:23.713000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Forro Lotto",
+    "color": "",
+    "precio_por_unidad": 5400,
+    "unidad_medida": "metro",
+    "tipo_material": "forro",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2dbe0efc73b2040c2b523",
+        "proveedor_nombre": "Estandar Textil",
+        "tipo": "primario",
+        "precio_especial": 5400
+      },
+      {
+        "proveedor_id": "68c2de21bf0579ef5760e9f6",
+        "proveedor_nombre": "Cimatex",
+        "tipo": "secundario",
+        "precio_especial": 5400
+      }
+    ],
+    "proveedor": "Estandar Textil",
+    "stock_minimo": 1500,
+    "observaciones": "",
+    "id": "68c2e7af84ee25b959da33e2",
+    "created_date": "2025-09-11T15:15:59.776000",
+    "updated_date": "2025-09-18T18:11:34.376000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Forro Flecce Pesado",
+    "color": "",
+    "precio_por_unidad": 6700,
+    "unidad_medida": "metro",
+    "tipo_material": "forro",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2de21bf0579ef5760e9f6",
+        "proveedor_nombre": "Cimatex",
+        "tipo": "primario",
+        "precio_especial": 6700
+      }
+    ],
+    "proveedor": "Cimatex",
+    "stock_minimo": 0,
+    "observaciones": "",
+    "id": "68c2e79869829c5027ac8bc2",
+    "created_date": "2025-09-11T15:15:36.565000",
+    "updated_date": "2025-09-18T18:11:48.014000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Forro Flecce Liviano",
+    "color": "",
+    "precio_por_unidad": 5700,
+    "unidad_medida": "metro",
+    "tipo_material": "forro",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2de21bf0579ef5760e9f6",
+        "proveedor_nombre": "Cimatex",
+        "tipo": "primario",
+        "precio_especial": 5700
+      }
+    ],
+    "proveedor": "Cimatex",
+    "stock_minimo": 1500,
+    "observaciones": "",
+    "id": "68c2e7864b43afb04d2e4ef1",
+    "created_date": "2025-09-11T15:15:18.335000",
+    "updated_date": "2025-09-18T18:11:58.507000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Caucho",
+    "color": "Blanco",
+    "precio_por_unidad": 15,
+    "unidad_medida": "gramos",
+    "tipo_material": "accesorio",
+    "color_fijo": true,
+    "color_por_defecto": "Blanco",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e20ed914de0599b425a0",
+        "proveedor_nombre": "Portela",
+        "tipo": "primario",
+        "precio_especial": 15
+      }
+    ],
+    "proveedor": "Portela",
+    "stock_minimo": 0,
+    "observaciones": "",
+    "id": "68c2e7695a8cec1f8171ec88",
+    "created_date": "2025-09-11T15:14:49.689000",
+    "updated_date": "2025-09-11T22:39:35.650000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Forro Briony",
+    "color": "",
+    "precio_por_unidad": 1700,
+    "unidad_medida": "metro",
+    "tipo_material": "forro",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2dbe0efc73b2040c2b523",
+        "proveedor_nombre": "Estandar Textil",
+        "tipo": "primario",
+        "precio_especial": 1700
+      },
+      {
+        "proveedor_id": "68c2de21bf0579ef5760e9f6",
+        "proveedor_nombre": "Cimatex",
+        "tipo": "secundario",
+        "precio_especial": 1700
+      },
+      {
+        "proveedor_id": "68c2e282a42946d80d2364d7",
+        "proveedor_nombre": "Jose Paramo",
+        "tipo": "terciario",
+        "precio_especial": 1700
+      }
+    ],
+    "proveedor": "Estandar Textil",
+    "stock_minimo": 2000,
+    "observaciones": "",
+    "id": "68c2e73b4ef117beb5fd1176",
+    "created_date": "2025-09-11T15:14:03.233000",
+    "updated_date": "2025-09-18T18:12:12.476000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Ojalete",
+    "color": "Niquel",
+    "precio_por_unidad": 27.5,
+    "unidad_medida": "unidad",
+    "tipo_material": "accesorio",
+    "color_fijo": true,
+    "color_por_defecto": "Niquel",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e2344b43afb04d2e21ce",
+        "proveedor_nombre": "Ojalete Restrepo",
+        "tipo": "primario",
+        "precio_especial": 27.5
+      }
+    ],
+    "proveedor": "Ojalete Restrepo",
+    "stock_minimo": 6000,
+    "observaciones": "",
+    "id": "68c2e71d9cbe60105be033d7",
+    "created_date": "2025-09-11T15:13:33.320000",
+    "updated_date": "2025-09-11T22:41:04.166000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Bolsa transparente",
+    "color": "Transparente ",
+    "precio_por_unidad": 12,
+    "unidad_medida": "gramos",
+    "tipo_material": "accesorio",
+    "color_fijo": true,
+    "color_por_defecto": "Transparente ",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e6bcdf9c23c7242457b4",
+        "proveedor_nombre": "Comerfilm SAS",
+        "tipo": "primario",
+        "precio_especial": 12
+      }
+    ],
+    "proveedor": "Comerfilm SAS",
+    "stock_minimo": 28000,
+    "observaciones": "",
+    "id": "68c2e6fba42946d80d2391d3",
+    "created_date": "2025-09-11T15:12:59.114000",
+    "updated_date": "2025-09-11T22:41:51.746000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Cordon Premium",
+    "color": "Blanco ",
+    "precio_por_unidad": 400,
+    "unidad_medida": "unidad",
+    "tipo_material": "accesorio",
+    "color_fijo": true,
+    "color_por_defecto": "Blanco ",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e2252b80f086a93167b9",
+        "proveedor_nombre": "Leonzi",
+        "tipo": "primario",
+        "precio_especial": 400
+      }
+    ],
+    "proveedor": "Leonzi",
+    "stock_minimo": 0,
+    "observaciones": "",
+    "id": "68c2e68e0ff1a1a5015fdbe9",
+    "created_date": "2025-09-11T15:11:10.362000",
+    "updated_date": "2025-09-11T22:42:11.586000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Cordon Estandar",
+    "color": "Blanco ",
+    "precio_por_unidad": 167,
+    "unidad_medida": "unidad",
+    "tipo_material": "accesorio",
+    "color_fijo": true,
+    "color_por_defecto": "Blanco ",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e2252b80f086a93167b9",
+        "proveedor_nombre": "Leonzi",
+        "tipo": "primario",
+        "precio_especial": 167
+      }
+    ],
+    "proveedor": "Leonzi",
+    "stock_minimo": 2880,
+    "observaciones": "",
+    "id": "68c2e672e3125bdb12fbcaa3",
+    "created_date": "2025-09-11T15:10:42.674000",
+    "updated_date": "2025-09-11T22:43:19.366000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Hilo 75",
+    "color": "",
+    "precio_por_unidad": 3200,
+    "unidad_medida": "unidad",
+    "tipo_material": "hilo",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e249191d7955dc5e7b14",
+        "proveedor_nombre": "Hilos Bufalo",
+        "tipo": "primario",
+        "precio_especial": 3200
+      }
+    ],
+    "proveedor": "Hilos Bufalo",
+    "stock_minimo": 100,
+    "observaciones": "",
+    "id": "68c2e64d88d0cc7d57615319",
+    "created_date": "2025-09-11T15:10:05.712000",
+    "updated_date": "2025-09-11T22:42:39.076000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Eslaider Mocho",
+    "color": "Niquel ",
+    "precio_por_unidad": 150,
+    "unidad_medida": "unidad",
+    "tipo_material": "accesorio",
+    "color_fijo": true,
+    "color_por_defecto": "Niquel ",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e1a8205c22f52c277a33",
+        "proveedor_nombre": "Dolphin Cremalleras",
+        "tipo": "primario",
+        "precio_especial": 150
+      },
+      {
+        "proveedor_id": "68c2e282a42946d80d2364d7",
+        "proveedor_nombre": "Jose Paramo",
+        "tipo": "secundario",
+        "precio_especial": 150
+      }
+    ],
+    "proveedor": "Dolphin Cremalleras",
+    "stock_minimo": 10000,
+    "observaciones": "",
+    "id": "68c2e635205c22f52c278dca",
+    "created_date": "2025-09-11T15:09:41.140000",
+    "updated_date": "2025-09-11T22:42:53.228000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Cremallera Continua Superior",
+    "color": "",
+    "precio_por_unidad": 250,
+    "unidad_medida": "metro",
+    "tipo_material": "cremallera",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e1a8205c22f52c277a33",
+        "proveedor_nombre": "Dolphin Cremalleras",
+        "tipo": "primario",
+        "precio_especial": 250
+      },
+      {
+        "proveedor_id": "68c2e282a42946d80d2364d7",
+        "proveedor_nombre": "Jose Paramo",
+        "tipo": "secundario",
+        "precio_especial": 250
+      }
+    ],
+    "proveedor": "Dolphin Cremalleras",
+    "stock_minimo": 5000,
+    "observaciones": "",
+    "id": "68c2e6103ccff0fd0efdd36e",
+    "created_date": "2025-09-11T15:09:04.810000",
+    "updated_date": "2025-09-12T12:35:48.206000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Cremallera 75 cm",
+    "color": "Blanco",
+    "precio_por_unidad": 350,
+    "unidad_medida": "unidad",
+    "tipo_material": "cremallera",
+    "color_fijo": true,
+    "color_por_defecto": "Blanco",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e1a8205c22f52c277a33",
+        "proveedor_nombre": "Dolphin Cremalleras",
+        "tipo": "primario",
+        "precio_especial": 350
+      },
+      {
+        "proveedor_id": "68c2e282a42946d80d2364d7",
+        "proveedor_nombre": "Jose Paramo",
+        "tipo": "secundario",
+        "precio_especial": 350
+      }
+    ],
+    "proveedor": "Dolphin Cremalleras",
+    "stock_minimo": 2000,
+    "observaciones": "",
+    "id": "68c2e5e4fa22c48412c4d103",
+    "created_date": "2025-09-11T15:08:20.901000",
+    "updated_date": "2025-09-11T22:43:39.684000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Tinta DTF Continua",
+    "color": "",
+    "precio_por_unidad": 20000,
+    "unidad_medida": "metro",
+    "tipo_material": "accesorio",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e200205c22f52c277bf1",
+        "proveedor_nombre": "Wii Tecnology",
+        "tipo": "primario",
+        "precio_especial": 20000
+      },
+      {
+        "proveedor_id": "68c2e5854044c301ef84c09b",
+        "proveedor_nombre": "DTF Policarpa",
+        "tipo": "secundario",
+        "precio_especial": 20000
+      }
+    ],
+    "proveedor": "Wii Tecnology",
+    "stock_minimo": 0,
+    "observaciones": "",
+    "id": "68c2e55c247f4a542a43837d",
+    "created_date": "2025-09-11T15:06:04.427000",
+    "updated_date": "2025-09-18T18:12:38.052000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Plotter",
+    "color": "Papel",
+    "precio_por_unidad": 3000,
+    "unidad_medida": "metro",
+    "tipo_material": "otro",
+    "color_fijo": true,
+    "color_por_defecto": "Papel",
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e200205c22f52c277bf1",
+        "proveedor_nombre": "Wii Tecnology",
+        "tipo": "primario",
+        "precio_especial": 3000
+      }
+    ],
+    "proveedor": "Wii Tecnology",
+    "stock_minimo": 0,
+    "observaciones": "",
+    "id": "68c2e5487f1993f147b554ee",
+    "created_date": "2025-09-11T15:05:44.422000",
+    "updated_date": "2025-09-11T22:44:00.493000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Hilaza",
+    "color": "",
+    "precio_por_unidad": 19,
+    "unidad_medida": "gramos",
+    "tipo_material": "accesorio",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e1ed621e1793e412d4b4",
+        "proveedor_nombre": "RPR",
+        "tipo": "primario",
+        "precio_especial": 19
+      },
+      {
+        "proveedor_id": "68c2e1dea6c247e71efc90cc",
+        "proveedor_nombre": "Riperme",
+        "tipo": "secundario",
+        "precio_especial": 19
+      }
+    ],
+    "proveedor": "RPR",
+    "stock_minimo": 35000,
+    "observaciones": "",
+    "id": "68c2e5280906b58805d52e64",
+    "created_date": "2025-09-11T15:05:12.659000",
+    "updated_date": "2025-09-11T22:44:13.652000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Sesgo",
+    "color": "",
+    "precio_por_unidad": 20,
+    "unidad_medida": "gramos",
+    "tipo_material": "accesorio",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e20ed914de0599b425a0",
+        "proveedor_nombre": "Portela",
+        "tipo": "primario",
+        "precio_especial": 20
+      }
+    ],
+    "proveedor": "Portela",
+    "stock_minimo": 20000,
+    "observaciones": "",
+    "id": "68c2e4e079db313429aa8089",
+    "created_date": "2025-09-11T15:04:00.844000",
+    "updated_date": "2025-09-11T22:44:21.366000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Lana",
+    "color": "",
+    "precio_por_unidad": 26,
+    "unidad_medida": "gramos",
+    "tipo_material": "accesorio",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2e4644451951c2adb0168",
+        "proveedor_nombre": "Createx",
+        "tipo": "primario",
+        "precio_especial": 26
+      }
+    ],
+    "proveedor": "Createx",
+    "stock_minimo": 0,
+    "observaciones": "",
+    "id": "68c2e4b80906b58805d52a99",
+    "created_date": "2025-09-11T15:03:20.436000",
+    "updated_date": "2025-09-11T22:44:31.026000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Algodón Perchado",
+    "color": "",
+    "precio_por_unidad": 9000,
+    "unidad_medida": "metro",
+    "tipo_material": "tela",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [],
+    "proveedor": "",
+    "stock_minimo": 0,
+    "observaciones": "",
+    "id": "68c2e482397a4e1a72153828",
+    "created_date": "2025-09-11T15:02:26.851000",
+    "updated_date": "2025-09-11T22:44:41.697000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Super Nylon",
+    "color": "",
+    "precio_por_unidad": 5700,
+    "unidad_medida": "metro",
+    "tipo_material": "tela",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2de21bf0579ef5760e9f6",
+        "proveedor_nombre": "Cimatex",
+        "tipo": "primario",
+        "precio_especial": 5700
+      },
+      {
+        "proveedor_id": "68c2dbe0efc73b2040c2b523",
+        "proveedor_nombre": "Estandar Textil",
+        "tipo": "secundario",
+        "precio_especial": 5700
+      },
+      {
+        "proveedor_id": "68c2e282a42946d80d2364d7",
+        "proveedor_nombre": "Jose Paramo",
+        "tipo": "terciario",
+        "precio_especial": 5700
+      }
+    ],
+    "proveedor": "Cimatex",
+    "stock_minimo": 1000,
+    "observaciones": "",
+    "id": "68c2e42b7f1993f147b55083",
+    "created_date": "2025-09-11T15:00:59.187000",
+    "updated_date": "2025-09-11T22:44:50.751000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Cariñosito",
+    "color": "",
+    "precio_por_unidad": 6500,
+    "unidad_medida": "metro",
+    "tipo_material": "forro",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2de21bf0579ef5760e9f6",
+        "proveedor_nombre": "Cimatex",
+        "tipo": "primario",
+        "precio_especial": 6500
+      },
+      {
+        "proveedor_id": "68c2dbe0efc73b2040c2b523",
+        "proveedor_nombre": "Estandar Textil",
+        "tipo": "secundario",
+        "precio_especial": 6500
+      },
+      {
+        "proveedor_id": "68c2e282a42946d80d2364d7",
+        "proveedor_nombre": "Jose Paramo",
+        "tipo": "terciario",
+        "precio_especial": 6500
+      }
+    ],
+    "proveedor": "Cimatex",
+    "stock_minimo": 1000,
+    "observaciones": "",
+    "id": "68c2e407077b1a3906ae297f",
+    "created_date": "2025-09-11T15:00:23.725000",
+    "updated_date": "2025-09-11T22:45:01.910000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Reflectivo",
+    "color": "Plateado ",
+    "precio_por_unidad": 9000,
+    "unidad_medida": "metro",
+    "tipo_material": "tela",
+    "color_fijo": true,
+    "color_por_defecto": "Plateado ",
+    "proveedores": [],
+    "proveedor": "",
+    "stock_minimo": 0,
+    "observaciones": "",
+    "id": "68c2e3df26ed6970e2f102c9",
+    "created_date": "2025-09-11T14:59:43.268000",
+    "updated_date": "2025-09-11T22:45:22.733000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "nombre": "Nylon",
+    "color": "",
+    "precio_por_unidad": 3800,
+    "unidad_medida": "metro",
+    "tipo_material": "tela",
+    "color_fijo": false,
+    "color_por_defecto": null,
+    "proveedores": [
+      {
+        "proveedor_id": "68c2de21bf0579ef5760e9f6",
+        "proveedor_nombre": "Cimatex",
+        "tipo": "primario",
+        "precio_especial": 3800
+      },
+      {
+        "proveedor_id": "68c2dbe0efc73b2040c2b523",
+        "proveedor_nombre": "Estandar Textil",
+        "tipo": "secundario",
+        "precio_especial": 3700
+      },
+      {
+        "proveedor_id": "68c2e282a42946d80d2364d7",
+        "proveedor_nombre": "Jose Paramo",
+        "tipo": "terciario",
+        "precio_especial": 3800
+      }
+    ],
+    "proveedor": "Cimatex",
+    "stock_minimo": 3000,
+    "observaciones": "",
+    "id": "68c2e377ea3bbbdbbe2c340a",
+    "created_date": "2025-09-11T14:57:59.240000",
+    "updated_date": "2025-09-11T22:45:34.262000",
+    "created_by_id": "68c1717a4cea263da7fab67a",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  }
+]

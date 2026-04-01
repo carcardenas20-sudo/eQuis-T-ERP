@@ -1,0 +1,178 @@
+[
+  {
+    "processed": true,
+    "source": "operarios",
+    "event_type": "salary_week",
+    "process_error": null,
+    "payload": {
+      "worker_id": "demo-worker-1",
+      "worker_name": "Operario Prueba",
+      "amount": 120000,
+      "period_start": "2026-03-16",
+      "period_end": "2026-03-22",
+      "location_id": "68cf12df2063c519cd8786c8",
+      "notes": "Evento de prueba generado desde Finanzas para validar integración."
+    },
+    "received_at": "2026-03-16T02:51:09.517Z",
+    "id": "69b7701d84105be722a968b9",
+    "created_date": "2026-03-16T02:51:09.639000",
+    "updated_date": "2026-03-16T02:51:26.062000",
+    "created_by_id": "service_839d297e-b5a3-4895-a197-94698e4fc9d7",
+    "created_by": "service+839d297e-b5a3-4895-a197-94698e4fc9d7@no-reply.base44.com",
+    "is_sample": false
+  },
+  {
+    "processed": true,
+    "source": "operarios",
+    "event_type": "salary_week",
+    "process_error": null,
+    "payload": {
+      "worker_id": "demo-worker-1",
+      "worker_name": "Operario Prueba",
+      "amount": 120000,
+      "period_start": "2026-03-09",
+      "period_end": "2026-03-15",
+      "location_id": "68cf12df2063c519cd8786c8",
+      "notes": "Evento de prueba generado desde Finanzas para validar integración."
+    },
+    "received_at": "2026-03-15T23:21:34.031Z",
+    "id": "69b73efead1d950514f359af",
+    "created_date": "2026-03-15T23:21:34.159000",
+    "updated_date": "2026-03-15T23:21:50.223000",
+    "created_by_id": "service_839d297e-b5a3-4895-a197-94698e4fc9d7",
+    "created_by": "service+839d297e-b5a3-4895-a197-94698e4fc9d7@no-reply.base44.com",
+    "is_sample": false
+  },
+  {
+    "processed": true,
+    "source": "operarios",
+    "event_type": "salary_week",
+    "process_error": null,
+    "payload": {
+      "worker_id": "demo-worker-1",
+      "worker_name": "Operario Prueba",
+      "amount": 120000,
+      "period_start": "2026-03-09",
+      "period_end": "2026-03-15",
+      "location_id": "68cf12df2063c519cd8786c8",
+      "notes": "Evento de prueba generado desde Finanzas para validar integración."
+    },
+    "received_at": "2026-03-15T23:20:34.291Z",
+    "id": "69b73ec2a1517d7edc17a89d",
+    "created_date": "2026-03-15T23:20:34.417000",
+    "updated_date": "2026-03-15T23:20:50.605000",
+    "created_by_id": "service_839d297e-b5a3-4895-a197-94698e4fc9d7",
+    "created_by": "service+839d297e-b5a3-4895-a197-94698e4fc9d7@no-reply.base44.com",
+    "is_sample": false
+  },
+  {
+    "processed": true,
+    "source": "operarios",
+    "event_type": "salary_week",
+    "process_error": null,
+    "payload": {
+      "worker_id": "demo-worker-1",
+      "worker_name": "Operario Prueba",
+      "amount": 120000,
+      "period_start": "2026-03-09",
+      "period_end": "2026-03-15",
+      "location_id": "68cf12df2063c519cd8786c8",
+      "notes": "Evento de prueba generado desde Finanzas para validar integración."
+    },
+    "received_at": "2026-03-15T23:08:57.018Z",
+    "id": "69b73c0955d650b673682673",
+    "created_date": "2026-03-15T23:08:57.134000",
+    "updated_date": "2026-03-15T23:09:13.381000",
+    "created_by_id": "service_839d297e-b5a3-4895-a197-94698e4fc9d7",
+    "created_by": "service+839d297e-b5a3-4895-a197-94698e4fc9d7@no-reply.base44.com",
+    "is_sample": false
+  },
+  {
+    "processed": true,
+    "source": "operarios",
+    "event_type": "salary_week",
+    "process_error": null,
+    "payload": {
+      "worker_id": "demo-worker-1",
+      "worker_name": "Operario Prueba",
+      "amount": 120000,
+      "period_start": "2026-03-09",
+      "period_end": "2026-03-15",
+      "location_id": "68cf12df2063c519cd8786c8",
+      "notes": "Evento de prueba generado desde Finanzas para validar integración."
+    },
+    "received_at": "2026-03-15T23:08:49.855Z",
+    "id": "69b73c013b02bd41ae9dc761",
+    "created_date": "2026-03-15T23:08:49.989000",
+    "updated_date": "2026-03-15T23:09:06.260000",
+    "created_by_id": "service_839d297e-b5a3-4895-a197-94698e4fc9d7",
+    "created_by": "service+839d297e-b5a3-4895-a197-94698e4fc9d7@no-reply.base44.com",
+    "is_sample": false
+  },
+  {
+    "processed": true,
+    "source": "operarios",
+    "event_type": "salary_week",
+    "process_error": null,
+    "payload": {
+      "worker_id": "demo-worker-1",
+      "worker_name": "Operario Prueba",
+      "amount": 120000,
+      "period_start": "2026-03-09",
+      "period_end": "2026-03-15",
+      "location_id": "68cf12df2063c519cd8786c8",
+      "notes": "Evento de prueba generado desde Finanzas para validar integración."
+    },
+    "received_at": "2026-03-15T22:57:23.390Z",
+    "id": "69b7395353d1762cb1b691ac",
+    "created_date": "2026-03-15T22:57:23.517000",
+    "updated_date": "2026-03-15T22:57:39.351000",
+    "created_by_id": "service_839d297e-b5a3-4895-a197-94698e4fc9d7",
+    "created_by": "service+839d297e-b5a3-4895-a197-94698e4fc9d7@no-reply.base44.com",
+    "is_sample": false
+  },
+  {
+    "processed": true,
+    "source": "operarios",
+    "event_type": "salary_week",
+    "process_error": null,
+    "payload": {
+      "worker_id": "demo-worker-1",
+      "worker_name": "Operario Prueba",
+      "amount": 120000,
+      "period_start": "2026-03-09",
+      "period_end": "2026-03-15",
+      "location_id": "68cf12df2063c519cd8786c8",
+      "notes": "Evento de prueba generado desde Finanzas para validar integración."
+    },
+    "received_at": "2026-03-15T22:57:22.681Z",
+    "id": "69b739521ddf5333498dfde0",
+    "created_date": "2026-03-15T22:57:22.821000",
+    "updated_date": "2026-03-15T22:57:38.792000",
+    "created_by_id": "service_839d297e-b5a3-4895-a197-94698e4fc9d7",
+    "created_by": "service+839d297e-b5a3-4895-a197-94698e4fc9d7@no-reply.base44.com",
+    "is_sample": false
+  },
+  {
+    "processed": true,
+    "source": "operarios",
+    "event_type": "salary_week",
+    "process_error": null,
+    "payload": {
+      "worker_id": "demo-worker-1",
+      "worker_name": "Operario Prueba",
+      "amount": 120000,
+      "period_start": "2026-03-09",
+      "period_end": "2026-03-15",
+      "location_id": "68cf12df2063c519cd8786c8",
+      "notes": "Evento de prueba generado desde Finanzas para validar integración."
+    },
+    "received_at": "2026-03-15T22:57:10.859Z",
+    "id": "69b73946b188be5b23737b13",
+    "created_date": "2026-03-15T22:57:10.997000",
+    "updated_date": "2026-03-15T22:57:27.441000",
+    "created_by_id": "service_839d297e-b5a3-4895-a197-94698e4fc9d7",
+    "created_by": "service+839d297e-b5a3-4895-a197-94698e4fc9d7@no-reply.base44.com",
+    "is_sample": false
+  }
+]

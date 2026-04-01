@@ -29,5 +29,3 @@ dist-ssr
 
 .env
 
-# Base44 export data (contains PII, generated at runtime)
-scripts/exports/

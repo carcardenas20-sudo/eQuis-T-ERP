@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Precio Detal",
+    "code": "RETAIL",
+    "is_default": false,
+    "description": "Precio de venta al público general.",
+    "id": "68cf053b72e4430aa176ba6e",
+    "created_date": "2025-09-20T19:49:15.927000",
+    "updated_date": "2025-09-20T22:37:50.915000",
+    "created_by_id": "68cefbef60300e08a2b75e38",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  },
+  {
+    "name": "Precio Mayorista",
+    "code": "WHOLESALE",
+    "is_default": true,
+    "description": "Precio especial para clientes mayoristas.",
+    "id": "68cf053b72e4430aa176ba6f",
+    "created_date": "2025-09-20T19:49:15.927000",
+    "updated_date": "2025-09-20T22:37:51.345000",
+    "created_by_id": "68cefbef60300e08a2b75e38",
+    "created_by": "carcardenas20@gmail.com",
+    "is_sample": false
+  }
+]
