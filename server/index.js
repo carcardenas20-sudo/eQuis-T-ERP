@@ -114,16 +114,19 @@ async function initDB() {
     }
     console.log(`✅ Per-entity tables created (${Object.keys(ENTITY_SCHEMAS).length} types)`);
 
-    // ─── Idempotent sync: copy any new rows from app_entities → per-entity tables ─
-    // Runs on every startup with ON CONFLICT DO NOTHING, so it's safe to repeat.
-    // This ensures data imported via scripts always reaches per-entity tables.
+    console.log('✅ DB schema initialized');
+
+    // ─── Auto-import historical data if DB is empty ─────────────────────────
+    await seedExportsData(client);
+
+    // ─── Sync: copy rows from app_entities → per-entity tables ───────────────
+    // Runs after import so data is always available in typed tables.
     {
       let migrated = 0;
       for (const [entityType, schema] of Object.entries(ENTITY_SCHEMAS)) {
         const typedCols = Object.keys(schema.typed);
         const typedTypes = schema.typed;
 
-        // Build SELECT expressions with proper type casting and NULLIF for empty strings
         const selectExprs = typedCols.map(col => {
           const colType = typedTypes[col].split(' ')[0].toUpperCase().replace(/\(.*\)/, '');
           const rawExpr = `NULLIF(data->>'${col}', '')`;
@@ -140,7 +143,6 @@ async function initDB() {
           }
         });
 
-        // Remove typed fields from remaining JSONB data
         const removeKeys = typedCols.map(c => `'${c}'`).join(', ');
         const dataExpr = typedCols.length > 0
           ? `data - ARRAY[${removeKeys}]`
@@ -161,13 +163,8 @@ async function initDB() {
         migrated += result.rowCount || 0;
       }
 
-      if (migrated > 0) console.log(`✅ Synced ${migrated} new records to per-entity tables`);
+      if (migrated > 0) console.log(`✅ Synced ${migrated} records to per-entity tables`);
     }
-
-    console.log('✅ DB schema initialized');
-
-    // ─── Auto-import historical data if DB is empty ─────────────────────────
-    await seedExportsData(client);
 
     // ─── Auto-seed admin user if no users exist ──────────────────────────────
     await seedAdminUser(client);
