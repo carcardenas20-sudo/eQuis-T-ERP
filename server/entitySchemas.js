@@ -365,7 +365,7 @@ export const ENTITY_SCHEMAS = {
     typed: {
       employee_id: 'TEXT',
       status: 'TEXT',
-      dispatch_date: 'TIMESTAMPTZ',
+      dispatch_date: 'TEXT',
       product_reference: 'TEXT',
       quantity: 'NUMERIC(14,4)',
     },
