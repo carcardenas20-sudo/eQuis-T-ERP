@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Devolucion } from "@/entities/all";
+import { Devolucion } from "@/api/publicEntities";
 import { CheckCircle2, RotateCcw, ArrowDownCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

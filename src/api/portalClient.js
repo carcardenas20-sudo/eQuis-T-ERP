@@ -33,6 +33,7 @@ function makeEntity(entityType) {
     },
     get: (id) => apiFetch(`/${entityType}/${id}`),
     create: (body) => apiFetch(`/${entityType}`, { method: 'POST', body: JSON.stringify(body) }),
+    update: (id, body) => apiFetch(`/${entityType}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   };
 }
 

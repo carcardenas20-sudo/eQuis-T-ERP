@@ -1,6 +1,23 @@
 import React, { useState, useMemo } from "react";
-import { Delivery, Dispatch, Inventory, StockMovement } from "@/entities/all";
-import { logActivity } from "@/functions/logActivity";
+import { Delivery, Dispatch, Inventory, StockMovement, AppConfig, ActivityLog } from "@/api/publicEntities";
+
+// Versión pública de logActivity (sin autenticación)
+async function logActivity(params) {
+  try {
+    await ActivityLog.create({
+      entity_type: params.entity_type || null,
+      entity_id: params.entity_id || null,
+      action: params.action || 'info',
+      description: params.description || '',
+      employee_id: params.employee_id || null,
+      employee_name: params.employee_name || null,
+      amount: params.amount || null,
+      old_data: params.old_data || null,
+      new_data: params.new_data || null,
+      timestamp: new Date().toISOString(),
+    });
+  } catch {}
+}
 import { CheckCircle2, Plus, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -128,6 +145,30 @@ export default function RouteOperario({ employees, products, dispatches, deliver
         status: "pendiente",
       });
       try { await logActivity({ entity_type: 'Delivery', entity_id: newDelivery.id, action: 'created', description: `Entrega registrada desde Portal de Ruta - ${employee?.name || employeeId}`, employee_id: employeeId, employee_name: employee?.name || employeeId, amount: total_amount, new_data: { items: validDeliveries, total_amount } }); } catch {}
+
+      // Abrir ventana de pagos automáticamente si no hay una ya abierta hoy
+      try {
+        const configs = await AppConfig.filter({ key: 'payment_window_opened_at' });
+        const existing = configs.length > 0 ? configs[0] : null;
+        const now = new Date();
+        const alreadyOpenToday = existing?.value
+          ? (() => {
+              const openedAt = new Date(existing.value);
+              const diffH = (now - openedAt) / (1000 * 60 * 60);
+              // Ventana aún activa (menos de 5 horas) Y fue abierta hoy
+              return diffH >= 0 && diffH < 5 && openedAt.toISOString().slice(0, 10) === today;
+            })()
+          : false;
+
+        if (!alreadyOpenToday) {
+          const nowIso = now.toISOString();
+          if (existing) {
+            await AppConfig.update(existing.id, { value: nowIso });
+          } else {
+            await AppConfig.create({ key: 'payment_window_opened_at', value: nowIso });
+          }
+        }
+      } catch {}
     }
 
     for (const d of validDispatches) {

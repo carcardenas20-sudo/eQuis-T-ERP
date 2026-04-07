@@ -77,6 +77,7 @@ const AuthenticatedApp = () => {
 const PublicRoutes = () => (
   <Routes>
     <Route path="/Op_EmployeePortal" element={<Op_EmployeePortal />} />
+    <Route path="/portal-planillador" element={<Op_RoutePortal />} />
     <Route path="*" element={<AuthenticatedApp />} />
   </Routes>
 );

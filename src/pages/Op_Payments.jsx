@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Combined";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, DollarSign } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, DollarSign, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 import PaymentForm from "../components/payments/PaymentForm";
 import PaymentsHistory from "../components/payments/PaymentsHistory";
@@ -14,10 +15,12 @@ export default function Payments() {
   const [deliveries, setDeliveries] = useState([]);
   const [payments, setPayments] = useState([]);
   const [purchases, setPurchases] = useState([]);
+  const [paymentRequests, setPaymentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [editingPayment, setEditingPayment] = useState(null);
+  const [processingRequest, setProcessingRequest] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -26,16 +29,18 @@ export default function Payments() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [employeesData, deliveriesData, paymentsData, purchasesData] = await Promise.all([
+      const [employeesData, deliveriesData, paymentsData, purchasesData, requestsData] = await Promise.all([
         base44.entities.Employee.list(),
         base44.entities.Delivery.list(),
         base44.entities.Payment.list('-payment_date'),
-        base44.entities.EmployeePurchase.list()
+        base44.entities.EmployeePurchase.list(),
+        base44.entities.PaymentRequest.filter({ status: 'pending' }, '-request_date'),
       ]);
       setEmployees(employeesData.filter(e => e.is_active));
       setDeliveries(deliveriesData);
       setPayments(paymentsData);
       setPurchases(purchasesData || []);
+      setPaymentRequests(requestsData || []);
     } catch (err) {
       console.error("Error cargando datos:", err);
     }
@@ -225,6 +230,58 @@ export default function Payments() {
     setShowForm(true);
   };
 
+  const handleApproveRequest = async (request) => {
+    if (!window.confirm(`¿Aprobar solicitud de $${request.requested_amount?.toLocaleString()} para ${request.employee_name}?`)) return;
+    setProcessingRequest(request.id);
+    try {
+      const colombiaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+      const todayStr = colombiaTime.toISOString().split('T')[0];
+
+      // Crear el pago (status: 'registrado' → aparece en Transferencias y CxP)
+      await base44.entities.Payment.create({
+        employee_id: request.employee_id,
+        employee_name: request.employee_name,
+        amount: request.requested_amount,
+        payment_date: todayStr,
+        payment_type: 'solicitud_aprobada',
+        status: 'registrado',
+        description: `Solicitud aprobada — ${request.employee_name}`,
+      });
+
+      // Marcar la solicitud como aprobada
+      await base44.entities.PaymentRequest.update(request.id, {
+        status: 'approved',
+        processed_date: todayStr,
+        admin_response: `Aprobado. Pago de $${request.requested_amount?.toLocaleString()} registrado.`,
+      });
+
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert('Error al aprobar la solicitud.');
+    }
+    setProcessingRequest(null);
+  };
+
+  const handleRejectRequest = async (request) => {
+    const reason = window.prompt(`Motivo de rechazo para ${request.employee_name} (opcional):`);
+    if (reason === null) return; // cancelado
+    setProcessingRequest(request.id);
+    try {
+      const colombiaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+      await base44.entities.PaymentRequest.update(request.id, {
+        status: 'rejected',
+        processed_date: colombiaTime.toISOString().split('T')[0],
+        admin_response: reason || 'Rechazado por administrador.',
+      });
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert('Error al rechazar la solicitud.');
+    }
+    setProcessingRequest(null);
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
@@ -255,12 +312,70 @@ export default function Payments() {
           />
         ) : (
           <>
-            <Tabs defaultValue="pending" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
+            <Tabs defaultValue={paymentRequests.length > 0 ? "requests" : "pending"} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-4">
+                <TabsTrigger value="requests" className="text-xs sm:text-sm relative">
+                  Solicitudes
+                  {paymentRequests.length > 0 && (
+                    <span className="ml-1 bg-red-500 text-white rounded-full text-xs px-1.5 py-0 font-bold">{paymentRequests.length}</span>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="pending" className="text-xs sm:text-sm">Pendientes</TabsTrigger>
                 <TabsTrigger value="history" className="text-xs sm:text-sm">Historial</TabsTrigger>
                 <TabsTrigger value="activity" className="text-xs sm:text-sm">Cambios</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="requests">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-blue-600" />
+                      Solicitudes de Pago Pendientes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {paymentRequests.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                        <p>No hay solicitudes pendientes.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {paymentRequests.map(req => (
+                          <div key={req.id} className="flex items-center justify-between gap-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-slate-900">{req.employee_name}</p>
+                              <p className="text-xs text-slate-500">ID: {req.employee_id} · {req.request_date}</p>
+                              <p className="text-xl font-bold text-blue-700 mt-1">${req.requested_amount?.toLocaleString()}</p>
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                disabled={processingRequest === req.id}
+                                onClick={() => handleApproveRequest(req)}
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-1" />
+                                Aprobar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-red-300 text-red-600 hover:bg-red-50"
+                                disabled={processingRequest === req.id}
+                                onClick={() => handleRejectRequest(req)}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Rechazar
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="pending">
                 <Card>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Employee, Producto, Dispatch, Delivery, Inventory, Devolucion, AppConfig } from "@/entities/all";
+import { Employee, Producto, Dispatch, Delivery, Inventory, Devolucion, AppConfig } from "@/api/publicEntities";
 import { Truck, RotateCcw, PackageCheck } from "lucide-react";
 import RouteOperario from "@/components/route/RouteOperario";
 import RouteRegistrosHoy from "@/components/route/RouteRegistrosHoy";

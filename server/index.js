@@ -57,16 +57,26 @@ app.use('/api/auth', authRoutes);
 
 // ─── Portal público de empleados (sin auth requerida) ────────────────────────
 // Solo permite leer entidades específicas del módulo operarios
-const PORTAL_PUBLIC_ENTITIES = new Set(['Employee', 'Delivery', 'Dispatch', 'Payment', 'PaymentRequest', 'EmployeePurchase', 'Producto', 'AppConfig']);
-const PORTAL_WRITE_ENTITIES = new Set(['PaymentRequest']);
+const PORTAL_PUBLIC_ENTITIES = new Set([
+  // Portal operario (lectura)
+  'Employee', 'Payment', 'PaymentRequest', 'EmployeePurchase', 'Producto', 'AppConfig',
+  // Planillador (lectura + escritura)
+  'Delivery', 'Dispatch', 'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog',
+]);
+// Entidades en las que el portal puede escribir
+const PORTAL_WRITE_ENTITIES = new Set([
+  'PaymentRequest',           // operario solicita pago
+  'Delivery', 'Dispatch',     // planillador registra entregas/despachos
+  'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog', 'AppConfig',
+]);
 app.use('/api/portal', (req, res, next) => {
   const type = req.path.split('/')[1];
   if (!PORTAL_PUBLIC_ENTITIES.has(type)) {
     return res.status(403).json({ error: 'Acceso no permitido' });
   }
   const isRead = req.method === 'GET';
-  const isAllowedWrite = req.method === 'POST' && PORTAL_WRITE_ENTITIES.has(type);
-  if (!isRead && !isAllowedWrite) {
+  const isWrite = ['POST', 'PUT', 'PATCH'].includes(req.method) && PORTAL_WRITE_ENTITIES.has(type);
+  if (!isRead && !isWrite) {
     return res.status(403).json({ error: 'Acceso no permitido' });
   }
   next();

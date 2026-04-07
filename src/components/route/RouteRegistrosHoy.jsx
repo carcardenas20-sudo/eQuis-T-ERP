@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Delivery, Dispatch, Inventory, StockMovement } from "@/entities/all";
+import { Delivery, Dispatch, Inventory, StockMovement } from "@/api/publicEntities";
 import { Edit2, Trash2, Save, X, ChevronDown, ChevronUp, PackageCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
