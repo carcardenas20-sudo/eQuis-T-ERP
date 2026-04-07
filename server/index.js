@@ -143,10 +143,10 @@ async function initDB() {
     }
     console.log(`✅ Per-entity tables created (${Object.keys(ENTITY_SCHEMAS).length} types)`);
 
-    console.log('✅ DB schema initialized');
-
-    // ─── Migrations ──────────────────────────────────────────────────────────
+    // ─── Migrations (antes del sync para que las columnas existan) ───────────
     await runMigrations(client);
+
+    console.log('✅ DB schema initialized');
 
     // ─── Auto-import historical data if DB is empty ─────────────────────────
     await seedExportsData(client);

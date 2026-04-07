@@ -458,7 +458,7 @@ export const ENTITY_SCHEMAS = {
       reference: 'TEXT',
       costo_mano_obra: 'NUMERIC(14,4)',
     },
-    indexes: ['tipo_diseno', 'reference'],
+    indexes: ['tipo_diseno'],
   },
 
   Proveedor: {
