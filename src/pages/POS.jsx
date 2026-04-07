@@ -162,10 +162,9 @@ export default function POS() {
   const getPriceForProduct = useCallback((product, quantity) => {
     if (!selectedPriceList || !product) return product?.sale_price || 0;
 
-    const productSku = product.sku || product.id;
-    
+    // Match by sku, then by id (familia_id is stored as product_sku in syncPriceLists)
     const matchingRules = priceRules.filter(rule =>
-      rule.product_sku === productSku &&
+      (rule.product_sku === product.sku || rule.product_sku === product.id) &&
       rule.price_list_code === selectedPriceList &&
       rule.min_quantity <= quantity
     );
