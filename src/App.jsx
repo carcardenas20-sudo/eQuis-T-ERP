@@ -8,6 +8,7 @@ import PageNotFound from './lib/PageNotFound';
 import PlannedPayments from './pages/PlannedPayments';
 import ConciliacionPagos from './pages/ConciliacionPagos';
 import Op_RoutePortal from './pages/Op_RoutePortal';
+import Op_EmployeePortal from './pages/Op_EmployeePortal';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import LoginPage from '@/components/auth/LoginPage';
 
@@ -72,13 +73,21 @@ const AuthenticatedApp = () => {
   );
 };
 
+// Rutas públicas (sin autenticación requerida)
+const PublicRoutes = () => (
+  <Routes>
+    <Route path="/Op_EmployeePortal" element={<Op_EmployeePortal />} />
+    <Route path="*" element={<AuthenticatedApp />} />
+  </Routes>
+);
+
 function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <NavigationTracker />
-          <AuthenticatedApp />
+          <PublicRoutes />
         </Router>
         <Toaster />
       </QueryClientProvider>

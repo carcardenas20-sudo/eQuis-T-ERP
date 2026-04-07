@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Employee, Delivery, Dispatch, Payment, PaymentRequest } from "@/api/entitiesProduccion";
-import { base44 } from "@/api/base44Combined";
+import { portalClient } from "@/api/portalClient";
+const { Employee, Delivery, Dispatch, Payment, PaymentRequest, Producto: ProductoEntity, AppConfig, EmployeePurchase } = {
+  Employee: portalClient.entities.Employee,
+  Delivery: portalClient.entities.Delivery,
+  Dispatch: portalClient.entities.Dispatch,
+  Payment: portalClient.entities.Payment,
+  PaymentRequest: portalClient.entities.PaymentRequest,
+  Producto: portalClient.entities.Producto,
+  AppConfig: portalClient.entities.AppConfig,
+  EmployeePurchase: portalClient.entities.EmployeePurchase,
+};
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +36,7 @@ export default function EmployeePortal() {
   useEffect(() => {
     const checkPaymentWindow = async () => {
       try {
-        const configs = await base44.entities.AppConfig.filter({ key: "payment_window_opened_at" });
+        const configs = await AppConfig.filter({ key: "payment_window_opened_at" });
         if (configs.length > 0 && configs[0].value) {
           const openedAt = new Date(configs[0].value);
           const now = new Date();
@@ -71,9 +80,9 @@ export default function EmployeePortal() {
           Delivery.filter({ employee_id: employeeId }),
           Dispatch.filter({ employee_id: employeeId }),
           Payment.filter({ employee_id: employeeId }, '-payment_date'),
-          base44.entities.Producto.list(),
+          ProductoEntity.list(),
           PaymentRequest.filter({ employee_id: employeeId, status: 'pending' }),
-          base44.entities.EmployeePurchase.filter({ employee_id: employeeId })
+          EmployeePurchase.filter({ employee_id: employeeId })
         ]);
         
         const normProducts = (products || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra }));

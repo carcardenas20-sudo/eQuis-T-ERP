@@ -54,6 +54,24 @@ const requireAuth = (req, res, next) => {
 
 app.use(authMiddleware);
 app.use('/api/auth', authRoutes);
+
+// ─── Portal público de empleados (sin auth requerida) ────────────────────────
+// Solo permite leer entidades específicas del módulo operarios
+const PORTAL_PUBLIC_ENTITIES = new Set(['Employee', 'Delivery', 'Dispatch', 'Payment', 'PaymentRequest', 'EmployeePurchase', 'Producto', 'AppConfig']);
+const PORTAL_WRITE_ENTITIES = new Set(['PaymentRequest']);
+app.use('/api/portal', (req, res, next) => {
+  const type = req.path.split('/')[1];
+  if (!PORTAL_PUBLIC_ENTITIES.has(type)) {
+    return res.status(403).json({ error: 'Acceso no permitido' });
+  }
+  const isRead = req.method === 'GET';
+  const isAllowedWrite = req.method === 'POST' && PORTAL_WRITE_ENTITIES.has(type);
+  if (!isRead && !isAllowedWrite) {
+    return res.status(403).json({ error: 'Acceso no permitido' });
+  }
+  next();
+}, entityRoutes);
+
 app.use('/api/entities', requireAuth, entityRoutes);
 app.use('/api/upload', requireAuth, uploadRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
