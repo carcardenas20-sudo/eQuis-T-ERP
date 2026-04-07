@@ -29,6 +29,7 @@ import TestPermisos from './pages/TestPermisos';
 import Transfers from './pages/Transfers';
 import Tutorials from './pages/Tutorials';
 import Users from './pages/Users';
+import MerchandiseAssignment from './pages/MerchandiseAssignment';
 
 // ── MÓDULO PRODUCCIÓN / CHAQUETAS (chaquetas-pro) ─────────────
 import Prod_Dashboard from './pages/Prod_Dashboard';
