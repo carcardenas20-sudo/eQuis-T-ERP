@@ -66,7 +66,7 @@ import Op_EmployeeProfile from './pages/Op_EmployeeProfile';
 import Op_DraftDeliveries from './pages/Op_DraftDeliveries';
 import Op_PhotoCapture from './pages/Op_PhotoCapture';
 import Op_Empleado from './pages/Op_Empleado';
-
+import Op_MerchandiseEntry from './pages/Op_MerchandiseEntry';
 import __Layout from './Layout.jsx';
 
 export const PAGES = {
@@ -134,6 +134,7 @@ export const PAGES = {
   "Op_PhotoCapture": Op_PhotoCapture,
   "Op_Empleado": Op_Empleado,
   "Op_MerchandiseEntry": Op_MerchandiseEntry,
+"MerchandiseAssignment": MerchandiseAssignment,
 };
 
 export const pagesConfig = {
