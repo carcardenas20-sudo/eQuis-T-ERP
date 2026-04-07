@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { AccountPayable, PayablePayment, Supplier, Location, Expense } from "@/entities/all";
-import { localClient } from "@/api/localClient";
 import { useSession } from "../components/providers/SessionProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, DollarSign, AlertCircle, TrendingUp, Loader2, Users } from "lucide-react";
+import { Plus, DollarSign, AlertCircle, TrendingUp, Loader2, PlayCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import PayableForm from "../components/payables/PayableForm";
 import PayableList from "../components/payables/PayableList";
 import PaymentModal from "../components/payables/PaymentModal";
 import InstallmentsManager from "../components/payables/InstallmentsManager";
+import { simulateOperariosSalary } from "@/functions/simulateOperariosSalary";
 
 export default function AccountsPayablePage() {
   const { currentUser, userLocation, userRole, isLoading: isSessionLoading } = useSession();
@@ -21,10 +21,6 @@ export default function AccountsPayablePage() {
   const [payables, setPayables] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [deliveries, setDeliveries] = useState([]);
-  const [opPayments, setOpPayments] = useState([]);
-  const [opPurchases, setOpPurchases] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPayable, setEditingPayable] = useState(null);
@@ -34,87 +30,28 @@ export default function AccountsPayablePage() {
   const [typeFilter, setTypeFilter] = useState("all");
 
   useEffect(() => {
-    if (!isSessionLoading) loadData();
+    if (!isSessionLoading) {
+      loadData();
+    }
   }, [isSessionLoading]);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [allPayables, allSuppliers, allLocations, allEmployees, allDeliveries, allOpPayments, allOpPurchases] = await Promise.all([
+      const [allPayables, allSuppliers, allLocations] = await Promise.all([
         AccountPayable.list("-created_date", 500),
         Supplier.list(),
-        Location.list(),
-        localClient.entities.Employee.list(),
-        localClient.entities.Delivery.list(),
-        localClient.entities.Payment.list(),
-        localClient.entities.EmployeePurchase.list(),
+        Location.list()
       ]);
+
       setPayables(allPayables || []);
       setSuppliers(allSuppliers || []);
       setLocations(allLocations || []);
-      setEmployees((allEmployees || []).filter(e => e.is_active));
-      setDeliveries(allDeliveries || []);
-      setOpPayments(allOpPayments || []);
-      setOpPurchases(allOpPurchases || []);
     } catch (error) {
       console.error("Error loading data:", error);
     }
     setIsLoading(false);
   };
-
-  // Calcula saldos pendientes de operarios en tiempo real
-  const operarioPayables = useMemo(() => {
-    return employees.map(emp => {
-      const empId = emp.employee_id || emp.id;
-
-      // Total ganado por entregas
-      const empDeliveries = deliveries.filter(d => d.employee_id === empId);
-      const totalEarned = empDeliveries.reduce((sum, d) => {
-        if (d.items?.length > 0) return sum + d.items.reduce((s, i) => s + (i.total_amount || 0), 0);
-        return sum + (d.total_amount || 0);
-      }, 0);
-
-      // Total pagado (pagos directos)
-      const deliveryPaidMap = {};
-      opPayments.filter(p => p.employee_id === empId).forEach(p => {
-        (p.delivery_payments || []).forEach(dp => {
-          deliveryPaidMap[dp.delivery_id] = (deliveryPaidMap[dp.delivery_id] || 0) + dp.amount;
-        });
-      });
-      const paidDeliveryIds = new Set(
-        opPayments.filter(p => p.employee_id === empId && p.payment_type === 'pago_completo')
-          .flatMap(p => p.delivery_ids || [])
-      );
-      const genericPaid = opPayments
-        .filter(p => p.employee_id === empId && (!p.delivery_payments?.length) && (!p.delivery_ids?.length))
-        .reduce((sum, p) => sum + (p.amount || 0), 0);
-      const specificPaid = Object.values(deliveryPaidMap).reduce((s, v) => s + v, 0);
-
-      // Descuentos por compras de empleados
-      const purchaseDiscounts = opPurchases
-        .filter(p => p.employee_id === empId && p.payment_method === 'descuento_saldo')
-        .reduce((sum, p) => sum + (p.total_amount || 0), 0);
-
-      const pending = totalEarned - specificPaid - genericPaid - purchaseDiscounts;
-
-      if (pending <= 100) return null;
-
-      return {
-        id: `op_${empId}`,
-        supplier_name: emp.name,
-        supplier_id: empId,
-        description: `Salario pendiente — ${emp.name}`,
-        type: 'manufacturing_salary',
-        category: 'salarios_manufactura',
-        status: 'pending',
-        total_amount: pending,
-        pending_amount: pending,
-        paid_amount: 0,
-        due_date: new Date().toISOString(),
-        _isOperario: true,
-      };
-    }).filter(Boolean);
-  }, [employees, deliveries, opPayments, opPurchases]);
 
   const handleSave = async (data) => {
     try {
@@ -150,6 +87,17 @@ export default function AccountsPayablePage() {
 
   const handlePayment = (payable) => {
     setPaymentModalData(payable);
+  };
+
+  const handleSimulatePayroll = async () => {
+    const res = await simulateOperariosSalary({});
+    if (res?.status === 200) {
+      alert("Simulación creada: revisa el filtro 'Nómina/Operarios'.");
+      await loadData();
+      setTypeFilter("nomina");
+    } else {
+      alert("No se pudo simular. Revisa permisos y logs de la función.");
+    }
   };
 
   const handlePaymentConfirm = async (paymentData) => {
@@ -207,28 +155,19 @@ export default function AccountsPayablePage() {
     }
   };
 
-  const isNomina = p => p.type === "manufacturing_salary" || p.category === "salarios_manufactura" || p._isOperario;
-
-  const allPayablesWithOperarios = typeFilter === "nomina"
-    ? operarioPayables
-    : typeFilter === "all"
-      ? [...payables, ...operarioPayables]
-      : payables;
-
-  const pendingPayables = allPayablesWithOperarios
-    .filter(p => p.status === "pending" || p.status === "partial")
-    .filter(p => typeFilter === "all" ? true : isNomina(p));
-
+  const pendingPayables = payables
+    .filter(p => (p.status === "pending" || p.status === "partial"))
+    .filter(p => typeFilter === "all" ? true : (p.type === "manufacturing_salary" || p.category === "salarios_manufactura"));
   const paidPayables = payables
     .filter(p => p.status === "paid")
-    .filter(p => typeFilter === "all" ? true : isNomina(p));
-
-  const overduePayables = allPayablesWithOperarios
+    .filter(p => typeFilter === "all" ? true : (p.type === "manufacturing_salary" || p.category === "salarios_manufactura"));
+  const overduePayables = payables
     .filter(p => {
       if (p.status === "paid") return false;
-      return new Date(p.due_date) < new Date();
+      const dueDate = new Date(p.due_date);
+      return dueDate < new Date();
     })
-    .filter(p => typeFilter === "all" ? true : isNomina(p));
+    .filter(p => typeFilter === "all" ? true : (p.type === "manufacturing_salary" || p.category === "salarios_manufactura"));
 
   const totalPending = pendingPayables.reduce((sum, p) => sum + (p.pending_amount || 0), 0);
   const totalOverdue = overduePayables.reduce((sum, p) => sum + (p.pending_amount || 0), 0);
@@ -253,12 +192,10 @@ export default function AccountsPayablePage() {
             <p className="text-slate-600 mt-1 text-sm sm:text-base">Gestiona deudas con proveedores y gastos a plazos</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {operarioPayables.length > 0 && (
-              <div className="flex items-center gap-1.5 text-xs bg-orange-50 border border-orange-200 text-orange-700 px-3 py-1.5 rounded-lg">
-                <Users className="w-3.5 h-3.5" />
-                <span>{operarioPayables.length} operario(s) con saldo pendiente</span>
-              </div>
-            )}
+            <Button variant="outline" onClick={handleSimulatePayroll} className="gap-1.5 text-xs sm:text-sm px-2 sm:px-3 hidden sm:flex">
+              <PlayCircle className="w-4 h-4" />
+              <span>Probar integración</span>
+            </Button>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-32 sm:w-44 text-xs sm:text-sm">
                 <SelectValue placeholder="Tipo" />
@@ -348,7 +285,7 @@ export default function AccountsPayablePage() {
               Pagadas ({paidPayables.length})
             </TabsTrigger>
             <TabsTrigger value="all">
-              Todas ({allPayablesWithOperarios.length})
+              Todas ({payables.length})
             </TabsTrigger>
           </TabsList>
 
@@ -376,7 +313,7 @@ export default function AccountsPayablePage() {
 
           <TabsContent value="all" className="mt-3 sm:mt-6">
             <PayableList
-              payables={allPayablesWithOperarios}
+              payables={payables}
               locations={locations}
               onEdit={handleEdit}
               onDelete={handleDelete}
