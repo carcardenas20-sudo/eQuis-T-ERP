@@ -95,6 +95,7 @@ export const PAGES = {
   "Transfers": Transfers,
   "Tutorials": Tutorials,
   "Users": Users,
+  "MerchandiseAssignment": MerchandiseAssignment,
 
   // Producción / Chaquetas
   "Prod_Dashboard": Prod_Dashboard,
@@ -131,6 +132,7 @@ export const PAGES = {
   "Op_DraftDeliveries": Op_DraftDeliveries,
   "Op_PhotoCapture": Op_PhotoCapture,
   "Op_Empleado": Op_Empleado,
+  "Op_MerchandiseEntry": Op_MerchandiseEntry,
 };
 
 export const pagesConfig = {
