@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, CreditCard, Smartphone, Building2, CheckCircle2, AlertCircle } from "lucide-react";
+import { DollarSign, CreditCard, Building2, CheckCircle2, AlertCircle, PackageOpen } from "lucide-react";
 
 export default function PaymentModal({ payable, locations, userLocation, onConfirm, onCancel }) {
   const [amount, setAmount] = useState("");
@@ -31,9 +31,11 @@ export default function PaymentModal({ payable, locations, userLocation, onConfi
     }
   };
 
+  const isOutsideCash = method === "fuera_de_caja";
+
   const handleSubmit = () => {
     const paymentAmount = parseFloat(amount);
-    
+
     if (!paymentAmount || paymentAmount <= 0) {
       alert("Ingresa un monto válido");
       return;
@@ -44,7 +46,7 @@ export default function PaymentModal({ payable, locations, userLocation, onConfi
       return;
     }
 
-    if (!locationId) {
+    if (!isOutsideCash && !locationId) {
       alert("Selecciona una sucursal");
       return;
     }
@@ -59,8 +61,9 @@ export default function PaymentModal({ payable, locations, userLocation, onConfi
       method,
       reference,
       bank_account_id: bankAccountId || null,
-      location_id: locationId,
-      notes
+      location_id: isOutsideCash ? null : locationId,
+      notes,
+      skip_cash_control: isOutsideCash,
     });
   };
 
@@ -68,7 +71,8 @@ export default function PaymentModal({ payable, locations, userLocation, onConfi
     { value: "cash", label: "Efectivo", icon: DollarSign },
     { value: "transfer", label: "Transferencia", icon: Building2 },
     { value: "card", label: "Tarjeta", icon: CreditCard },
-    { value: "check", label: "Cheque", icon: CheckCircle2 }
+    { value: "check", label: "Cheque", icon: CheckCircle2 },
+    { value: "fuera_de_caja", label: "Fuera de caja", icon: PackageOpen },
   ];
 
   return (
@@ -136,12 +140,20 @@ export default function PaymentModal({ payable, locations, userLocation, onConfi
             </div>
           </div>
 
-          {/* Alerta si es efectivo */}
+          {/* Info según método */}
           {method === "cash" && (
             <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-blue-800">
-                Este pago se registrará automáticamente como <strong>Gasto</strong> para restar del control de efectivo del día.
+                Se crea un <strong>Gasto</strong> que descuenta del control de efectivo de la sucursal seleccionada.
+              </p>
+            </div>
+          )}
+          {isOutsideCash && (
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-start gap-2">
+              <PackageOpen className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">
+                El pago se registra en CxP pero <strong>no afecta caja ni cuentas bancarias</strong>. Útil mientras el sistema se integra completamente.
               </p>
             </div>
           )}
@@ -175,22 +187,24 @@ export default function PaymentModal({ payable, locations, userLocation, onConfi
             />
           </div>
 
-          {/* Sucursal */}
-          <div className="space-y-2">
-            <Label>Sucursal *</Label>
-            <Select value={locationId} onValueChange={setLocationId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar..." />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map(location => (
-                  <SelectItem key={location.id} value={location.id}>
-                    {location.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Sucursal — oculta en Fuera de caja */}
+          {!isOutsideCash && (
+            <div className="space-y-2">
+              <Label>Sucursal *</Label>
+              <Select value={locationId} onValueChange={setLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map(location => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Notas */}
           <div className="space-y-2">

@@ -132,9 +132,10 @@ export default function AccountsPayablePage() {
         notes: paymentData.notes || ""
       });
 
-      // Si el pago es en efectivo, crear automáticamente un Expense
+      // Si es efectivo (y no está marcado como fuera de caja), crear Expense
+      // que descuenta automáticamente del control de caja de la sucursal
       let expenseId = null;
-      if (paymentData.method === "cash") {
+      if (paymentData.method === "cash" && !paymentData.skip_cash_control) {
         const expense = await Expense.create({
           description: `Pago a ${payable.supplier_name} - ${payable.description}`,
           amount: paymentData.amount,
@@ -147,8 +148,6 @@ export default function AccountsPayablePage() {
           notes: `Abono a cuenta por pagar #${payable.id}`
         });
         expenseId = expense.id;
-
-        // Actualizar el pago con el expense_id
         await PayablePayment.update(payment.id, { expense_id: expenseId });
       }
 
