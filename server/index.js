@@ -56,7 +56,83 @@ app.use(authMiddleware);
 app.use('/api/auth', authRoutes);
 app.use('/api/entities', requireAuth, entityRoutes);
 app.use('/api/upload', requireAuth, uploadRoutes);
-app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date() }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
+
+// ─── Function: simulateOperariosSalary ───────────────────────────────────────
+// Reads pending operario deliveries and creates AccountPayable records for each
+// employee that has unpaid balance.
+app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res) => {
+  try {
+    const { rows: employees } = await query(`SELECT id, name, data FROM entity_employee WHERE is_active = true`);
+    const { rows: deliveries } = await query(`SELECT id, employee_id, total_amount, status, data FROM entity_delivery`);
+    const { rows: payments } = await query(`SELECT id, employee_id, amount, data FROM entity_payment`);
+
+    const created = [];
+
+    for (const emp of employees) {
+      const empId = emp.data?.employee_id || emp.id;
+      const empName = emp.name || emp.data?.name || empId;
+
+      // Total earned from deliveries
+      const empDeliveries = deliveries.filter(d => {
+        const dEmpId = d.employee_id || d.data?.employee_id;
+        return dEmpId === empId;
+      });
+
+      const totalEarned = empDeliveries.reduce((sum, d) => {
+        const amt = parseFloat(d.total_amount) || parseFloat(d.data?.total_amount) || 0;
+        return sum + amt;
+      }, 0);
+
+      // Total paid
+      const empPayments = payments.filter(p => {
+        const pEmpId = p.employee_id || p.data?.employee_id;
+        return pEmpId === empId;
+      });
+
+      const totalPaid = empPayments.reduce((sum, p) => {
+        return sum + (parseFloat(p.amount) || parseFloat(p.data?.amount) || 0);
+      }, 0);
+
+      const pending = totalEarned - totalPaid;
+      if (pending <= 0) continue;
+
+      // Check if there's already a pending AccountPayable for this employee
+      const { rows: existing } = await query(
+        `SELECT id FROM entity_account_payable WHERE supplier_id = $1 AND status != 'paid'`,
+        [empId]
+      );
+      if (existing.length > 0) continue;
+
+      const now = new Date().toISOString();
+      const id = `sal_${empId}_${Date.now()}`;
+      const dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      await query(
+        `INSERT INTO entity_account_payable
+          (id, supplier_id, status, due_date, pending_amount, paid_amount, data, created_date, updated_date)
+         VALUES ($1,$2,'pending',$3,$4,0,$5,$6,$6)`,
+        [
+          id, empId, dueDate, pending,
+          JSON.stringify({
+            supplier_name: empName,
+            description: `Salario pendiente operario ${empName}`,
+            type: 'manufacturing_salary',
+            category: 'salarios_manufactura',
+            total_amount: pending,
+          }),
+          now,
+        ]
+      );
+      created.push({ employee: empName, amount: pending });
+    }
+
+    res.json({ ok: true, created });
+  } catch (err) {
+    console.error('simulateOperariosSalary:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ─── Serve frontend (React build) ────────────────────────────────────────────
 const DIST_DIR = join(__dirname, '..', 'dist');

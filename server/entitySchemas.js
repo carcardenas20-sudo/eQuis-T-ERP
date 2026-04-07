@@ -579,9 +579,11 @@ export function mergeRecord(row, schema) {
   for (const col of typedCols) {
     if (row[col] !== undefined) typed[col] = row[col];
   }
+  // Typed columns take priority over JSONB so updates to typed fields
+  // are not silently overwritten by stale JSONB values.
   return {
-    ...typed,
     ...(row.data || {}),
+    ...typed,
     id: row.id,
     created_date: row.created_date,
     updated_date: row.updated_date,
