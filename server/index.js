@@ -69,6 +69,27 @@ app.get('/{*path}', (req, res) => {
 async function runMigrations(client) {
   const migrations = [
     {
+      name: 'deduplicate_employees_by_employee_id',
+      sql: async () => {
+        // Keep the oldest record per employee_id, delete the rest
+        await client.query(`
+          DELETE FROM entity_employee
+          WHERE id IN (
+            SELECT id FROM (
+              SELECT id,
+                ROW_NUMBER() OVER (
+                  PARTITION BY COALESCE(name, data->>'employee_id', data->>'name')
+                  ORDER BY created_date ASC
+                ) AS rn
+              FROM entity_employee
+            ) ranked
+            WHERE rn > 1
+          )
+        `);
+        console.log('✅ Migration: duplicate employees removed');
+      }
+    },
+    {
       name: 'add_producto_reference_and_costo_cols',
       sql: async () => {
         await client.query(`ALTER TABLE entity_producto_produccion ADD COLUMN IF NOT EXISTS reference TEXT`);
