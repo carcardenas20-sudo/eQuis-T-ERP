@@ -219,6 +219,25 @@ async function initDB() {
       if (migrated > 0) console.log(`✅ Synced ${migrated} records to per-entity tables`);
     }
 
+    // ─── Post-sync dedup: always remove duplicate employees after sync ────────
+    const dedupResult = await client.query(`
+      DELETE FROM entity_employee
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id,
+            ROW_NUMBER() OVER (
+              PARTITION BY name
+              ORDER BY created_date ASC
+            ) AS rn
+          FROM entity_employee
+        ) ranked
+        WHERE rn > 1
+      )
+    `);
+    if (dedupResult.rowCount > 0) {
+      console.log(`✅ Post-sync dedup: removed ${dedupResult.rowCount} duplicate employee(s)`);
+    }
+
     // ─── Auto-seed admin user if no users exist ──────────────────────────────
     await seedAdminUser(client);
 
