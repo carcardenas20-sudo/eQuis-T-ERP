@@ -60,13 +60,39 @@ app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date() }));
 
 // ─── Serve frontend (React build) ────────────────────────────────────────────
 const DIST_DIR = join(__dirname, '..', 'dist');
-import { existsSync } from 'fs';
 console.log('🗂️  DIST_DIR:', DIST_DIR);
-console.log('🗂️  EXISTS:', existsSync(DIST_DIR));
 app.use(express.static(DIST_DIR));
 app.get('/{*path}', (req, res) => {
   res.sendFile(join(DIST_DIR, 'index.html'));
 });
+
+async function runMigrations(client) {
+  const migrations = [
+    {
+      name: 'add_producto_reference_and_costo_cols',
+      sql: async () => {
+        await client.query(`ALTER TABLE entity_producto_produccion ADD COLUMN IF NOT EXISTS reference TEXT`);
+        await client.query(`ALTER TABLE entity_producto_produccion ADD COLUMN IF NOT EXISTS costo_mano_obra NUMERIC(14,4)`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_entity_producto_produccion_reference ON entity_producto_produccion(reference)`);
+        // Migrate existing values from JSONB to typed columns
+        await client.query(`
+          UPDATE entity_producto_produccion
+          SET reference = NULLIF(data->>'reference', ''),
+              costo_mano_obra = NULLIF(data->>'costo_mano_obra', '')::NUMERIC
+          WHERE (reference IS NULL OR costo_mano_obra IS NULL)
+        `);
+        console.log('✅ Migration: reference + costo_mano_obra columns added to entity_producto_produccion');
+      }
+    }
+  ];
+
+  for (const migration of migrations) {
+    const already = await client.query('SELECT 1 FROM schema_migrations WHERE name = $1', [migration.name]);
+    if (already.rows.length > 0) continue;
+    await migration.sql();
+    await client.query('INSERT INTO schema_migrations (name) VALUES ($1) ON CONFLICT DO NOTHING', [migration.name]);
+  }
+}
 
 async function initDB() {
   const client = await pool.connect();
@@ -118,6 +144,9 @@ async function initDB() {
     console.log(`✅ Per-entity tables created (${Object.keys(ENTITY_SCHEMAS).length} types)`);
 
     console.log('✅ DB schema initialized');
+
+    // ─── Migrations ──────────────────────────────────────────────────────────
+    await runMigrations(client);
 
     // ─── Auto-import historical data if DB is empty ─────────────────────────
     await seedExportsData(client);
