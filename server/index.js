@@ -60,8 +60,9 @@ app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date() }));
 
 // ─── Serve frontend (React build) ────────────────────────────────────────────
 const DIST_DIR = join(__dirname, '..', 'dist');
+import { existsSync } from 'fs';
 console.log('🗂️  DIST_DIR:', DIST_DIR);
-console.log('🗂️  EXISTS:', require('fs').existsSync(DIST_DIR));
+console.log('🗂️  EXISTS:', existsSync(DIST_DIR));
 app.use(express.static(DIST_DIR));
 app.get('/{*path}', (req, res) => {
   res.sendFile(join(DIST_DIR, 'index.html'));
