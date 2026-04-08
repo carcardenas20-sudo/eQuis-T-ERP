@@ -169,6 +169,8 @@ export default function EmployeePortal() {
       return sum + (d.quantity || 0);
     }, 0);
 
+    const pendingUnits = {};
+
     setStats({ totalEarned, pendingAmount, totalDelivered, pendingUnits });
   };
 
