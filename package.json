@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "start": "node server/index.js",
     "dev": "concurrently -n API,Vite -c blue,green \"node server/index.js\" \"vite\"",
     "server": "node server/index.js",
     "import-data": "node scripts/import-to-postgres.js",
