@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { pool } from './db.js';
+import { pool, query } from './db.js';
 import { JWT_SECRET } from './config.js';
 import { ENTITY_SCHEMAS, buildCreateTableSQL, buildIndexSQL } from './entitySchemas.js';
 import authRoutes from './routes/auth.js';
