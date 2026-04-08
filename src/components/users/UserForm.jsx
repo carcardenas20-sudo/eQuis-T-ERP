@@ -212,49 +212,39 @@ export default function UserForm({ user, locations, roles: rolesProp, onSave, on
               </div>
             </div>
 
-            {/* Role selector */}
-            <Select
+            {/* Role selector — native select to avoid z-index conflicts inside Dialog */}
+            <select
               value={formData.role_id || ''}
-              onValueChange={handleRoleChange}
+              onChange={e => handleRoleChange(e.target.value)}
+              className="w-full h-12 border-2 border-blue-300 rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <SelectTrigger className="w-full h-12 bg-white border-2 border-blue-300">
-                <SelectValue placeholder="⚠️ Seleccionar rol..." />
-              </SelectTrigger>
-              <SelectContent className="z-[9999]">
-                {filteredRoles.length === 0 ? (
-                  <div className="py-3 px-4 text-sm text-slate-500 text-center">
-                    No hay roles para este módulo.
-                    <button
-                      type="button"
-                      onClick={() => setModuleFilter("all")}
-                      className="block mx-auto mt-1 text-blue-600 underline text-xs"
-                    >
-                      Ver todos
-                    </button>
-                  </div>
-                ) : (
-                  filteredRoles.map(role => {
-                    const mods = getModulesForRole(role);
-                    return (
-                      <SelectItem key={role.id} value={role.id}>
-                        <div className="flex items-center gap-2 py-0.5">
-                          <Shield className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                          <span className="font-medium">{role.name}</span>
-                          <div className="flex gap-1 ml-1">
-                            {mods.includes("comercial") && <span className="text-xs">🔵</span>}
-                            {mods.includes("produccion") && <span className="text-xs">🟢</span>}
-                            {mods.includes("operarios") && <span className="text-xs">🟣</span>}
-                          </div>
-                          <Badge variant="outline" className="ml-auto text-xs shrink-0">
-                            {role.permissions?.length || 0} permisos
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    );
-                  })
-                )}
-              </SelectContent>
-            </Select>
+              <option value="">⚠️ Seleccionar rol...</option>
+              {filteredRoles.length === 0 && (
+                <option disabled>— No hay roles para este módulo —</option>
+              )}
+              {filteredRoles.map(role => {
+                const mods = getModulesForRole(role);
+                const modIcons = [
+                  mods.includes("comercial") ? "🔵" : "",
+                  mods.includes("produccion") ? "🟢" : "",
+                  mods.includes("operarios") ? "🟣" : "",
+                ].filter(Boolean).join("");
+                return (
+                  <option key={role.id} value={role.id}>
+                    {modIcons ? `${modIcons} ` : ""}{role.name} ({role.permissions?.length || 0} permisos)
+                  </option>
+                );
+              })}
+            </select>
+            {filteredRoles.length === 0 && moduleFilter !== "all" && (
+              <button
+                type="button"
+                onClick={() => setModuleFilter("all")}
+                className="text-xs text-blue-600 underline mt-1"
+              >
+                Ver todos los módulos
+              </button>
+            )}
 
             {/* Preview of selected role */}
             {selectedRole && (
@@ -319,22 +309,19 @@ export default function UserForm({ user, locations, roles: rolesProp, onSave, on
               <Building2 className="w-3.5 h-3.5" />
               Sucursal Asignada
             </Label>
-            <Select
+            <select
+              id="location_id"
               value={formData.location_id || ''}
-              onValueChange={value => handleChange('location_id', value)}
+              onChange={e => handleChange('location_id', e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <SelectTrigger id="location_id" className="w-full">
-                <SelectValue placeholder="Seleccionar sucursal..." />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map(loc => (
-                  <SelectItem key={loc.id} value={loc.id}>
-                    {loc.name}
-                    {loc.is_main && <Badge variant="outline" className="ml-2 text-xs">Principal</Badge>}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">Seleccionar sucursal...</option>
+              {locations.map(loc => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}{loc.is_main ? " (Principal)" : ""}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Salary */}

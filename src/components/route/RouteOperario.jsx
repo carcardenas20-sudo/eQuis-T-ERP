@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Delivery, Dispatch, Inventory, StockMovement, AppConfig, ActivityLog } from "@/api/publicEntities";
 
-// Versión pública de logActivity (sin autenticación)
 async function logActivity(params) {
   try {
     await ActivityLog.create({
@@ -18,6 +17,7 @@ async function logActivity(params) {
     });
   } catch {}
 }
+
 import { CheckCircle2, Plus, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -146,7 +146,6 @@ export default function RouteOperario({ employees, products, dispatches, deliver
       });
       try { await logActivity({ entity_type: 'Delivery', entity_id: newDelivery.id, action: 'created', description: `Entrega registrada desde Portal de Ruta - ${employee?.name || employeeId}`, employee_id: employeeId, employee_name: employee?.name || employeeId, amount: total_amount, new_data: { items: validDeliveries, total_amount } }); } catch {}
 
-      // Abrir ventana de pagos automáticamente si no hay una ya abierta hoy
       try {
         const configs = await AppConfig.filter({ key: 'payment_window_opened_at' });
         const existing = configs.length > 0 ? configs[0] : null;
@@ -155,18 +154,13 @@ export default function RouteOperario({ employees, products, dispatches, deliver
           ? (() => {
               const openedAt = new Date(existing.value);
               const diffH = (now - openedAt) / (1000 * 60 * 60);
-              // Ventana aún activa (menos de 5 horas) Y fue abierta hoy
               return diffH >= 0 && diffH < 5 && openedAt.toISOString().slice(0, 10) === today;
             })()
           : false;
-
         if (!alreadyOpenToday) {
           const nowIso = now.toISOString();
-          if (existing) {
-            await AppConfig.update(existing.id, { value: nowIso });
-          } else {
-            await AppConfig.create({ key: 'payment_window_opened_at', value: nowIso });
-          }
+          if (existing) { await AppConfig.update(existing.id, { value: nowIso }); }
+          else { await AppConfig.create({ key: 'payment_window_opened_at', value: nowIso }); }
         }
       } catch {}
     }
@@ -200,11 +194,7 @@ export default function RouteOperario({ employees, products, dispatches, deliver
 
     setSaving(false);
     setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      resetForm();
-      onSaved();
-    }, 1500);
+    setTimeout(() => { setSaved(false); resetForm(); onSaved(); }, 1500);
   };
 
   if (saved) {
@@ -218,14 +208,14 @@ export default function RouteOperario({ employees, products, dispatches, deliver
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Selección de operario */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-        <label className="text-xs font-semibold text-slate-600 block mb-1.5">Operario</label>
+        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Operario</label>
         <select
           value={employeeId}
           onChange={e => { setEmployeeId(e.target.value); setDeliveryQty({}); }}
-          className="w-full border border-slate-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
         >
           <option value="">— Seleccionar operario —</option>
           {employees.map(e => (
@@ -235,35 +225,39 @@ export default function RouteOperario({ employees, products, dispatches, deliver
 
         {employeeId && employeeStats && (
           <div className="mt-3 space-y-2">
-            <div className="flex gap-2">
-              <div className="flex-1 bg-blue-50 rounded-lg px-3 py-2 text-center">
-                <p className="text-xs text-slate-500">Prom. semanal</p>
-                <p className="font-bold text-blue-700 text-lg">{employeeStats.weeklyAvg || '—'}</p>
-                <p className="text-xs text-slate-400">uds/sem</p>
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-blue-50 rounded-xl p-3 text-center">
+                <p className="text-xs text-slate-500 mb-0.5">Prom. semanal</p>
+                <p className="font-bold text-blue-700 text-2xl leading-none">{employeeStats.weeklyAvg || '—'}</p>
+                <p className="text-xs text-slate-400 mt-0.5">uds/sem</p>
               </div>
-              <div className={`flex-1 rounded-lg px-3 py-2 text-center ${
+              <div className={`rounded-xl p-3 text-center ${
                 employeeStats.performancePct === null ? 'bg-slate-50' :
                 employeeStats.performancePct >= 85 ? 'bg-green-50' :
                 employeeStats.performancePct >= 65 ? 'bg-amber-50' : 'bg-red-50'
               }`}>
-                <p className="text-xs text-slate-500">Productividad</p>
-                <p className={`font-bold text-lg ${
+                <p className="text-xs text-slate-500 mb-0.5">Productividad</p>
+                <p className={`font-bold text-2xl leading-none ${
                   employeeStats.performancePct === null ? 'text-slate-400' :
                   employeeStats.performancePct >= 85 ? 'text-green-700' :
                   employeeStats.performancePct >= 65 ? 'text-amber-700' : 'text-red-700'
                 }`}>{employeeStats.performancePct !== null ? `${employeeStats.performancePct}%` : '—'}</p>
-                <p className="text-xs text-slate-400">último ciclo</p>
+                <p className="text-xs text-slate-400 mt-0.5">último ciclo</p>
               </div>
             </div>
+            {/* Devoluciones abiertas */}
             {employeeStats.openDevs.length > 0 && (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-                <p className="text-xs font-semibold text-orange-700 mb-1">⚠️ Devoluciones abiertas ({employeeStats.openDevs.length})</p>
+              <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
+                <p className="text-xs font-semibold text-orange-700 mb-1">
+                  ⚠️ {employeeStats.openDevs.length} devolución{employeeStats.openDevs.length > 1 ? 'es' : ''} pendiente{employeeStats.openDevs.length > 1 ? 's' : ''} de reparación
+                </p>
                 {employeeStats.openDevs.map(d => {
                   const pend = d.quantity_sent - (d.quantity_returned || 0);
                   const prod = products.find(p => p.reference === d.product_reference);
                   return (
                     <p key={d.id} className="text-xs text-orange-800">
-                      {prod?.name || d.product_reference}: <span className="font-bold">{pend} pendientes</span>
+                      · {prod?.name || d.product_reference}: <span className="font-bold">{pend} uds</span>
                     </p>
                   );
                 })}
@@ -275,37 +269,29 @@ export default function RouteOperario({ employees, products, dispatches, deliver
 
       {employeeId && (
         <>
-          {/* Sección: Entregas de despachos anteriores */}
+          {/* Entregas de despachos anteriores */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 bg-green-50 border-b border-green-200">
-              <p className="font-semibold text-green-800 text-sm">Entrega de despachos anteriores</p>
-              <p className="text-xs text-green-600 mt-0.5">Se registran directamente como pendiente de pago.</p>
+              <p className="font-semibold text-green-800">Entregas del operario</p>
+              <p className="text-xs text-green-600 mt-0.5">Quedan pendientes por entregar</p>
             </div>
             <div className="px-4 py-3">
               {pendingItems.length === 0 ? (
-                <p className="text-sm text-slate-400 py-2">Sin pendientes de entrega.</p>
+                <p className="text-sm text-slate-400 py-3 text-center">Sin pendientes de entrega.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {pendingItems.map(({ product, pending }) => {
                     const val = parseInt(deliveryQty[product.reference] || "0");
                     const over = val > pending;
                     return (
-                      <div key={product.reference} className="space-y-1">
+                      <div key={product.reference}>
+                        {/* Product info + input en fila */}
                         <div className="flex items-center gap-3">
-                          <div className="flex-1">
-                            <p className="text-sm text-slate-800 font-medium">{product.name}</p>
-                            <p className="text-xs text-slate-400">
-                              Pendiente: <span className="font-semibold text-slate-700">{pending}</span> uds
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate">{product.name}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Pendiente: <span className="font-bold text-slate-700">{pending}</span> uds
                             </p>
-                            {val > 0 && (
-                              <p className="text-xs font-semibold mt-0.5">
-                                <span className="text-green-700">Entrega: {val}</span>
-                                <span className="text-slate-400"> → </span>
-                                <span className={pending - val === 0 ? "text-emerald-700" : "text-orange-600"}>
-                                  Quedan: {pending - val}
-                                </span>
-                              </p>
-                            )}
                           </div>
                           <input
                             type="number" min="0" max={pending} placeholder="0"
@@ -314,15 +300,25 @@ export default function RouteOperario({ employees, products, dispatches, deliver
                               const raw = parseInt(e.target.value) || 0;
                               setDeliveryQty(prev => ({ ...prev, [product.reference]: String(Math.min(raw, pending)) }));
                             }}
-                            className={`w-20 border rounded-lg px-2 py-2 text-center text-sm font-semibold focus:outline-none focus:ring-2 ${
+                            className={`w-20 h-12 border-2 rounded-xl px-2 text-center text-lg font-bold focus:outline-none focus:ring-2 shrink-0 ${
                               over ? "border-red-400 bg-red-50 text-red-700 focus:ring-red-400"
                                    : val > 0 ? "border-green-400 bg-green-50 text-green-800 focus:ring-green-400"
                                    : "border-slate-300 focus:ring-green-400"
                             }`}
                           />
                         </div>
+                        {/* Feedback de cantidad */}
+                        {val > 0 && !over && (
+                          <p className="text-xs font-semibold mt-1 text-right">
+                            <span className="text-green-700">Entrega: {val}</span>
+                            <span className="text-slate-400 mx-1">→</span>
+                            <span className={pending - val === 0 ? "text-emerald-700" : "text-orange-600"}>
+                              Quedan: {pending - val}
+                            </span>
+                          </p>
+                        )}
                         {over && (
-                          <p className="text-xs text-red-600 text-right pr-1 font-medium">⚠️ Máximo permitido: {pending}</p>
+                          <p className="text-xs text-red-600 text-right font-semibold mt-1">⚠️ Máx: {pending}</p>
                         )}
                       </div>
                     );
@@ -332,17 +328,17 @@ export default function RouteOperario({ employees, products, dispatches, deliver
             </div>
           </div>
 
-          {/* Sección: Nuevo despacho */}
+          {/* Nuevo despacho */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <button
-              className="w-full px-4 py-3 bg-blue-50 border-b border-blue-200 flex items-center justify-between"
+              className="w-full px-4 py-3.5 bg-blue-50 border-b border-blue-200 flex items-center justify-between active:bg-blue-100"
               onClick={() => setDispatchOpen(o => !o)}
             >
               <div className="text-left">
-                <p className="font-semibold text-blue-800 text-sm">Nuevo despacho</p>
-                <p className="text-xs text-blue-600 mt-0.5">Se descuenta del inventario inmediatamente.</p>
+                <p className="font-semibold text-blue-800">Nuevo despacho</p>
+                <p className="text-xs text-blue-500 mt-0.5">Descuenta del inventario</p>
               </div>
-              {dispatchOpen ? <ChevronUp className="w-4 h-4 text-blue-400" /> : <ChevronDown className="w-4 h-4 text-blue-400" />}
+              {dispatchOpen ? <ChevronUp className="w-5 h-5 text-blue-400 shrink-0" /> : <ChevronDown className="w-5 h-5 text-blue-400 shrink-0" />}
             </button>
 
             {dispatchOpen && (
@@ -351,53 +347,71 @@ export default function RouteOperario({ employees, products, dispatches, deliver
                   const stock = item.product_reference ? getStock(item.product_reference) : null;
                   const over = stock !== null && parseInt(item.quantity) > stock;
                   return (
-                    <div key={i} className="space-y-2 p-3 bg-slate-50 rounded-lg">
+                    <div key={i} className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      {/* Referencia */}
                       <select
                         value={item.product_reference}
                         onChange={e => updateDispatch(i, "product_reference", e.target.value)}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full border border-slate-300 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                       >
-                        <option value="">— Referencia —</option>
+                        <option value="">— Seleccionar referencia —</option>
                         {products.map(p => (
-                          <option key={p.reference} value={p.reference}>{p.name} (stock: {getStock(p.reference)})</option>
+                          <option key={p.reference} value={p.reference}>
+                            {p.name} (stock: {getStock(p.reference)})
+                          </option>
                         ))}
                       </select>
+
+                      {/* Cantidad + Eliminar */}
                       <div className="flex gap-2 items-center">
-                        <input
-                          type="number" min="1" placeholder="Cantidad"
-                          value={item.quantity}
-                          onChange={e => {
-                            const raw = parseInt(e.target.value) || 0;
-                            const maxStock = item.product_reference ? getStock(item.product_reference) : 9999;
-                            updateDispatch(i, "quantity", String(Math.min(raw, maxStock)));
-                          }}
-                          className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${over ? "border-orange-400 bg-orange-50 focus:ring-orange-400" : "border-slate-300 focus:ring-blue-400"}`}
-                        />
+                        <div className="flex-1">
+                          <input
+                            type="number" min="1" placeholder="Cantidad a despachar"
+                            value={item.quantity}
+                            onChange={e => {
+                              const raw = parseInt(e.target.value) || 0;
+                              const maxStock = item.product_reference ? getStock(item.product_reference) : 9999;
+                              updateDispatch(i, "quantity", String(Math.min(raw, maxStock)));
+                            }}
+                            className={`w-full h-12 border-2 rounded-xl px-3 text-base font-semibold focus:outline-none focus:ring-2 ${
+                              over ? "border-orange-400 bg-orange-50 text-orange-800 focus:ring-orange-400"
+                                   : "border-slate-300 focus:ring-blue-400 bg-white"
+                            }`}
+                          />
+                        </div>
                         {newDispatches.length > 1 && (
-                          <button onClick={() => setNewDispatches(prev => prev.filter((_, idx) => idx !== i))} className="text-red-400 shrink-0">
+                          <button
+                            onClick={() => setNewDispatches(prev => prev.filter((_, idx) => idx !== i))}
+                            className="w-12 h-12 flex items-center justify-center rounded-xl bg-red-50 border border-red-200 text-red-500 shrink-0"
+                          >
                             <X className="w-4 h-4" />
                           </button>
                         )}
                       </div>
+
+                      {/* Stock info */}
                       {item.product_reference && stock !== null && (
-                        <p className={`text-xs ${over ? "text-orange-600 font-semibold" : "text-slate-400"}`}>
-                          {over ? `⚠️ Stock disponible: ${stock}` : `Stock disponible: ${stock}`}
+                        <p className={`text-xs px-1 ${over ? "text-orange-600 font-semibold" : "text-slate-400"}`}>
+                          {over ? `⚠️ Stock disponible: ${stock}` : `Stock disponible: ${stock} uds`}
                         </p>
                       )}
+
+                      {/* Observaciones */}
                       <textarea
-                        placeholder="Observaciones (ej: falta cremallera, tela dañada, etc.)"
+                        placeholder="Observaciones (opcional)"
                         value={item.observations || ""}
                         onChange={e => updateDispatch(i, "observations", e.target.value)}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none h-16 placeholder-slate-400"
+                        className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none h-16 bg-white placeholder-slate-400"
                       />
                     </div>
                   );
                 })}
+
                 <button
                   onClick={() => setNewDispatches(prev => [...prev, { product_reference: "", quantity: "", observations: "" }])}
-                  className="w-full py-2 border border-dashed border-blue-300 rounded-lg text-blue-600 text-sm flex items-center justify-center gap-1 hover:bg-blue-50"
+                  className="w-full py-3 border-2 border-dashed border-blue-200 rounded-xl text-blue-600 text-sm font-medium flex items-center justify-center gap-2 active:bg-blue-50"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Agregar referencia
+                  <Plus className="w-4 h-4" /> Agregar referencia
                 </button>
               </div>
             )}
@@ -406,7 +420,7 @@ export default function RouteOperario({ employees, products, dispatches, deliver
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white h-12 text-base font-semibold"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white h-14 text-base font-bold rounded-xl"
           >
             {saving ? "Guardando..." : "Guardar todo"}
           </Button>

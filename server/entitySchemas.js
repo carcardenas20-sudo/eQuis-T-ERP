@@ -354,10 +354,12 @@ export const ENTITY_SCHEMAS = {
       quantity_sent: 'NUMERIC(14,4)',
       quantity_returned: 'NUMERIC(14,4)',
       date_sent: 'TIMESTAMPTZ',
+      defect_type: 'TEXT',
       notes: 'TEXT',
       status: 'TEXT',
+      date_returned: 'TIMESTAMPTZ',
     },
-    indexes: ['employee_id', 'status', 'date_sent'],
+    indexes: ['employee_id', 'status', 'date_sent', 'date_returned'],
   },
 
   Delivery: {

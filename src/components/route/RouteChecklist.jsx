@@ -84,7 +84,7 @@ export default function RouteChecklist({ employees, dispatches, deliveries, rout
               <Circle className="w-5 h-5 text-orange-400 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">{emp.name}</p>
-                {emp.phone && <p className="text-xs text-slate-400">{emp.phone}</p>}
+                {emp.phone && <p className="text-xs text-slate-400 truncate">{emp.phone}</p>}
               </div>
               <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full shrink-0">
                 {pendingUnits} uds

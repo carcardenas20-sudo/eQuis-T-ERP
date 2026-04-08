@@ -29,7 +29,6 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
   const getProduct = (ref) => products.find(p => p.reference === ref);
   const getInv = (ref) => inventory.find(i => i.product_reference === ref);
 
-  // --- Delivery edit/delete ---
   const startEditDelivery = (d) => {
     setEditingDelivery({
       id: d.id,
@@ -49,7 +48,6 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
       });
     const total_amount = items.reduce((s, i) => s + i.total_amount, 0);
     await Delivery.update(editingDelivery.id, { items, total_amount });
-
     setEditingDelivery(null);
     setSaving(false);
     onSaved();
@@ -57,13 +55,10 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
 
   const deleteDelivery = async (id) => {
     if (!confirm("¿Eliminar esta entrega?")) return;
-    const delivery = deliveries.find(d => d.id === id);
     await Delivery.delete(id);
-
     onSaved();
   };
 
-  // --- Dispatch edit/delete ---
   const startEditDispatch = (d) => {
     setEditingDispatch({ id: d.id, product_reference: d.product_reference, quantity: String(d.quantity), employee_id: d.employee_id, original_qty: d.quantity });
   };
@@ -87,7 +82,6 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
         new_stock: newStock,
       });
     }
-
     setEditingDispatch(null);
     setSaving(false);
     onSaved();
@@ -109,55 +103,73 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
         new_stock: inv.current_stock + d.quantity,
       });
     }
-
     onSaved();
   };
 
   if (todayDeliveries.length === 0 && todayDispatches.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-2">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-3">
+      {/* Header colapsable */}
       <button
-        className="w-full px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between"
+        className="w-full px-4 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between active:bg-slate-100"
         onClick={() => setOpen(o => !o)}
       >
         <div className="text-left">
-          <p className="font-semibold text-slate-700 text-sm">Registros recientes ({todayDeliveries.length + todayDispatches.length})</p>
-          <p className="text-xs text-slate-400">Últimos 5 días · editar o eliminar</p>
+          <p className="font-semibold text-slate-700">Registros recientes</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {todayDeliveries.length + todayDispatches.length} registros · últimos 5 días
+          </p>
         </div>
-        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        {open
+          ? <ChevronUp className="w-5 h-5 text-slate-400 shrink-0" />
+          : <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />}
       </button>
 
       {open && (
         <div className="divide-y divide-slate-100">
 
-          {/* Entregas del día */}
+          {/* ── Entregas ── */}
           {todayDeliveries.map(d => (
             <div key={d.id} className="px-4 py-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                   <PackageCheck className="w-4 h-4 text-green-600" />
-                   <span className="text-sm font-semibold text-slate-800">{empName(d.employee_id)}</span>
-                   <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Entrega</span>
-                   <span className="text-xs text-slate-400">{(d.delivery_date || '').slice(0, 10)}</span>
+              {/* Cabecera del registro */}
+              <div className="flex items-start gap-2">
+                {/* Info izquierda */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <PackageCheck className="w-4 h-4 text-green-600 shrink-0" />
+                    <span className="text-sm font-semibold text-slate-800 truncate">{empName(d.employee_id)}</span>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full shrink-0">Entrega</span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5 ml-6">{(d.delivery_date || '').slice(0, 10)}</p>
                 </div>
+                {/* Botones editar/eliminar */}
                 {editingDelivery?.id !== d.id && (
-                  <div className="flex gap-1">
-                    <button onClick={() => startEditDelivery(d)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg">
-                      <Edit2 className="w-3.5 h-3.5" />
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => startEditDelivery(d)}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl text-blue-500 hover:bg-blue-50 active:bg-blue-100"
+                    >
+                      <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => deleteDelivery(d.id)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button
+                      onClick={() => deleteDelivery(d.id)}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl text-red-400 hover:bg-red-50 active:bg-red-100"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 )}
               </div>
 
+              {/* Modo edición */}
               {editingDelivery?.id === d.id ? (
-                <div className="space-y-2 mt-2">
+                <div className="space-y-2 mt-3">
                   {editingDelivery.items.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="flex-1 text-xs text-slate-600">{prodName(item.product_reference)}</span>
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="flex-1 text-sm text-slate-700 font-medium truncate">
+                        {prodName(item.product_reference)}
+                      </span>
                       <input
                         type="number" min="0"
                         value={item.quantity}
@@ -166,78 +178,104 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
                           updated[i] = { ...updated[i], quantity: e.target.value };
                           setEditingDelivery(prev => ({ ...prev, items: updated }));
                         }}
-                        className="w-20 border border-blue-300 rounded-lg px-2 py-1.5 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-24 h-11 border-2 border-blue-300 rounded-xl px-2 text-center text-base font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
                       />
                     </div>
                   ))}
                   <div className="flex gap-2 pt-1">
-                    <Button size="sm" onClick={saveDelivery} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white flex-1">
-                      <Save className="w-3.5 h-3.5 mr-1" />{saving ? "Guardando..." : "Guardar"}
+                    <Button
+                      size="sm"
+                      onClick={saveDelivery}
+                      disabled={saving}
+                      className="bg-blue-600 hover:bg-blue-700 text-white flex-1 h-11"
+                    >
+                      <Save className="w-4 h-4 mr-1" />
+                      {saving ? "Guardando..." : "Guardar"}
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingDelivery(null)}>
-                      <X className="w-3.5 h-3.5" />
-                    </Button>
+                    <button
+                      onClick={() => setEditingDelivery(null)}
+                      className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-0.5 ml-6">
+                /* Vista normal */
+                <div className="mt-1.5 ml-6 space-y-0.5">
                   {(d.items || []).map((item, i) => (
-                    <p key={i} className="text-xs text-slate-500">
-                      {prodName(item.product_reference)}: <span className="font-semibold text-slate-700">{item.quantity}</span>
+                    <p key={i} className="text-sm text-slate-600">
+                      {prodName(item.product_reference)}:
+                      <span className="font-bold text-slate-800 ml-1">{item.quantity} uds</span>
                     </p>
                   ))}
+                  {d.observations && (
+                    <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5 mt-1">
+                      📝 {d.observations}
+                    </p>
+                  )}
                 </div>
-              )}
-              {d.observations && (
-                <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1.5 mt-1.5 ml-6">
-                  📝 <strong>Obs:</strong> {d.observations}
-                </p>
               )}
             </div>
           ))}
 
-          {/* Despachos del día */}
+          {/* ── Despachos ── */}
           {todayDispatches.map(d => {
             const inv = getInv(d.product_reference);
             const isEditing = editingDispatch?.id === d.id;
             const newQty = isEditing ? parseInt(editingDispatch.quantity) || 0 : d.quantity;
             const diff = isEditing ? newQty - d.quantity : 0;
             const stockAfter = inv ? inv.current_stock - diff : null;
+
             return (
               <div key={d.id} className="px-4 py-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Truck className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-semibold text-slate-800">{empName(d.employee_id)}</span>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Despacho</span>
-                    <span className="text-xs text-slate-400">{(d.dispatch_date || '').slice(0, 10)}</span>
+                {/* Cabecera del registro */}
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Truck className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span className="text-sm font-semibold text-slate-800 truncate">{empName(d.employee_id)}</span>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full shrink-0">Despacho</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5 ml-6">{(d.dispatch_date || '').slice(0, 10)}</p>
                   </div>
                   {!isEditing && (
-                    <div className="flex gap-1">
-                      <button onClick={() => startEditDispatch(d)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg">
-                        <Edit2 className="w-3.5 h-3.5" />
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        onClick={() => startEditDispatch(d)}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl text-blue-500 hover:bg-blue-50 active:bg-blue-100"
+                      >
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => deleteDispatch(d)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg">
-                        <Trash2 className="w-3.5 h-3.5" />
+                      <button
+                        onClick={() => deleteDispatch(d)}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl text-red-400 hover:bg-red-50 active:bg-red-100"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   )}
                 </div>
 
+                {/* Modo edición */}
                 {isEditing ? (
-                  <div className="space-y-2 mt-1 ml-6">
-                    <div className="flex items-center gap-2">
-                      <span className="flex-1 text-xs text-slate-600">{prodName(d.product_reference)}</span>
+                  <div className="space-y-2 mt-3 ml-6">
+                    <div className="flex items-center gap-3">
+                      <span className="flex-1 text-sm text-slate-700 font-medium truncate">
+                        {prodName(d.product_reference)}
+                      </span>
                       <input
                         type="number" min="0"
                         value={editingDispatch.quantity}
                         onChange={e => setEditingDispatch(prev => ({ ...prev, quantity: e.target.value }))}
-                        className="w-20 border border-blue-300 rounded-lg px-2 py-1.5 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-24 h-11 border-2 border-blue-300 rounded-xl px-2 text-center text-base font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
                       />
                     </div>
                     {inv && diff !== 0 && (
                       <p className={`text-xs ${diff < 0 ? "text-green-600" : "text-orange-600"}`}>
-                        {diff < 0 ? `✓ Se liberan ${Math.abs(diff)} uds al stock (quedará: ${stockAfter})` : `⚠️ Se consumen ${diff} uds del stock (quedará: ${stockAfter})`}
+                        {diff < 0
+                          ? `✓ Libera ${Math.abs(diff)} uds al stock (quedará: ${stockAfter})`
+                          : `⚠️ Consume ${diff} uds del stock (quedará: ${stockAfter})`}
                       </p>
                     )}
                     {inv && stockAfter !== null && stockAfter < 0 && (
@@ -248,31 +286,38 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
                         size="sm"
                         onClick={saveDispatch}
                         disabled={saving || (stockAfter !== null && stockAfter < 0)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1 h-11"
                       >
-                        <Save className="w-3.5 h-3.5 mr-1" />{saving ? "Guardando..." : "Guardar"}
+                        <Save className="w-4 h-4 mr-1" />
+                        {saving ? "Guardando..." : "Guardar"}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingDispatch(null)}>
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
+                      <button
+                        onClick={() => setEditingDispatch(null)}
+                        className="w-11 h-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ) : (
-                <div className="ml-6">
-                  <p className="text-xs text-slate-500">
-                    {prodName(d.product_reference)}: <span className="font-semibold text-slate-700">{d.quantity}</span> uds
-                    {inv && <span className="text-slate-400 ml-1">(stock actual: {inv.current_stock})</span>}
-                  </p>
-                  {d.observations && (
-                    <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 mt-1">
-                      📝 <strong>Obs:</strong> {d.observations}
+                  /* Vista normal */
+                  <div className="mt-1.5 ml-6">
+                    <p className="text-sm text-slate-600">
+                      {prodName(d.product_reference)}:
+                      <span className="font-bold text-slate-800 ml-1">{d.quantity} uds</span>
+                      {inv && <span className="text-xs text-slate-400 ml-2">(stock: {inv.current_stock})</span>}
                     </p>
-                  )}
-                </div>
+                    {d.observations && (
+                      <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5 mt-1">
+                        📝 {d.observations}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             );
           })}
+
         </div>
       )}
     </div>

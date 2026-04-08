@@ -10,14 +10,15 @@ const getColombiaToday = () => {
 export default function RouteConteoFisico({ employees, products, deliveries, dispatches = [], devoluciones = [], onSaved }) {
   const today = getColombiaToday();
 
-  // Fechas disponibles con entregas O devoluciones (más reciente primero)
+  // Fechas disponibles con entregas O retornos de devoluciones (por date_returned, no date_sent)
   const availableDates = [...new Set([
     ...deliveries
       .filter(d => d.status !== "borrador")
       .map(d => (d.delivery_date || "").slice(0, 10))
       .filter(Boolean),
     ...devoluciones
-      .map(d => (d.date_sent || "").slice(0, 10))
+      .filter(d => d.date_returned)
+      .map(d => d.date_returned.slice(0, 10))
       .filter(Boolean),
   ])].sort((a, b) => b.localeCompare(a));
 
@@ -32,9 +33,9 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
     d => (d.delivery_date || "").slice(0, 10) === selectedDate && d.status !== "borrador"
   );
 
-  // Devoluciones del día seleccionado
+  // Devoluciones REPARADAS retornadas en el día seleccionado (por date_returned)
   const selectedDevoluciones = devoluciones.filter(
-    d => (d.date_sent || "").slice(0, 10) === selectedDate
+    d => d.date_returned && d.date_returned.slice(0, 10) === selectedDate && d.quantity_returned > 0
   );
 
   // Empleados con entrega O devolución en la fecha seleccionada
@@ -64,12 +65,13 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
   }, [selectedDeliveries]);
 
   // Devoluciones del sistema por empleado (agrupadas por referencia)
+  // Cuenta por quantity_returned (lo que realmente retornó reparado ese día)
   const devolucionesSistema = useMemo(() => {
     const result = {};
     selectedDevoluciones.forEach(d => {
       if (!result[d.employee_id]) result[d.employee_id] = {};
       result[d.employee_id][d.product_reference] =
-        (result[d.employee_id][d.product_reference] || 0) + (d.quantity_sent || 0);
+        (result[d.employee_id][d.product_reference] || 0) + (d.quantity_returned || 0);
     });
     return result;
   }, [selectedDevoluciones]);
@@ -292,13 +294,13 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
       {(() => {
         const totalDevPorRef = {};
         selectedDevoluciones.forEach(d => {
-          totalDevPorRef[d.product_reference] = (totalDevPorRef[d.product_reference] || 0) + (d.quantity_sent || 0);
+          totalDevPorRef[d.product_reference] = (totalDevPorRef[d.product_reference] || 0) + (d.quantity_returned || 0);
         });
         const totalDev = Object.values(totalDevPorRef).reduce((s, q) => s + q, 0);
         if (totalDev === 0) return null;
         return (
           <div className="rounded-xl p-4 border-2 bg-orange-700 border-orange-700 text-white">
-            <p className="text-xs font-semibold opacity-70 uppercase tracking-wide mb-3">🔁 Devoluciones registradas en sistema</p>
+            <p className="text-xs font-semibold opacity-70 uppercase tracking-wide mb-3">🔧 Devoluciones reparadas retornadas</p>
             <div className="flex gap-3 flex-wrap items-start">
               <div className="bg-white/10 rounded-lg px-3 py-2">
                 <p className="text-xs opacity-70">Total devoluciones</p>
@@ -390,7 +392,7 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
                     )}
                     {tieneDevoluciones && (
                       <p className="text-xs text-orange-600">
-                        🔁 Devoluciones sistema: {Object.entries(devolucionesSistema[empId] || {}).map(([ref, qty]) => `${qty} ${prodName(ref)}`).join(", ")}
+                        🔧 Reparadas sistema: {Object.entries(devolucionesSistema[empId] || {}).map(([ref, qty]) => `${qty} ${prodName(ref)}`).join(", ")}
                       </p>
                     )}
                   </div>
@@ -461,13 +463,13 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
                                 <AlertTriangle className="w-4 h-4" /> Diferencias en entregas:
                               </p>
                               {diff.diffs.filter(d => d.delta !== 0).map((d, i) => (
-                                <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-red-100 last:border-0">
-                                  <span className="text-slate-700">{prodName(d.ref)}</span>
-                                  <div className="flex items-center gap-3">
+                                <div key={i} className="py-1.5 border-b border-red-100 last:border-0">
+                                  <p className="text-xs font-semibold text-slate-700 mb-1">{prodName(d.ref)}</p>
+                                  <div className="flex gap-3 text-xs flex-wrap">
                                     <span className="text-slate-500">Sistema: <b>{d.sistema}</b></span>
                                     <span className="text-slate-500">Físico: <b>{d.contado}</b></span>
                                     <span className={`font-bold ${d.delta > 0 ? "text-green-700" : "text-red-700"}`}>
-                                      {d.delta > 0 ? `+${d.delta}` : d.delta}
+                                      Diferencia: {d.delta > 0 ? `+${d.delta}` : d.delta}
                                     </span>
                                   </div>
                                 </div>
@@ -485,7 +487,7 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
               {tieneDevoluciones && (
                 <div>
                   <p className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                    <RotateCcw className="w-3.5 h-3.5" /> Conteo de devoluciones entregadas
+                    <RotateCcw className="w-3.5 h-3.5" /> Conteo de reparadas retornadas
                   </p>
                   {!filasD ? (
                     <button
@@ -537,13 +539,13 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
                                 <AlertTriangle className="w-4 h-4" /> Diferencias en devoluciones:
                               </p>
                               {diff.diffsD.filter(d => d.delta !== 0).map((d, i) => (
-                                <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-red-100 last:border-0">
-                                  <span className="text-slate-700">{prodName(d.ref)}</span>
-                                  <div className="flex items-center gap-3">
+                                <div key={i} className="py-1.5 border-b border-red-100 last:border-0">
+                                  <p className="text-xs font-semibold text-slate-700 mb-1">{prodName(d.ref)}</p>
+                                  <div className="flex gap-3 text-xs flex-wrap">
                                     <span className="text-slate-500">Sistema: <b>{d.sistema}</b></span>
                                     <span className="text-slate-500">Físico: <b>{d.contado}</b></span>
                                     <span className={`font-bold ${d.delta > 0 ? "text-green-700" : "text-red-700"}`}>
-                                      {d.delta > 0 ? `+${d.delta}` : d.delta}
+                                      Diferencia: {d.delta > 0 ? `+${d.delta}` : d.delta}
                                     </span>
                                   </div>
                                 </div>
