@@ -544,6 +544,7 @@ export default function AccountsPayablePage() {
   const [showGastoVariable, setShowGastoVariable] = useState(false);
   const [showGastoFijo, setShowGastoFijo] = useState(false);
   const [editandoGastoFijo, setEditandoGastoFijo] = useState(null);
+  const [filtroCategoria, setFiltroCategoria] = useState('all');
 
   useEffect(() => { if (!isSessionLoading) loadData(); }, [isSessionLoading]);
 
@@ -1010,38 +1011,81 @@ export default function AccountsPayablePage() {
           </TabsList>
 
           {/* ─── Pendientes unificados ──────────────────────────────────── */}
-          <TabsContent value="pendientes" className="mt-4 space-y-6">
-            {allPending.length === 0 ? (
-              <div className="text-center py-16 text-slate-400">
-                <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">Sin cuentas pendientes</p>
-              </div>
-            ) : (
-              ['vencida', 'urgente', 'proximo', 'futuro', 'sin_fecha'].map(u => {
-                const items = byUrgency[u];
-                if (items.length === 0) return null;
-                const uStyle = URGENCY_STYLES[u];
-                const groupTotal = items.reduce((s, p) => s + (p.pending_amount || 0), 0);
-                return (
-                  <div key={u}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${uStyle.dot}`} />
-                      <h3 className="font-semibold text-slate-700 text-sm">{uStyle.label}</h3>
-                      <span className="text-xs text-slate-400">({items.length})</span>
-                      <span className="ml-auto text-sm font-bold text-slate-700">{fmtMoney(groupTotal)}</span>
-                    </div>
-                    <div className="space-y-2">
-                      {items.map(item => (
-                        <PendienteCard
-                          key={item.id} item={item} onPayment={setPaymentModalData}
-                          abonos={allAbonos.filter(a => a.payable_id === item.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+          <TabsContent value="pendientes" className="mt-4 space-y-4">
+            {/* Filtros por categoría */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'all',                   label: 'Todos',          count: allPending.length },
+                { key: 'manufacturing_salary',   label: 'Operarios',      count: allPending.filter(p => p._isOperario || p.category === 'salarios_manufactura').length },
+                { key: 'materia_prima_credito',  label: 'Mat. Prima',     count: allPending.filter(p => p.category === 'materia_prima_credito').length },
+                { key: 'gasto_fijo',             label: 'Gastos Fijos',   count: allPending.filter(p => p.category === 'gasto_fijo').length },
+                { key: 'gasto_variable',         label: 'Gastos Variables',count: allPending.filter(p => p.category === 'gasto_variable').length },
+                { key: 'otros',                  label: 'Otros',          count: allPending.filter(p => !['salarios_manufactura','materia_prima_credito','gasto_fijo','gasto_variable'].includes(p.category) && !p._isOperario).length },
+              ].filter(f => f.key === 'all' || f.count > 0).map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFiltroCategoria(f.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                    filtroCategoria === f.key
+                      ? 'bg-slate-800 text-white border-slate-800'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                  }`}
+                >
+                  {f.label}
+                  <span className={`text-[10px] font-bold px-1 py-0.5 rounded-full ${filtroCategoria === f.key ? 'bg-white/20' : 'bg-slate-100'}`}>
+                    {f.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {(() => {
+              const filtered = allPending.filter(p => {
+                if (filtroCategoria === 'all') return true;
+                if (filtroCategoria === 'manufacturing_salary') return p._isOperario || p.category === 'salarios_manufactura';
+                if (filtroCategoria === 'otros') return !['salarios_manufactura','materia_prima_credito','gasto_fijo','gasto_variable'].includes(p.category) && !p._isOperario;
+                return p.category === filtroCategoria;
+              });
+
+              if (filtered.length === 0) return (
+                <div className="text-center py-16 text-slate-400">
+                  <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium">Sin cuentas en esta categoría</p>
+                </div>
+              );
+
+              const groups = { vencida: [], urgente: [], proximo: [], futuro: [], sin_fecha: [] };
+              for (const item of filtered) groups[URGENCY(item.due_date)].push(item);
+
+              return (
+                <div className="space-y-6">
+                  {['vencida', 'urgente', 'proximo', 'futuro', 'sin_fecha'].map(u => {
+                    const items = groups[u];
+                    if (items.length === 0) return null;
+                    const uStyle = URGENCY_STYLES[u];
+                    const groupTotal = items.reduce((s, p) => s + (p.pending_amount || 0), 0);
+                    return (
+                      <div key={u}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${uStyle.dot}`} />
+                          <h3 className="font-semibold text-slate-700 text-sm">{uStyle.label}</h3>
+                          <span className="text-xs text-slate-400">({items.length})</span>
+                          <span className="ml-auto text-sm font-bold text-slate-700">{fmtMoney(groupTotal)}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {items.map(item => (
+                            <PendienteCard
+                              key={item.id} item={item} onPayment={setPaymentModalData}
+                              abonos={allAbonos.filter(a => a.payable_id === item.id)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </TabsContent>
 
           {/* ─── Materias Primas ────────────────────────────────────────── */}
