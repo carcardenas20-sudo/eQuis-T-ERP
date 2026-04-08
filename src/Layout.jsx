@@ -38,7 +38,6 @@ const comercialGroups = [
       { title: "Inventario", url: createPageUrl("Inventory"), icon: MapPin, permissions: ["inventory_view"] },
       { title: "Auditorías", url: createPageUrl("InventoryAudits"), icon: MapPin, permissions: ["inventory_view"] },
       { title: "Traslados", url: createPageUrl("Transfers"), icon: ArrowRightLeft, permissions: ["inventory_transfer"] },
-      { title: "Asignación Mercancía", url: createPageUrl("MerchandiseAssignment"), icon: PackageCheck, permissions: ["inventory_view"] },
     ]
   },
   {
@@ -120,7 +119,6 @@ const operariosGroups = [
       { title: "Transferencias", url: createPageUrl("Op_BankTransfers"), icon: ArrowRightLeft, permissions: ["operarios_admin"] },
       { title: "Cotizador Salario", url: createPageUrl("Op_SalaryQuote"), icon: Calculator, permissions: ["operarios_view"] },
       { title: "Compras Empleados", url: createPageUrl("Op_EmployeePurchases"), icon: ShoppingBag, permissions: ["operarios_view"] },
-      { title: "Entrada de Mercancía", url: createPageUrl("Op_MerchandiseEntry"), icon: PackageCheck, permissions: ["operarios_view"] },
       { title: "Solicitud de Pago", url: createPageUrl("Op_PaymentRequest"), icon: Receipt, permissions: ["operarios_view"] },
       { title: "Auditoría Op.", url: createPageUrl("Op_AuditLog"), icon: Eye, permissions: ["operarios_admin"] },
     ]
@@ -247,7 +245,7 @@ function LayoutContent({ children }) {
       {sidebarOpen && <div onClick={closeSidebar} className="fixed inset-0 bg-black/60 z-[100] lg:hidden backdrop-blur-sm" />}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 bottom-0 w-64 transform transition-transform duration-300 z-[200] flex flex-col overflow-y-auto overscroll-none scrollbar-none ${isRealAdmin ? 'top-7' : 'top-0'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+      <aside className={`fixed left-0 bottom-0 w-64 transform transition-transform duration-300 z-[200] flex flex-col overflow-y-auto overscroll-none ${isRealAdmin ? 'top-7' : 'top-0'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{ background: sidebarBg, borderRight: `1px solid ${sidebarBorder}` }}>
 
         {/* Logo */}
@@ -266,7 +264,7 @@ function LayoutContent({ children }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto overscroll-none scrollbar-none">
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto overscroll-none">
           {navEntries.map((entry, idx) => {
             if (entry.type === "header") {
               const hStyle = mkHeader[entry.mk];
