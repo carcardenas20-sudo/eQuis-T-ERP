@@ -220,7 +220,7 @@ export default function UserForm({ user, locations, roles: rolesProp, onSave, on
               <SelectTrigger className="w-full h-12 bg-white border-2 border-blue-300">
                 <SelectValue placeholder="⚠️ Seleccionar rol..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[9999]">
                 {filteredRoles.length === 0 ? (
                   <div className="py-3 px-4 text-sm text-slate-500 text-center">
                     No hay roles para este módulo.
