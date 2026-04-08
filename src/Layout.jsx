@@ -12,7 +12,7 @@ import {
   Menu, X, LogOut, LayoutDashboard, ShoppingCart, Package, MapPin, Users,
   FileText, Settings, Building2, UserCheck, CreditCard, Receipt, ShoppingBag,
   BookOpen, ArrowRightLeft, ArrowLeftRight, Sparkles, Wallet, BarChart3,
-  ChevronRight, ListChecks, Factory, Shirt, Palette, Wrench, Truck, Calculator,
+  ListChecks, Factory, Shirt, Palette, Wrench, Truck, Calculator,
   PackageCheck, TruckIcon, Clock, Warehouse, Eye
 } from "lucide-react";
 
@@ -138,7 +138,6 @@ function LayoutContent({ children }) {
   const location = useLocation();
   const { currentUser, permissions, userRole, isLoading, isRealAdmin, previewRoleId } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState({});
 
   // In preview mode, disable admin bypass so permission filtering works realistically
   const isAdmin = isRealAdmin && !previewRoleId;
@@ -157,7 +156,6 @@ function LayoutContent({ children }) {
     });
   };
 
-  const toggleGroup = (key) => setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
   const closeSidebar = () => setSidebarOpen(false);
 
   const handleLogout = async () => {
@@ -182,16 +180,15 @@ function LayoutContent({ children }) {
     ...operariosGroups.map(g => ({ ...g, mk: "operarios" })),
   ];
 
-  const visibleGroups = allGroups
-    .filter(g => hasModuleAccess(g.mk))
-    .map(g => ({ ...g, items: filterItems(g.items) }))
-    .filter(g => g.items.length > 0);
-
-  const navEntries = [];
+  // Aplanar todos los items de cada módulo sin subgrupos
+  const flatEntries = [];
   let lastMk = null;
-  for (const g of visibleGroups) {
-    if (g.mk !== lastMk) { navEntries.push({ type: "header", mk: g.mk }); lastMk = g.mk; }
-    navEntries.push({ type: "group", ...g });
+  for (const g of allGroups) {
+    if (!hasModuleAccess(g.mk)) continue;
+    const items = filterItems(g.items);
+    if (items.length === 0) continue;
+    if (g.mk !== lastMk) { flatEntries.push({ type: "header", mk: g.mk }); lastMk = g.mk; }
+    for (const item of items) flatEntries.push({ type: "item", mk: g.mk, item });
   }
 
   const hideTabBar = location.pathname === createPageUrl("Settings");
@@ -261,7 +258,7 @@ function LayoutContent({ children }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto overscroll-none scrollbar-none">
-          {navEntries.map((entry, idx) => {
+          {flatEntries.map((entry, idx) => {
             if (entry.type === "header") {
               const hStyle = mkHeader[entry.mk];
               return (
@@ -273,73 +270,49 @@ function LayoutContent({ children }) {
                 </div>
               );
             }
-            const gKey = `${entry.mk}-${entry.title}`;
-            const isExpanded = expandedGroups[gKey] ?? entry.items.some(i => location.pathname === i.url);
-            const hasActive = entry.items.some(i => location.pathname === i.url);
-            const activeStyle = mkActiveItem[entry.mk];
+            const { mk, item } = entry;
+            const isActive = location.pathname === item.url;
+            const activeStyle = mkActiveItem[mk];
+            const Icon = item.icon;
+
+            if (item.isPortal) {
+              const portalUrl = `${window.location.origin}${item.url}`;
+              return (
+                <div key={item.title} className="flex items-center gap-1 rounded-lg overflow-hidden"
+                  style={isActive ? { background: activeStyle.bg } : {}}>
+                  <Link to={item.url} onClick={closeSidebar}
+                    className="flex items-center gap-2.5 px-3 py-1.5 flex-1 text-sm transition-all duration-150"
+                    style={isActive ? { color: activeStyle.text, fontWeight: 500 } : { color: 'rgba(255,255,255,0.40)' }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.40)'; }}
+                  >
+                    <Icon size={14} style={isActive ? { color: activeStyle.icon } : {}} />
+                    <span>{item.title}</span>
+                  </Link>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(portalUrl)}
+                    title="Copiar enlace del portal"
+                    className="px-2 py-1.5 text-xs rounded transition-colors shrink-0"
+                    style={{ color: 'rgba(255,255,255,0.30)' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.30)'; e.currentTarget.style.background = ''; }}
+                  >🔗</button>
+                </div>
+              );
+            }
+
             return (
-              <div key={gKey}>
-                <button
-                  onClick={() => toggleGroup(gKey)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${hasActive ? mkGroupActive[entry.mk] : ''}`}
-                  style={hasActive
-                    ? { background: activeStyle.bg }
-                    : { color: 'rgba(255,255,255,0.45)' }}
-                  onMouseEnter={e => { if (!hasActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                  onMouseLeave={e => { if (!hasActive) e.currentTarget.style.background = ''; }}
-                >
-                  <span>{entry.title}</span>
-                  <ChevronRight size={13} className={`transition-transform opacity-50 ${isExpanded ? 'rotate-90' : ''}`} />
-                </button>
-                {isExpanded && (
-                  <div className="ml-2.5 mt-0.5 space-y-0.5 pl-2" style={{ borderLeft: `1px solid rgba(255,255,255,0.07)` }}>
-                    {entry.items.map(item => {
-                      const isActive = location.pathname === item.url;
-                      const Icon = item.icon;
-                      if (item.isPortal) {
-                        const portalUrl = `${window.location.origin}${item.url}`;
-                        return (
-                          <div key={item.title} className="flex items-center gap-1 rounded-lg overflow-hidden"
-                            style={isActive ? { background: activeStyle.bg } : {}}>
-                            <Link to={item.url} onClick={closeSidebar}
-                              className="flex items-center gap-2.5 px-3 py-1.5 flex-1 text-sm transition-all duration-150"
-                              style={isActive ? { color: activeStyle.text, fontWeight: 500 } : { color: 'rgba(255,255,255,0.40)' }}
-                              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; } }}
-                              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color = 'rgba(255,255,255,0.40)'; } }}
-                            >
-                              <Icon size={14} style={isActive ? { color: activeStyle.icon } : {}} />
-                              <span>{item.title}</span>
-                            </Link>
-                            <button
-                              onClick={() => { navigator.clipboard.writeText(portalUrl); }}
-                              title="Copiar enlace del portal"
-                              className="px-2 py-1.5 text-xs rounded transition-colors shrink-0"
-                              style={{ color: 'rgba(255,255,255,0.30)' }}
-                              onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.30)'; e.currentTarget.style.background = ''; }}
-                            >
-                              🔗
-                            </button>
-                          </div>
-                        );
-                      }
-                      return (
-                        <Link key={item.title} to={item.url} onClick={closeSidebar}
-                          className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-150"
-                          style={isActive
-                            ? { background: activeStyle.bg, color: activeStyle.text, fontWeight: 500 }
-                            : { color: 'rgba(255,255,255,0.40)' }}
-                          onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; } }}
-                          onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.40)'; } }}
-                        >
-                          <Icon size={14} style={isActive ? { color: activeStyle.icon } : {}} />
-                          <span>{item.title}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <Link key={item.title} to={item.url} onClick={closeSidebar}
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-150"
+                style={isActive
+                  ? { background: activeStyle.bg, color: activeStyle.text, fontWeight: 500 }
+                  : { color: 'rgba(255,255,255,0.40)' }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; } }}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.40)'; } }}
+              >
+                <Icon size={14} style={isActive ? { color: activeStyle.icon } : {}} />
+                <span>{item.title}</span>
+              </Link>
             );
           })}
         </nav>
