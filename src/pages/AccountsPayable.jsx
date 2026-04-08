@@ -420,46 +420,100 @@ function MaterialPendienteRow({ item, onComprar }) {
   );
 }
 
-// ─── Tarjeta de item en vista unificada ───────────────────────────────────────
-function PendienteCard({ item, onPayment }) {
+// ─── Tarjeta de item en vista unificada (con historial de abonos) ────────────
+function PendienteCard({ item, onPayment, abonos = [] }) {
+  const [expanded, setExpanded] = useState(false);
   const urgency = URGENCY(item.due_date);
   const uStyle = URGENCY_STYLES[urgency];
   const catMeta = getCategoryMeta(item);
   const CatIcon = catMeta.icon;
 
+  const totalAbonado = abonos.reduce((s, a) => s + (a.amount || 0), 0);
+  const saldoActual = (item.total_amount || 0) - totalAbonado;
+  const hasAbonos = abonos.length > 0;
+  const hasPartial = item.paid_amount > 0 || hasAbonos;
+
+  const METHOD_LABELS = { cash: 'Efectivo', transfer: 'Transferencia', fuera_de_caja: 'Fuera de caja', check: 'Cheque', other: 'Otro' };
+
   return (
-    <div className={`border rounded-lg p-3 sm:p-4 flex items-center gap-3 ${uStyle.bg} ${uStyle.border}`}>
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${catMeta.bg}`}>
-        <CatIcon className={`w-4 h-4 ${catMeta.color}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-slate-900 text-sm truncate">{item.description || item.supplier_name}</span>
-          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${catMeta.bg} ${catMeta.color}`}>
-            {catMeta.label}
-          </span>
+    <div className={`border rounded-lg overflow-hidden ${uStyle.border}`}>
+      <div className={`p-3 sm:p-4 flex items-center gap-3 ${uStyle.bg}`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${catMeta.bg}`}>
+          <CatIcon className={`w-4 h-4 ${catMeta.color}`} />
         </div>
-        {item.supplier_name && item.description && item.supplier_name !== item.description && (
-          <p className="text-xs text-slate-500 truncate">{item.supplier_name}</p>
-        )}
-        <div className="flex items-center gap-2 mt-1">
-          <Calendar className="w-3 h-3 text-slate-400" />
-          <span className="text-xs text-slate-500">{fmtDate(item.due_date)}</span>
-          {urgency === 'vencida' && (
-            <span className="text-xs font-semibold text-red-600">Vencida</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-slate-900 text-sm truncate">{item.description || item.supplier_name}</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${catMeta.bg} ${catMeta.color}`}>
+              {catMeta.label}
+            </span>
+          </div>
+          {item.supplier_name && item.description && item.supplier_name !== item.description && (
+            <p className="text-xs text-slate-500 truncate">{item.supplier_name}</p>
+          )}
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-slate-400" />
+              <span className="text-xs text-slate-500">{fmtDate(item.due_date)}</span>
+            </div>
+            {urgency === 'vencida' && <span className="text-xs font-semibold text-red-600">Vencida</span>}
+            {hasPartial && (
+              <span className="text-xs text-emerald-600 font-medium">
+                {fmtMoney(totalAbonado || item.paid_amount)} abonado
+              </span>
+            )}
+          </div>
+          {/* Barra de progreso si hay abonos */}
+          {item.total_amount > 0 && hasPartial && (
+            <div className="mt-1.5 h-1 bg-slate-200 rounded-full overflow-hidden w-full max-w-[200px]">
+              <div
+                className="h-full bg-emerald-500 rounded-full"
+                style={{ width: `${Math.min(100, ((totalAbonado || item.paid_amount) / item.total_amount) * 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-bold text-slate-900">{fmtMoney(item.pending_amount ?? saldoActual)}</p>
+          {item.total_amount && hasPartial && (
+            <p className="text-xs text-slate-400">de {fmtMoney(item.total_amount)}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button size="sm" onClick={() => onPayment(item)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-xs h-8 px-2">
+            Pagar
+          </Button>
+          {hasAbonos && (
+            <button onClick={() => setExpanded(e => !e)}
+              className="p-1.5 rounded hover:bg-white/60 text-slate-400">
+              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
           )}
         </div>
       </div>
-      <div className="text-right shrink-0">
-        <p className="text-sm font-bold text-slate-900">{fmtMoney(item.pending_amount || item.total_amount)}</p>
-        {item.total_amount && item.paid_amount > 0 && (
-          <p className="text-xs text-slate-400">de {fmtMoney(item.total_amount)}</p>
-        )}
-      </div>
-      <Button size="sm" onClick={() => onPayment(item)}
-        className="bg-emerald-600 hover:bg-emerald-700 text-xs h-8 px-2 shrink-0">
-        Pagar
-      </Button>
+
+      {/* Historial de abonos */}
+      {expanded && hasAbonos && (
+        <div className="border-t bg-white px-4 py-2 space-y-1">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Historial de abonos</p>
+          {abonos.map((a, i) => (
+            <div key={i} className="flex items-center justify-between text-xs text-slate-600 py-0.5">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
+                <span>{fmtDate(a.payment_date)}</span>
+                <span className="text-slate-400">{METHOD_LABELS[a.method] || a.method || ''}</span>
+                {a.reference && <span className="text-slate-300">· {a.reference}</span>}
+              </div>
+              <span className="font-semibold text-slate-800">{fmtMoney(a.amount)}</span>
+            </div>
+          ))}
+          <div className="border-t mt-1 pt-1 flex justify-between text-xs font-semibold">
+            <span className="text-slate-500">Saldo actual</span>
+            <span className="text-slate-900">{fmtMoney(item.pending_amount ?? saldoActual)}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -476,6 +530,7 @@ export default function AccountsPayablePage() {
   const [presupuestos, setPresupuestos] = useState([]);
   const [inventario, setInventario] = useState([]);
   const [gastosFixed, setGastosFixed] = useState([]);
+  const [allAbonos, setAllAbonos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // UI state
@@ -496,7 +551,7 @@ export default function AccountsPayablePage() {
     setIsLoading(true);
     try {
       const [allPayables, allSuppliers, allLocations, allOpPayments, allEmployees,
-        allPresupuestos, allInventario, allGastosFijos] = await Promise.all([
+        allPresupuestos, allInventario, allGastosFijos, allPayablePayments] = await Promise.all([
         AccountPayable.list("-created_date", 500),
         Supplier.list(),
         Location.list(),
@@ -505,6 +560,7 @@ export default function AccountsPayablePage() {
         Presupuesto.list("-created_date", 200),
         Inventario.list("-updated_date", 300),
         FixedExpense.list(),
+        PayablePayment.list('-payment_date', 1000),
       ]);
       setPayables(allPayables || []);
       setSuppliers(allSuppliers || []);
@@ -514,6 +570,7 @@ export default function AccountsPayablePage() {
       setPresupuestos((allPresupuestos || []).filter(p => p.estado !== 'rechazado'));
       setInventario(allInventario || []);
       setGastosFixed(allGastosFijos || []);
+      setAllAbonos(allPayablePayments || []);
     } catch (err) {
       console.error("Error loading data:", err);
     }
@@ -580,10 +637,11 @@ export default function AccountsPayablePage() {
     return groups;
   }, [allPending]);
 
-  // ── Balance por proveedor ─────────────────────────────────────────────────
+  // ── Balance por proveedor (solo CxP reales, sin operarios) ───────────────
   const supplierBalances = useMemo(() => {
     const map = {};
     for (const p of allPending) {
+      if (p._isOperario) continue; // los operarios tienen su propio módulo
       const name = p.supplier_name || '(Sin proveedor)';
       if (!map[name]) map[name] = { name, total: 0, count: 0, items: [] };
       map[name].total += p.pending_amount || 0;
@@ -974,7 +1032,10 @@ export default function AccountsPayablePage() {
                     </div>
                     <div className="space-y-2">
                       {items.map(item => (
-                        <PendienteCard key={item.id} item={item} onPayment={setPaymentModalData} />
+                        <PendienteCard
+                          key={item.id} item={item} onPayment={setPaymentModalData}
+                          abonos={allAbonos.filter(a => a.payable_id === item.id)}
+                        />
                       ))}
                     </div>
                   </div>
@@ -1096,7 +1157,8 @@ export default function AccountsPayablePage() {
                     .filter(p => p.category === 'gasto_fijo' && (p.status === 'pending' || p.status === 'partial'))
                     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
                     .map(p => (
-                      <PendienteCard key={p.id} item={p} onPayment={setPaymentModalData} />
+                      <PendienteCard key={p.id} item={p} onPayment={setPaymentModalData}
+                        abonos={allAbonos.filter(a => a.payable_id === p.id)} />
                     ))}
                 </div>
               </div>
@@ -1111,7 +1173,8 @@ export default function AccountsPayablePage() {
                 <p className="font-medium">Sin saldos pendientes por proveedor</p>
               </div>
             ) : supplierBalances.map(sup => (
-              <SupplierBalanceCard key={sup.name} supplier={sup} onPayment={setPaymentModalData} />
+              <SupplierBalanceCard key={sup.name} supplier={sup} onPayment={setPaymentModalData}
+                allAbonos={allAbonos} />
             ))}
           </TabsContent>
 
@@ -1160,8 +1223,12 @@ export default function AccountsPayablePage() {
 }
 
 // ─── Tarjeta balance por proveedor ────────────────────────────────────────────
-function SupplierBalanceCard({ supplier, onPayment }) {
+function SupplierBalanceCard({ supplier, onPayment, allAbonos = [] }) {
   const [expanded, setExpanded] = useState(false);
+  const totalAbonado = supplier.items.reduce((s, item) => {
+    return s + allAbonos.filter(a => a.payable_id === item.id).reduce((ss, a) => ss + (a.amount || 0), 0);
+  }, 0);
+
   return (
     <div className="border rounded-lg bg-white overflow-hidden">
       <div className="flex items-center gap-3 p-4">
@@ -1170,27 +1237,52 @@ function SupplierBalanceCard({ supplier, onPayment }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-slate-900 text-sm">{supplier.name}</p>
-          <p className="text-xs text-slate-500">{supplier.count} obligación(es) pendiente(s)</p>
+          <p className="text-xs text-slate-500">{supplier.count} obligación(es)</p>
+          {totalAbonado > 0 && (
+            <p className="text-xs text-emerald-600">{fmtMoney(totalAbonado)} abonado</p>
+          )}
         </div>
-        <p className="text-base font-bold text-slate-900 shrink-0">{fmtMoney(supplier.total)}</p>
+        <div className="text-right shrink-0">
+          <p className="text-base font-bold text-slate-900">{fmtMoney(supplier.total)}</p>
+          <p className="text-xs text-slate-400">pendiente</p>
+        </div>
         <button onClick={() => setExpanded(e => !e)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400">
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
       </div>
       {expanded && (
         <div className="border-t bg-slate-50 px-4 py-2 space-y-2">
-          {supplier.items.map(item => (
-            <div key={item.id} className="flex items-center justify-between gap-2 text-sm py-1">
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-700 truncate">{item.description || item.supplier_name}</p>
-                <p className="text-xs text-slate-400">{fmtDate(item.due_date)}</p>
+          {supplier.items.map(item => {
+            const itemAbonos = allAbonos.filter(a => a.payable_id === item.id);
+            const itemAbonado = itemAbonos.reduce((s, a) => s + (a.amount || 0), 0);
+            return (
+              <div key={item.id} className="border rounded bg-white p-2.5 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-700 truncate font-medium">{item.description || item.supplier_name}</p>
+                    <p className="text-xs text-slate-400">{fmtDate(item.due_date)}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-slate-900">{fmtMoney(item.pending_amount)}</p>
+                    {itemAbonado > 0 && <p className="text-xs text-emerald-600">{fmtMoney(itemAbonado)} abonado</p>}
+                  </div>
+                  <Button size="sm" onClick={() => onPayment(item)} className="bg-emerald-600 hover:bg-emerald-700 text-xs h-7 px-2 shrink-0">
+                    Abonar
+                  </Button>
+                </div>
+                {itemAbonos.length > 0 && (
+                  <div className="border-t pt-1 space-y-0.5">
+                    {itemAbonos.map((a, i) => (
+                      <div key={i} className="flex justify-between text-xs text-slate-500">
+                        <span>{fmtDate(a.payment_date)} · {a.method || ''}</span>
+                        <span className="font-medium">{fmtMoney(a.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <span className="font-medium text-slate-900 shrink-0">{fmtMoney(item.pending_amount)}</span>
-              <Button size="sm" onClick={() => onPayment(item)} className="bg-emerald-600 hover:bg-emerald-700 text-xs h-7 px-2 shrink-0">
-                Pagar
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
