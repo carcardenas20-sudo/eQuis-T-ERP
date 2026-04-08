@@ -75,8 +75,8 @@ app.post('/api/portal-login', async (req, res) => {
   if (!employee_id) return res.status(400).json({ error: 'Falta employee_id' });
   try {
     const { rows } = await query(
-      `SELECT id, name, employee_id, is_active, position, phone, hire_date, data, created_date, updated_date
-       FROM entity_employee WHERE employee_id = $1 LIMIT 1`,
+      `SELECT id, name, is_active, position, phone, hire_date, data, created_date, updated_date
+       FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
       [String(employee_id).trim()]
     );
     if (!rows.length) return res.status(404).json({ error: 'Empleado no encontrado' });
@@ -86,7 +86,7 @@ app.post('/api/portal-login', async (req, res) => {
       return res.status(401).json({ error: 'PIN incorrecto' });
     }
     const { portal_pin: _p, ...dataRest } = row.data || {};
-    res.json({ ...dataRest, id: row.id, name: row.name, employee_id: row.employee_id,
+    res.json({ ...dataRest, id: row.id, name: row.name, employee_id: row.data?.employee_id,
       is_active: row.is_active, position: row.position, phone: row.phone,
       hire_date: row.hire_date, created_date: row.created_date, updated_date: row.updated_date });
   } catch (e) {
