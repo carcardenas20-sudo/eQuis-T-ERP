@@ -5,8 +5,6 @@ import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
-import PlannedPayments from './pages/PlannedPayments';
-import ConciliacionPagos from './pages/ConciliacionPagos';
 import Op_RoutePortal from './pages/Op_RoutePortal';
 import Op_EmployeePortal from './pages/Op_EmployeePortal';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -55,16 +53,6 @@ const AuthenticatedApp = () => {
         />
       ))}
 
-      <Route path="/PlannedPayments" element={
-        <LayoutWrapper currentPageName="PlannedPayments">
-          <PlannedPayments />
-        </LayoutWrapper>
-      } />
-      <Route path="/ConciliacionPagos" element={
-        <LayoutWrapper currentPageName="ConciliacionPagos">
-          <ConciliacionPagos />
-        </LayoutWrapper>
-      } />
 
       <Route path="/portal-planillador" element={<Op_RoutePortal />} />
 

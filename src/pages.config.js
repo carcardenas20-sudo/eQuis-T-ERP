@@ -13,7 +13,6 @@ import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import Debug from './pages/Debug';
 import Exchanges from './pages/Exchanges';
-import ExpenseChecklist from './pages/ExpenseChecklist';
 import Expenses from './pages/Expenses';
 import IntegracionAPI from './pages/IntegracionAPI';
 import Inventory from './pages/Inventory';
@@ -80,7 +79,6 @@ export const PAGES = {
   "Dashboard": Dashboard,
   "Debug": Debug,
   "Exchanges": Exchanges,
-  "ExpenseChecklist": ExpenseChecklist,
   "Expenses": Expenses,
   "IntegracionAPI": IntegracionAPI,
   "Inventory": Inventory,
