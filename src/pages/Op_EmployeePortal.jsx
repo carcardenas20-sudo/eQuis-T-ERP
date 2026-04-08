@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { portalClient } from "@/api/portalClient";
-const { Employee, Delivery, Dispatch, Payment, PaymentRequest, Producto: ProductoEntity, AppConfig, EmployeePurchase } = {
-  Employee: portalClient.entities.Employee,
+const { Delivery, Dispatch, Payment, PaymentRequest, Producto: ProductoEntity, AppConfig, EmployeePurchase } = {
   Delivery: portalClient.entities.Delivery,
   Dispatch: portalClient.entities.Dispatch,
   Payment: portalClient.entities.Payment,
@@ -11,6 +10,15 @@ const { Employee, Delivery, Dispatch, Payment, PaymentRequest, Producto: Product
   AppConfig: portalClient.entities.AppConfig,
   EmployeePurchase: portalClient.entities.EmployeePurchase,
 };
+
+// Carga empleado verificando PIN en el servidor
+async function fetchEmployeeWithPin(id, pin) {
+  const res = await fetch(`/api/portal/Employee/${id}?pin=${encodeURIComponent(pin)}`);
+  if (res.status === 401) throw new Error('PIN_INCORRECTO');
+  if (res.status === 404) throw new Error('NO_ENCONTRADO');
+  if (!res.ok) throw new Error('ERROR_SERVIDOR');
+  return res.json();
+}
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,15 +33,27 @@ export default function EmployeePortal() {
   const [employee, setEmployee] = useState(null);
   const [data, setData] = useState({ deliveries: [], dispatches: [], payments: [], products: [], purchases: [] });
   const [stats, setStats] = useState({ totalEarned: 0, pendingAmount: 0, totalDelivered: 0, pendingUnits: {} });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isPaymentWindowOpen, setIsPaymentWindowOpen] = useState(false);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [calculationSteps, setCalculationSteps] = useState([]);
 
-  const location = useLocation();
+  // PIN state
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinVerified, setPinVerified] = useState(false);
+  const [employeeDbId, setEmployeeDbId] = useState(null); // UUID del empleado
 
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const employeeId = params.get('employee_id');  // employee_id lógico (EMP001, etc.)
+  const employeeDbIdParam = params.get('id');     // UUID de BD (alternativa)
+
+  // Efecto: verificar PIN y cargar datos una vez verificado
   useEffect(() => {
+    if (!pinVerified || !employeeDbId) return;
+
     const checkPaymentWindow = async () => {
       try {
         const configs = await AppConfig.filter({ key: "payment_window_opened_at" });
@@ -53,38 +73,21 @@ export default function EmployeePortal() {
     checkPaymentWindow();
     const interval = setInterval(checkPaymentWindow, 60000);
 
-    const params = new URLSearchParams(location.search);
-    const employeeId = params.get('employee_id');
-
-    if (!employeeId) {
-      setError("No se ha proporcionado un ID de empleado.");
-      setLoading(false);
-      clearInterval(interval);
-      return;
-    }
-
     const loadAllData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const [employeeData] = await Employee.filter({ employee_id: employeeId });
-        if (!employeeData) {
-          setError("Empleado no encontrado.");
-          setLoading(false);
-          clearInterval(interval);
-          return;
-        }
-        setEmployee(employeeData);
+        const empId = employee?.employee_id || employeeId;
 
         const [deliveries, dispatches, payments, products, existingRequests, purchases] = await Promise.all([
-          Delivery.filter({ employee_id: employeeId }),
-          Dispatch.filter({ employee_id: employeeId }),
-          Payment.filter({ employee_id: employeeId }, '-payment_date'),
+          Delivery.filter({ employee_id: empId }),
+          Dispatch.filter({ employee_id: empId }),
+          Payment.filter({ employee_id: empId }, '-payment_date'),
           ProductoEntity.list(),
-          PaymentRequest.filter({ employee_id: employeeId, status: 'pending' }),
-          EmployeePurchase.filter({ employee_id: employeeId })
+          PaymentRequest.filter({ employee_id: empId, status: 'pending' }),
+          EmployeePurchase.filter({ employee_id: empId })
         ]);
-        
+
         const normProducts = (products || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra }));
         setData({ deliveries, dispatches, payments, products: normProducts, purchases: purchases || [] });
         setHasPendingRequest(existingRequests.length > 0);
@@ -100,9 +103,8 @@ export default function EmployeePortal() {
 
     loadAllData();
 
-    // Limpiar interval al desmontar
     return () => clearInterval(interval);
-  }, [location.search]);
+  }, [pinVerified, employeeDbId]);
 
   const calculateStats = (deliveries, dispatches, payments, purchases = []) => {
     const totalEarned = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -380,6 +382,75 @@ export default function EmployeePortal() {
       }
     }
   };
+
+  // ── Pantalla de PIN ────────────────────────────────────────────────────────
+  const handleVerifyPin = async () => {
+    if (!employeeId && !employeeDbIdParam) {
+      setPinError('URL inválida: falta el ID del empleado.');
+      return;
+    }
+    setPinError('');
+    // El servidor necesita el UUID (id de BD). Si la URL trae ?employee_id=EMP001,
+    // buscamos primero el UUID vía /api/portal/Employee?employee_id=EMP001
+    try {
+      let dbId = employeeDbIdParam;
+      if (!dbId) {
+        // Buscar UUID por employee_id lógico
+        const res = await fetch(`/api/portal/Employee?employee_id=${encodeURIComponent(employeeId)}`);
+        if (!res.ok) { setPinError('Empleado no encontrado.'); return; }
+        const list = await res.json();
+        const emp = Array.isArray(list) ? list[0] : list;
+        if (!emp) { setPinError('Empleado no encontrado.'); return; }
+        dbId = emp.id;
+      }
+      // Verificar PIN
+      const empData = await fetchEmployeeWithPin(dbId, pinInput);
+      setEmployee(empData);
+      setEmployeeDbId(dbId);
+      setPinVerified(true);
+    } catch (e) {
+      if (e.message === 'PIN_INCORRECTO') setPinError('PIN incorrecto. Intenta de nuevo.');
+      else if (e.message === 'NO_ENCONTRADO') setPinError('Empleado no encontrado.');
+      else setPinError('Error de conexión. Intenta de nuevo.');
+    }
+  };
+
+  if (!pinVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm text-center space-y-6">
+          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Factory className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">Portal de Empleado</h1>
+            <p className="text-slate-500 text-sm mt-1">Ingresa tu PIN para continuar</p>
+          </div>
+          <div className="space-y-3">
+            <input
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              placeholder="PIN"
+              value={pinInput}
+              onChange={e => { setPinInput(e.target.value); setPinError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handleVerifyPin()}
+              className="w-full border-2 border-slate-200 rounded-xl px-4 py-4 text-center text-3xl font-bold tracking-[0.5em] focus:outline-none focus:border-blue-500"
+              autoFocus
+            />
+            {pinError && <p className="text-red-600 text-sm font-medium">{pinError}</p>}
+            <button
+              onClick={handleVerifyPin}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors"
+            >
+              Entrar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -69,6 +69,35 @@ const PORTAL_WRITE_ENTITIES = new Set([
   'Delivery', 'Dispatch',     // planillador registra entregas/despachos
   'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog', 'AppConfig',
 ]);
+// Verificación de PIN del empleado (antes del middleware general del portal)
+// GET /api/portal/Employee/:id?pin=XXXX  → verifica pin y devuelve el empleado si es correcto
+app.get('/api/portal/Employee/:id', async (req, res) => {
+  const { id } = req.params;
+  const { pin } = req.query;
+  try {
+    const { rows } = await query(
+      `SELECT id, name, employee_id, is_active, position, phone, hire_date, data, created_date, updated_date
+       FROM entity_employee WHERE id = $1 LIMIT 1`,
+      [id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Empleado no encontrado' });
+    const row = rows[0];
+    const storedPin = row.data?.portal_pin;
+    // Si el empleado no tiene PIN configurado, acceso libre (para no romper cuentas existentes)
+    if (storedPin && String(storedPin) !== String(pin || '')) {
+      return res.status(401).json({ error: 'PIN incorrecto' });
+    }
+    // Devolver datos sin exponer el PIN
+    const { portal_pin: _pin, ...dataRest } = row.data || {};
+    res.json({ ...dataRest, id: row.id, name: row.name, employee_id: row.employee_id,
+      is_active: row.is_active, position: row.position, phone: row.phone,
+      hire_date: row.hire_date, created_date: row.created_date, updated_date: row.updated_date });
+  } catch (e) {
+    console.error('portal employee lookup', e);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
 app.use('/api/portal', (req, res, next) => {
   const type = req.path.split('/')[1];
   if (!PORTAL_PUBLIC_ENTITIES.has(type)) {
@@ -166,7 +195,7 @@ app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res)
 const DIST_DIR = join(__dirname, '..', 'dist');
 console.log('🗂️  DIST_DIR:', DIST_DIR);
 app.use(express.static(DIST_DIR));
-app.get('*', (_req, res) => {
+app.get('/{*path}', (_req, res) => {
   res.sendFile(join(DIST_DIR, 'index.html'));
 });
 

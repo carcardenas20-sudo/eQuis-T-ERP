@@ -3,7 +3,7 @@ import { Employee } from "@/api/entitiesProduccion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Phone, Calendar, Link as LinkIcon, Check, Eye, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Phone, Calendar, Link as LinkIcon, Check, Eye, AlertTriangle, KeyRound } from "lucide-react";
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
 
@@ -15,6 +15,9 @@ export default function Employees() {
   const [showForm, setShowForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [copiedLink, setCopiedLink] = useState(null);
+  const [pinModal, setPinModal] = useState(null); // employee
+  const [pinValue, setPinValue] = useState('');
+  const [savingPin, setSavingPin] = useState(false);
 
   useEffect(() => {
     loadEmployees();
@@ -79,6 +82,29 @@ export default function Employees() {
     setTimeout(() => setCopiedLink(null), 2500);
   };
 
+  const openPinModal = (employee) => {
+    setPinValue(employee.portal_pin || '');
+    setPinModal(employee);
+  };
+
+  const handleSavePin = async () => {
+    if (!pinModal) return;
+    const pin = pinValue.trim();
+    if (pin && (pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin))) {
+      alert('El PIN debe ser numérico de 4 a 6 dígitos.');
+      return;
+    }
+    setSavingPin(true);
+    try {
+      await Employee.update(pinModal.id, { portal_pin: pin || null });
+      await loadEmployees();
+      setPinModal(null);
+    } catch (e) {
+      alert('Error al guardar el PIN.');
+    }
+    setSavingPin(false);
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
@@ -89,6 +115,7 @@ export default function Employees() {
   }
 
   return (
+    <>
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex justify-between items-center">
@@ -210,6 +237,15 @@ export default function Employees() {
                           <><LinkIcon className="w-4 h-4 mr-2"/> Copiar Enlace del Portal</>
                         )}
                       </Button>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        variant="outline"
+                        onClick={() => openPinModal(employee)}
+                      >
+                        <KeyRound className="w-4 h-4 mr-2"/>
+                        {employee.portal_pin ? 'Cambiar PIN' : 'Asignar PIN'}
+                      </Button>
                     </div>
                   </Card>
                 ))}
@@ -228,5 +264,43 @@ export default function Employees() {
         </Card>
       </div>
     </div>
+
+    {/* Modal PIN */}
+
+    {pinModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
+          <div className="flex items-center gap-3">
+            <KeyRound className="w-6 h-6 text-blue-600" />
+            <div>
+              <h2 className="font-bold text-slate-900">PIN del portal</h2>
+              <p className="text-sm text-slate-500">{pinModal.name}</p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-600">
+            El operario usará este PIN para acceder a su portal. Debe ser de 4 a 6 dígitos. Déjalo vacío para que no requiera PIN.
+          </p>
+          <input
+            type="number"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Ej: 1234"
+            value={pinValue}
+            onChange={e => setPinValue(e.target.value)}
+            className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-center text-2xl font-bold tracking-widest focus:outline-none focus:border-blue-500"
+            autoFocus
+          />
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => setPinModal(null)} disabled={savingPin}>
+              Cancelar
+            </Button>
+            <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={handleSavePin} disabled={savingPin}>
+              {savingPin ? 'Guardando...' : 'Guardar PIN'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
