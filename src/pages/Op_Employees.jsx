@@ -76,7 +76,7 @@ export default function Employees() {
   };
 
   const handleCopyLink = (employeeId) => {
-    const portalUrl = `${window.location.origin}${createPageUrl(`EmployeePortal?employee_id=${employeeId}`)}`;
+    const portalUrl = `${window.location.origin}/Op_EmployeePortal?employee_id=${employeeId}`;
     navigator.clipboard.writeText(portalUrl);
     setCopiedLink(employeeId);
     setTimeout(() => setCopiedLink(null), 2500);
