@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { SessionProvider, useSession } from "./components/providers/SessionProvider";
@@ -68,8 +68,6 @@ const comercialGroups = [
   },
 ];
 
-// produccion_pipeline_view: acceso de solo lectura al flujo de producción
-// (para Planillador y Gerentes de Tienda — sin acceso a gestión completa)
 const produccionGroups = [
   {
     title: "Producción", items: [
@@ -132,19 +130,54 @@ const MODULE_ACCESS_PERMS = {
 };
 
 const MODULE_META = {
-  comercial: { label: "Comercial", icon: ShoppingCart, badgeCls: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", activeCls: "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300", groupCls: "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" },
-  produccion: { label: "Producción", icon: Factory, badgeCls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", activeCls: "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300", groupCls: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" },
-  operarios: { label: "Operarios", icon: Users, badgeCls: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300", activeCls: "bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300", groupCls: "bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300" },
+  comercial: { label: "Comercial", icon: ShoppingCart },
+  produccion: { label: "Producción", icon: Factory },
+  operarios:  { label: "Operarios",  icon: Users },
 };
 
+const moduleGroupsMap = {
+  comercial: comercialGroups,
+  produccion: produccionGroups,
+  operarios: operariosGroups,
+};
+
+const mkActiveItem = {
+  comercial:  { bg: "rgba(99,102,241,0.18)",   text: "#a5b4fc", icon: "#818cf8" },
+  produccion: { bg: "rgba(16,185,129,0.15)",   text: "#6ee7b7", icon: "#34d399" },
+  operarios:  { bg: "rgba(167,139,250,0.15)",  text: "#c4b5fd", icon: "#a78bfa" },
+};
+const mkGroupActive = {
+  comercial:  "text-indigo-300",
+  produccion: "text-emerald-300",
+  operarios:  "text-violet-300",
+};
+const mkHeader = {
+  comercial:  { dot: "#6366f1", text: "#6366f1" },
+  produccion: { dot: "#10b981", text: "#10b981" },
+  operarios:  { dot: "#a78bfa", text: "#a78bfa" },
+};
+const mkIconColors = {
+  comercial:  { bg: "rgba(99,102,241,0.25)",  color: "#a5b4fc" },
+  produccion: { bg: "rgba(16,185,129,0.20)",  color: "#6ee7b7" },
+  operarios:  { bg: "rgba(167,139,250,0.22)", color: "#c4b5fd" },
+};
+
+function getRouteModule(pathname) {
+  for (const mk of ['comercial', 'produccion', 'operarios']) {
+    for (const g of moduleGroupsMap[mk]) {
+      if (g.items.some(i => i.url === pathname)) return mk;
+    }
+  }
+  return null;
+}
 
 function LayoutContent({ children }) {
   const location = useLocation();
   const { currentUser, permissions, userRole, isLoading, isRealAdmin, previewRoleId } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
+  const [activeModule, setActiveModule] = useState(() => getRouteModule(location.pathname) || 'comercial');
 
-  // In preview mode, disable admin bypass so permission filtering works realistically
   const isAdmin = isRealAdmin && !previewRoleId;
 
   const hasModuleAccess = (mk) => {
@@ -160,6 +193,22 @@ function LayoutContent({ children }) {
       return item.permissions.some(p => permissions.includes(p));
     });
   };
+
+  // Auto-detect module from route
+  useEffect(() => {
+    const detected = getRouteModule(location.pathname);
+    if (detected) setActiveModule(detected);
+  }, [location.pathname]);
+
+  const accessibleModules = ['comercial', 'produccion', 'operarios'].filter(hasModuleAccess);
+
+  // Ensure activeModule is always one the user can access
+  const currentModule = accessibleModules.includes(activeModule) ? activeModule : (accessibleModules[0] || 'comercial');
+
+  // Groups for the active module only
+  const activeGroups = (moduleGroupsMap[currentModule] || [])
+    .map(g => ({ ...g, items: filterItems(g.items) }))
+    .filter(g => g.items.length > 0);
 
   const toggleGroup = (key) => setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }));
   const closeSidebar = () => setSidebarOpen(false);
@@ -180,45 +229,9 @@ function LayoutContent({ children }) {
     return <div className="min-h-screen flex items-center justify-center" style={{background:'#0f0f23'}}><div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full" /></div>;
   }
 
-  const allGroups = [
-    ...comercialGroups.map(g => ({ ...g, mk: "comercial" })),
-    ...produccionGroups.map(g => ({ ...g, mk: "produccion" })),
-    ...operariosGroups.map(g => ({ ...g, mk: "operarios" })),
-  ];
-
-  const visibleGroups = allGroups
-    .filter(g => hasModuleAccess(g.mk))
-    .map(g => ({ ...g, items: filterItems(g.items) }))
-    .filter(g => g.items.length > 0);
-
-  const navEntries = [];
-  let lastMk = null;
-  for (const g of visibleGroups) {
-    if (g.mk !== lastMk) { navEntries.push({ type: "header", mk: g.mk }); lastMk = g.mk; }
-    navEntries.push({ type: "group", ...g });
-  }
-
   const hideTabBar = location.pathname === createPageUrl("Settings");
-
   const sidebarBg = "hsl(229, 84%, 5%)";
   const sidebarBorder = "rgba(255,255,255,0.06)";
-
-  const mkActiveItem = {
-    comercial:  { bg: "rgba(99,102,241,0.18)", text: "#a5b4fc", icon: "#818cf8" },
-    produccion: { bg: "rgba(16,185,129,0.15)", text: "#6ee7b7", icon: "#34d399" },
-    operarios:  { bg: "rgba(167,139,250,0.15)", text: "#c4b5fd", icon: "#a78bfa" },
-  };
-  const mkGroupActive = {
-    comercial:  "text-indigo-300",
-    produccion: "text-emerald-300",
-    operarios:  "text-violet-300",
-  };
-  const mkHeader = {
-    comercial:  { dot: "#6366f1", text: "#6366f1" },
-    produccion: { dot: "#10b981", text: "#10b981" },
-    operarios:  { dot: "#a78bfa", text: "#a78bfa" },
-  };
-
   const bannerOffset = isRealAdmin ? "pt-7" : "";
 
   return (
@@ -245,137 +258,136 @@ function LayoutContent({ children }) {
       {sidebarOpen && <div onClick={closeSidebar} className="fixed inset-0 bg-black/60 z-[100] lg:hidden backdrop-blur-sm" />}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 bottom-0 w-64 transform transition-transform duration-300 z-[200] flex flex-col overflow-y-auto overscroll-none ${isRealAdmin ? 'top-7' : 'top-0'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+      <aside className={`fixed left-0 bottom-0 w-64 transform transition-transform duration-300 z-[200] flex ${isRealAdmin ? 'top-7' : 'top-0'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{ background: sidebarBg, borderRight: `1px solid ${sidebarBorder}` }}>
 
-        {/* Logo */}
-        <div className="px-5 py-5 flex items-center justify-between" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', boxShadow: '0 4px 12px rgba(99,102,241,0.4)' }}>
-              <span className="text-white font-bold text-sm">eQ</span>
-            </div>
-            <div>
-              <p className="text-white font-semibold text-sm leading-none tracking-tight">eQuis-T</p>
-              <p className="text-[11px] mt-0.5" style={{ color: '#6366f1' }}>Sistema Unificado</p>
-            </div>
-          </div>
-          <div className="hidden lg:block"><ThemeToggle /></div>
-        </div>
+        {/* Icon strip */}
+        <div className="w-14 shrink-0 flex flex-col items-center py-4 gap-1"
+          style={{ borderRight: `1px solid ${sidebarBorder}` }}>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto overscroll-none">
-          {navEntries.map((entry, idx) => {
-            if (entry.type === "header") {
-              const hStyle = mkHeader[entry.mk];
-              return (
-                <div key={`h-${entry.mk}`} className={`flex items-center gap-2 px-2 pb-1.5 ${idx > 0 ? 'pt-5' : 'pt-1'}`}>
-                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: hStyle.dot }} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: hStyle.text }}>
-                    {MODULE_META[entry.mk].label}
-                  </span>
-                </div>
-              );
-            }
-            const gKey = `${entry.mk}-${entry.title}`;
-            const isExpanded = expandedGroups[gKey] ?? entry.items.some(i => location.pathname === i.url);
-            const hasActive = entry.items.some(i => location.pathname === i.url);
-            const activeStyle = mkActiveItem[entry.mk];
+          {/* Logo */}
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-3 shrink-0"
+            style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', boxShadow: '0 4px 12px rgba(99,102,241,0.4)' }}>
+            <span className="text-white font-bold text-sm">eQ</span>
+          </div>
+
+          {/* Module icons — only accessible modules */}
+          {accessibleModules.map(mk => {
+            const Icon = MODULE_META[mk].icon;
+            const isActive = currentModule === mk;
+            const colors = mkIconColors[mk];
             return (
-              <div key={gKey}>
-                <button
-                  onClick={() => toggleGroup(gKey)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${hasActive ? mkGroupActive[entry.mk] : ''}`}
-                  style={hasActive
-                    ? { background: activeStyle.bg }
-                    : { color: 'rgba(255,255,255,0.45)' }}
-                  onMouseEnter={e => { if (!hasActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                  onMouseLeave={e => { if (!hasActive) e.currentTarget.style.background = ''; }}
-                >
-                  <span>{entry.title}</span>
-                  <ChevronRight size={13} className={`transition-transform opacity-50 ${isExpanded ? 'rotate-90' : ''}`} />
-                </button>
-                {isExpanded && (
-                  <div className="ml-2.5 mt-0.5 space-y-0.5 pl-2" style={{ borderLeft: `1px solid rgba(255,255,255,0.07)` }}>
-                    {entry.items.map(item => {
-                      const isActive = location.pathname === item.url;
-                      const Icon = item.icon;
-                      if (item.isPortal) {
-                        const portalUrl = `${window.location.origin}${item.url}`;
-                        return (
-                          <div key={item.title} className="flex items-center gap-1 rounded-lg overflow-hidden"
-                            style={isActive ? { background: activeStyle.bg } : {}}>
-                            <Link to={item.url} onClick={closeSidebar}
-                              className="flex items-center gap-2.5 px-3 py-1.5 flex-1 text-sm transition-all duration-150"
-                              style={isActive ? { color: activeStyle.text, fontWeight: 500 } : { color: 'rgba(255,255,255,0.40)' }}
-                              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; } }}
-                              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color = 'rgba(255,255,255,0.40)'; } }}
-                            >
-                              <Icon size={14} style={isActive ? { color: activeStyle.icon } : {}} />
-                              <span>{item.title}</span>
-                            </Link>
-                            <button
-                              onClick={() => { navigator.clipboard.writeText(portalUrl); }}
-                              title="Copiar enlace del portal"
-                              className="px-2 py-1.5 text-xs rounded transition-colors shrink-0"
-                              style={{ color: 'rgba(255,255,255,0.30)' }}
-                              onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.30)'; e.currentTarget.style.background = ''; }}
-                            >
-                              🔗
-                            </button>
-                          </div>
-                        );
-                      }
-                      return (
-                        <Link key={item.title} to={item.url} onClick={closeSidebar}
-                          className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-150"
-                          style={isActive
-                            ? { background: activeStyle.bg, color: activeStyle.text, fontWeight: 500 }
-                            : { color: 'rgba(255,255,255,0.40)' }}
-                          onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; } }}
-                          onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.40)'; } }}
-                        >
-                          <Icon size={14} style={isActive ? { color: activeStyle.icon } : {}} />
-                          <span>{item.title}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <button key={mk} onClick={() => setActiveModule(mk)} title={MODULE_META[mk].label}
+                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150"
+                style={isActive ? { background: colors.bg, color: colors.color } : { color: 'rgba(255,255,255,0.35)' }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; } }}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; } }}
+              >
+                <Icon size={18} />
+              </button>
             );
           })}
-        </nav>
 
-        {/* Footer */}
-        <div className="px-4 py-4" style={{ borderTop: `1px solid ${sidebarBorder}` }}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white"
-              style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}>
-              {(currentUser.full_name || currentUser.email || '?')[0].toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-white truncate leading-tight">
-                {currentUser.full_name || currentUser.email}
-              </p>
-              <div className="flex gap-1 mt-0.5 flex-wrap">
-                {Object.keys(MODULE_META).filter(hasModuleAccess).map(mk => {
-                  const colors = { comercial: '#6366f1', produccion: '#10b981', operarios: '#a78bfa' };
-                  return <span key={mk} className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: colors[mk] }}>{MODULE_META[mk].label}</span>;
-                }).reduce((acc, el, i) => i === 0 ? [el] : [...acc, <span key={`sep-${i}`} className="text-[9px]" style={{color:'rgba(255,255,255,0.2)'}}>·</span>, el], [])}
-              </div>
-            </div>
+          <div className="flex-1" />
+
+          {/* Theme toggle */}
+          <div className="mb-1"><ThemeToggle /></div>
+
+          {/* User avatar */}
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white mb-1 shrink-0 cursor-default"
+            title={currentUser.full_name || currentUser.email}
+            style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}>
+            {(currentUser.full_name || currentUser.email || '?')[0].toUpperCase()}
           </div>
-          <button onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150"
-            style={{ color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}
+
+          {/* Logout */}
+          <button onClick={handleLogout} title="Cerrar Sesión"
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150"
+            style={{ color: 'rgba(255,255,255,0.3)' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
-          >
-            <LogOut size={13} />
-            Cerrar Sesión
+            onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.3)'; }}>
+            <LogOut size={14} />
           </button>
+        </div>
+
+        {/* Nav panel */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+          {/* Module header */}
+          <div className="px-3 py-3 flex items-center gap-2 shrink-0" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
+            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: mkHeader[currentModule].dot }} />
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: mkHeader[currentModule].text }}>
+              {MODULE_META[currentModule].label}
+            </span>
+          </div>
+
+          {/* Nav items */}
+          <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto overscroll-none">
+            {activeGroups.map(g => {
+              const gKey = `${currentModule}-${g.title}`;
+              const isExpanded = expandedGroups[gKey] ?? g.items.some(i => location.pathname === i.url);
+              const hasActive = g.items.some(i => location.pathname === i.url);
+              const activeStyle = mkActiveItem[currentModule];
+              return (
+                <div key={gKey}>
+                  <button onClick={() => toggleGroup(gKey)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${hasActive ? mkGroupActive[currentModule] : ''}`}
+                    style={hasActive ? { background: activeStyle.bg } : { color: 'rgba(255,255,255,0.45)' }}
+                    onMouseEnter={e => { if (!hasActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                    onMouseLeave={e => { if (!hasActive) e.currentTarget.style.background = ''; }}
+                  >
+                    <span>{g.title}</span>
+                    <ChevronRight size={13} className={`transition-transform opacity-50 ${isExpanded ? 'rotate-90' : ''}`} />
+                  </button>
+                  {isExpanded && (
+                    <div className="ml-2.5 mt-0.5 space-y-0.5 pl-2" style={{ borderLeft: `1px solid rgba(255,255,255,0.07)` }}>
+                      {g.items.map(item => {
+                        const isActive = location.pathname === item.url;
+                        const Icon = item.icon;
+                        if (item.isPortal) {
+                          const portalUrl = `${window.location.origin}${item.url}`;
+                          return (
+                            <div key={item.title} className="flex items-center gap-1 rounded-lg overflow-hidden"
+                              style={isActive ? { background: activeStyle.bg } : {}}>
+                              <Link to={item.url} onClick={closeSidebar}
+                                className="flex items-center gap-2.5 px-3 py-1.5 flex-1 text-sm transition-all duration-150"
+                                style={isActive ? { color: activeStyle.text, fontWeight: 500 } : { color: 'rgba(255,255,255,0.40)' }}
+                                onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+                                onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.40)'; }}
+                              >
+                                <Icon size={14} style={isActive ? { color: activeStyle.icon } : {}} />
+                                <span>{item.title}</span>
+                              </Link>
+                              <button onClick={() => navigator.clipboard.writeText(portalUrl)}
+                                title="Copiar enlace del portal"
+                                className="px-2 py-1.5 text-xs rounded transition-colors shrink-0"
+                                style={{ color: 'rgba(255,255,255,0.30)' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.30)'; e.currentTarget.style.background = ''; }}
+                              >🔗</button>
+                            </div>
+                          );
+                        }
+                        return (
+                          <Link key={item.title} to={item.url} onClick={closeSidebar}
+                            className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-150"
+                            style={isActive
+                              ? { background: activeStyle.bg, color: activeStyle.text, fontWeight: 500 }
+                              : { color: 'rgba(255,255,255,0.40)' }}
+                            onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; } }}
+                            onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.40)'; } }}
+                          >
+                            <Icon size={14} style={isActive ? { color: activeStyle.icon } : {}} />
+                            <span>{item.title}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
         </div>
       </aside>
 
