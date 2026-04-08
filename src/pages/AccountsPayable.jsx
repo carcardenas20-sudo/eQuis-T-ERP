@@ -1043,6 +1043,26 @@ export default function AccountsPayablePage() {
                 return p.category === filtroCategoria;
               });
 
+              // Totales del filtro activo
+              const now = new Date();
+              const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
+              const finMes    = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+              const totalFiltro     = filtered.reduce((s, p) => s + (p.pending_amount || 0), 0);
+              const vencidoFiltro   = filtered.filter(p => p.due_date && new Date(p.due_date) < now).reduce((s, p) => s + (p.pending_amount || 0), 0);
+              const esteMesFiltro   = filtered.filter(p => p.due_date && new Date(p.due_date) >= inicioMes && new Date(p.due_date) <= finMes).reduce((s, p) => s + (p.pending_amount || 0), 0);
+              const proximoFiltro   = filtered.filter(p => p.due_date && new Date(p.due_date) > finMes).reduce((s, p) => s + (p.pending_amount || 0), 0);
+              const sinFechaFiltro  = filtered.filter(p => !p.due_date).reduce((s, p) => s + (p.pending_amount || 0), 0);
+
+              // Cuando el filtro es "Todos", mostrar desglose por categoría
+              const categorySums = filtroCategoria === 'all' ? [
+                { key: 'manufacturing_salary', label: 'Operarios',        items: filtered.filter(p => p._isOperario || p.category === 'salarios_manufactura') },
+                { key: 'materia_prima_credito',label: 'Mat. Prima',        items: filtered.filter(p => p.category === 'materia_prima_credito') },
+                { key: 'gasto_fijo',           label: 'Gastos Fijos',      items: filtered.filter(p => p.category === 'gasto_fijo') },
+                { key: 'gasto_variable',       label: 'Gastos Variables',  items: filtered.filter(p => p.category === 'gasto_variable') },
+                { key: 'otros',                label: 'Otros',             items: filtered.filter(p => !['salarios_manufactura','materia_prima_credito','gasto_fijo','gasto_variable'].includes(p.category) && !p._isOperario) },
+              ].filter(c => c.items.length > 0) : [];
+
               if (filtered.length === 0) return (
                 <div className="text-center py-16 text-slate-400">
                   <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-40" />
@@ -1054,31 +1074,98 @@ export default function AccountsPayablePage() {
               for (const item of filtered) groups[URGENCY(item.due_date)].push(item);
 
               return (
-                <div className="space-y-6">
-                  {['vencida', 'urgente', 'proximo', 'futuro', 'sin_fecha'].map(u => {
-                    const items = groups[u];
-                    if (items.length === 0) return null;
-                    const uStyle = URGENCY_STYLES[u];
-                    const groupTotal = items.reduce((s, p) => s + (p.pending_amount || 0), 0);
-                    return (
-                      <div key={u}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`w-2.5 h-2.5 rounded-full ${uStyle.dot}`} />
-                          <h3 className="font-semibold text-slate-700 text-sm">{uStyle.label}</h3>
-                          <span className="text-xs text-slate-400">({items.length})</span>
-                          <span className="ml-auto text-sm font-bold text-slate-700">{fmtMoney(groupTotal)}</span>
+                <div className="space-y-4">
+                  {/* ── Resumen de totales del filtro activo ── */}
+                  <div className="bg-white border rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-700">
+                        {filtroCategoria === 'all' ? 'Total pendiente' : CATEGORY_META[filtroCategoria]?.label || 'Total'}
+                      </span>
+                      <span className="text-xl font-bold text-slate-900">{fmtMoney(totalFiltro)}</span>
+                    </div>
+
+                    {/* Desglose por urgencia */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {vencidoFiltro > 0 && (
+                        <div className="bg-red-50 border border-red-100 rounded-lg p-2 text-center">
+                          <p className="text-[10px] text-red-500 font-medium uppercase tracking-wide">Vencido</p>
+                          <p className="text-sm font-bold text-red-700 mt-0.5">{fmtMoney(vencidoFiltro)}</p>
                         </div>
-                        <div className="space-y-2">
-                          {items.map(item => (
-                            <PendienteCard
-                              key={item.id} item={item} onPayment={setPaymentModalData}
-                              abonos={allAbonos.filter(a => a.payable_id === item.id)}
-                            />
-                          ))}
+                      )}
+                      {esteMesFiltro > 0 && (
+                        <div className="bg-amber-50 border border-amber-100 rounded-lg p-2 text-center">
+                          <p className="text-[10px] text-amber-600 font-medium uppercase tracking-wide">Este mes</p>
+                          <p className="text-sm font-bold text-amber-700 mt-0.5">{fmtMoney(esteMesFiltro)}</p>
                         </div>
+                      )}
+                      {proximoFiltro > 0 && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 text-center">
+                          <p className="text-[10px] text-blue-500 font-medium uppercase tracking-wide">Próximo mes+</p>
+                          <p className="text-sm font-bold text-blue-700 mt-0.5">{fmtMoney(proximoFiltro)}</p>
+                        </div>
+                      )}
+                      {sinFechaFiltro > 0 && (
+                        <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 text-center">
+                          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Sin fecha</p>
+                          <p className="text-sm font-bold text-slate-600 mt-0.5">{fmtMoney(sinFechaFiltro)}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Desglose por categoría (solo en vista "Todos") */}
+                    {categorySums.length > 0 && (
+                      <div className="border-t pt-3 space-y-1.5">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Por categoría</p>
+                        {categorySums.map(c => {
+                          const catTotal = c.items.reduce((s, p) => s + (p.pending_amount || 0), 0);
+                          const catMeta = CATEGORY_META[c.key] || CATEGORY_META.otros;
+                          const CatIcon = catMeta.icon;
+                          const pct = totalFiltro > 0 ? (catTotal / totalFiltro) * 100 : 0;
+                          return (
+                            <div key={c.key} className="flex items-center gap-2">
+                              <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${catMeta.bg}`}>
+                                <CatIcon className={`w-3 h-3 ${catMeta.color}`} />
+                              </div>
+                              <span className="text-xs text-slate-600 w-28 shrink-0">{c.label}</span>
+                              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${catMeta.bg.replace('bg-','bg-').replace('-100','-400')}`}
+                                  style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-semibold text-slate-700 w-24 text-right shrink-0">{fmtMoney(catTotal)}</span>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    )}
+                  </div>
+
+                  {/* ── Lista agrupada por urgencia ── */}
+                  <div className="space-y-6">
+                    {['vencida', 'urgente', 'proximo', 'futuro', 'sin_fecha'].map(u => {
+                      const items = groups[u];
+                      if (items.length === 0) return null;
+                      const uStyle = URGENCY_STYLES[u];
+                      const groupTotal = items.reduce((s, p) => s + (p.pending_amount || 0), 0);
+                      return (
+                        <div key={u}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${uStyle.dot}`} />
+                            <h3 className="font-semibold text-slate-700 text-sm">{uStyle.label}</h3>
+                            <span className="text-xs text-slate-400">({items.length})</span>
+                            <span className="ml-auto text-sm font-bold text-slate-700">{fmtMoney(groupTotal)}</span>
+                          </div>
+                          <div className="space-y-2">
+                            {items.map(item => (
+                              <PendienteCard
+                                key={item.id} item={item} onPayment={setPaymentModalData}
+                                abonos={allAbonos.filter(a => a.payable_id === item.id)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })()}
