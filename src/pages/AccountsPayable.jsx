@@ -310,27 +310,23 @@ function GastoFijoModal({ gasto, onConfirm, onCancel }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Periodicidad</Label>
-              <Select value={periodicidad} onValueChange={setPeriodicidad}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PERIODICIDAD_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select value={periodicidad} onChange={e => setPeriodicidad(e.target.value)}
+                className="mt-1 w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {Object.entries(PERIODICIDAD_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
             </div>
             <div>
               <Label>Categoría</Label>
-              <Select value={categoria} onValueChange={setCategoria}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="servicios">Servicios</SelectItem>
-                  <SelectItem value="arriendo">Arriendo</SelectItem>
-                  <SelectItem value="nomina_adm">Nómina Administrativa</SelectItem>
-                  <SelectItem value="seguros">Seguros</SelectItem>
-                  <SelectItem value="otros_fijos">Otros fijos</SelectItem>
-                </SelectContent>
-              </Select>
+              <select value={categoria} onChange={e => setCategoria(e.target.value)}
+                className="mt-1 w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="servicios">Servicios</option>
+                <option value="arriendo">Arriendo</option>
+                <option value="nomina_adm">Nómina Administrativa</option>
+                <option value="seguros">Seguros</option>
+                <option value="otros_fijos">Otros fijos</option>
+              </select>
             </div>
           </div>
         </div>
