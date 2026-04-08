@@ -199,6 +199,20 @@ export const ENTITY_SCHEMAS = {
     indexes: ['supplier_id', 'status', 'due_date', 'location_id'],
   },
 
+  FixedExpense: {
+    table: 'entity_fixed_expense',
+    typed: {
+      nombre: 'TEXT',
+      monto: 'NUMERIC(14,2)',
+      dia_vencimiento: 'INTEGER',
+      periodicidad: 'TEXT',
+      categoria: 'TEXT',
+      is_active: 'BOOLEAN DEFAULT true',
+      ultima_generacion: 'TEXT',
+    },
+    indexes: ['is_active', 'periodicidad'],
+  },
+
   PayableInstallment: {
     table: 'entity_payable_installment',
     typed: {

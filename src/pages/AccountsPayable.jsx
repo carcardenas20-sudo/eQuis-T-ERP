@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { AccountPayable, PayablePayment, Supplier, Location, Expense, Presupuesto, Inventario } from "@/entities/all";
+import { AccountPayable, PayablePayment, Supplier, Location, Expense, Presupuesto, Inventario, FixedExpense } from "@/entities/all";
 import { localClient } from "@/api/localClient";
 import { useSession } from "../components/providers/SessionProvider";
 import { Button } from "@/components/ui/button";
@@ -9,19 +9,82 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, DollarSign, AlertCircle, TrendingUp, Loader2, Package, ShoppingCart, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Plus, DollarSign, AlertCircle, TrendingUp, Loader2, Package, ShoppingCart,
+  ChevronDown, ChevronUp, CheckCircle2, Users, Wrench, BarChart3, Building2,
+  Calendar, Clock, CreditCard, Edit2, Trash2, Repeat, CircleDollarSign,
+  PackageOpen, ArrowUpRight,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
 import PayableForm from "../components/payables/PayableForm";
 import PayableList from "../components/payables/PayableList";
 import PaymentModal from "../components/payables/PaymentModal";
 import InstallmentsManager from "../components/payables/InstallmentsManager";
 
-// ─── Modal Comprar Material ───────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const URGENCY = (dueDate) => {
+  if (!dueDate) return 'sin_fecha';
+  const diff = (new Date(dueDate) - new Date()) / 86400000;
+  if (diff < 0) return 'vencida';
+  if (diff <= 7) return 'urgente';
+  if (diff <= 30) return 'proximo';
+  return 'futuro';
+};
+
+const URGENCY_STYLES = {
+  vencida:   { label: 'Vencida',       bg: 'bg-red-50',    border: 'border-red-200',   badge: 'bg-red-100 text-red-700',    dot: 'bg-red-500' },
+  urgente:   { label: 'Esta semana',   bg: 'bg-amber-50',  border: 'border-amber-200', badge: 'bg-amber-100 text-amber-700',dot: 'bg-amber-500' },
+  proximo:   { label: 'Este mes',      bg: 'bg-blue-50',   border: 'border-blue-200',  badge: 'bg-blue-100 text-blue-700',  dot: 'bg-blue-500' },
+  futuro:    { label: 'Próximas',      bg: 'bg-slate-50',  border: 'border-slate-200', badge: 'bg-slate-100 text-slate-600',dot: 'bg-slate-400' },
+  sin_fecha: { label: 'Sin fecha',     bg: 'bg-slate-50',  border: 'border-slate-200', badge: 'bg-slate-100 text-slate-500',dot: 'bg-slate-300' },
+};
+
+const CATEGORY_META = {
+  manufacturing_salary:  { label: 'Operarios',       icon: Users,             color: 'text-violet-600', bg: 'bg-violet-100' },
+  materia_prima_credito: { label: 'Mat. Prima',       icon: Package,           color: 'text-emerald-600',bg: 'bg-emerald-100' },
+  gasto_fijo:            { label: 'Gasto Fijo',       icon: Repeat,            color: 'text-blue-600',   bg: 'bg-blue-100' },
+  gasto_variable:        { label: 'Gasto Variable',   icon: ArrowUpRight,      color: 'text-orange-600', bg: 'bg-orange-100' },
+  otros:                 { label: 'Otros',             icon: CircleDollarSign,  color: 'text-slate-600',  bg: 'bg-slate-100' },
+};
+
+const getCategoryMeta = (item) => {
+  if (item._isOperario || item.type === 'manufacturing_salary' || item.category === 'salarios_manufactura')
+    return CATEGORY_META.manufacturing_salary;
+  const cat = item.category || item.type || 'otros';
+  return CATEGORY_META[cat] || CATEGORY_META.otros;
+};
+
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtMoney = (n) => `$${(n || 0).toLocaleString('es-CO')}`;
+
+const PERIODICIDAD_LABELS = {
+  mensual: 'Mensual', bimestral: 'Bimestral', trimestral: 'Trimestral',
+  semestral: 'Semestral', anual: 'Anual',
+};
+
+// Decide si un gasto fijo debe generar una CxP este mes
+function deberiGenerarEsteMes(gasto) {
+  const hoy = new Date();
+  const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  if (gasto.ultima_generacion === mesActual) return false;
+  if (!gasto.ultima_generacion) return true;
+  const [y, m] = gasto.ultima_generacion.split('-').map(Number);
+  const lastDate = new Date(y, m - 1, 1);
+  const { periodicidad } = gasto;
+  const mesesMap = { mensual: 1, bimestral: 2, trimestral: 3, semestral: 6, anual: 12 };
+  const meses = mesesMap[periodicidad] || 1;
+  lastDate.setMonth(lastDate.getMonth() + meses);
+  return lastDate <= hoy;
+}
+
+// ─── Modal: Comprar Material (con opción de crédito) ─────────────────────────
 function ComprarMaterialModal({ item, onConfirm, onCancel }) {
   const [cantidad, setCantidad] = useState(String(item.cantidad_pendiente));
   const [precio, setPrecio] = useState(String(item.precio_unitario || ""));
   const [proveedor, setProveedor] = useState("");
+  const [esCredito, setEsCredito] = useState(false);
+  const [fechaVencimiento, setFechaVencimiento] = useState("");
   const [loading, setLoading] = useState(false);
 
   const cantNum = parseFloat(cantidad) || 0;
@@ -30,16 +93,15 @@ function ComprarMaterialModal({ item, onConfirm, onCancel }) {
   const totalCompra = cantNum * precioNum;
 
   const estadoBadge = {
-    borrador: "bg-slate-100 text-slate-700",
-    enviado:  "bg-blue-100 text-blue-700",
-    aprobado: "bg-emerald-100 text-emerald-700",
-    rechazado:"bg-red-100 text-red-700",
+    borrador: "bg-slate-100 text-slate-700", enviado: "bg-blue-100 text-blue-700",
+    aprobado: "bg-emerald-100 text-emerald-700", rechazado: "bg-red-100 text-red-700",
   };
 
   const handleConfirm = async () => {
     if (cantNum <= 0) return;
+    if (esCredito && !fechaVencimiento) { alert("Indica la fecha de pago del crédito"); return; }
     setLoading(true);
-    await onConfirm({ cantidad: cantNum, precioUnitario: precioNum, proveedor });
+    await onConfirm({ cantidad: cantNum, precioUnitario: precioNum, proveedor, esCredito, fechaVencimiento });
     setLoading(false);
   };
 
@@ -69,78 +131,71 @@ function ComprarMaterialModal({ item, onConfirm, onCancel }) {
                 <span className="font-medium">{item._presupuesto.cliente}</span>
               </div>
             )}
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500">Necesario</span>
-              <span className="font-medium">{item.cantidad_total} {item.unidad_medida}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500">Ya comprado</span>
-              <span className="font-medium">{item.cantidad_comprada} {item.unidad_medida}</span>
-            </div>
             <div className="flex items-center justify-between border-t pt-1 mt-1">
               <span className="text-slate-700 font-medium">Pendiente</span>
               <span className="font-bold text-amber-700">{item.cantidad_pendiente.toFixed(2)} {item.unidad_medida}</span>
             </div>
           </div>
 
-          {/* Cantidad a comprar */}
+          {/* Cantidad */}
           <div>
             <Label className="text-sm font-medium text-slate-700">Cantidad a comprar *</Label>
             <div className="flex items-center gap-2 mt-1">
-              <Input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={cantidad}
-                onChange={e => setCantidad(e.target.value)}
-                className="flex-1"
-                placeholder={item.cantidad_pendiente}
-              />
+              <Input type="number" min="0.01" step="0.01" value={cantidad}
+                onChange={e => setCantidad(e.target.value)} className="flex-1" />
               <span className="text-sm text-slate-500 shrink-0">{item.unidad_medida}</span>
             </div>
             {exceso > 0 && (
               <p className="text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded">
-                Excedente de <strong>{exceso.toFixed(2)} {item.unidad_medida}</strong> → se añadirá al inventario de materias primas
+                Excedente de <strong>{exceso.toFixed(2)} {item.unidad_medida}</strong> → irá al inventario
               </p>
             )}
           </div>
 
-          {/* Precio unitario */}
+          {/* Precio */}
           <div>
             <Label className="text-sm font-medium text-slate-700">Precio unitario</Label>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-slate-500">$</span>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={precio}
-                onChange={e => setPrecio(e.target.value)}
-                className="flex-1"
-              />
+              <Input type="number" min="0" step="0.01" value={precio}
+                onChange={e => setPrecio(e.target.value)} className="flex-1" />
             </div>
             {cantNum > 0 && precioNum > 0 && (
-              <p className="text-xs text-slate-500 mt-1">Total: <strong>${totalCompra.toLocaleString()}</strong></p>
+              <p className="text-xs text-slate-500 mt-1">Total: <strong>{fmtMoney(totalCompra)}</strong></p>
             )}
           </div>
 
           {/* Proveedor */}
           <div>
-            <Label className="text-sm font-medium text-slate-700">Proveedor (opcional)</Label>
-            <Input
-              className="mt-1"
-              value={proveedor}
-              onChange={e => setProveedor(e.target.value)}
-              placeholder="Nombre del proveedor"
-            />
+            <Label className="text-sm font-medium text-slate-700">Proveedor</Label>
+            <Input className="mt-1" value={proveedor} onChange={e => setProveedor(e.target.value)}
+              placeholder="Nombre del proveedor" />
+          </div>
+
+          {/* ¿Compra a crédito? */}
+          <div className="border rounded-lg p-3 space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={esCredito} onChange={e => setEsCredito(e.target.checked)}
+                className="w-4 h-4 accent-blue-600" />
+              <span className="text-sm font-medium text-slate-700">Compra a crédito</span>
+              <span className="text-xs text-slate-400">(el material entra al inventario ahora, se paga después)</span>
+            </label>
+            {esCredito && (
+              <div>
+                <Label className="text-sm font-medium text-slate-700">Fecha límite de pago *</Label>
+                <Input type="date" className="mt-1" value={fechaVencimiento}
+                  onChange={e => setFechaVencimiento(e.target.value)} />
+              </div>
+            )}
           </div>
         </div>
 
         <div className="px-6 py-4 border-t flex gap-3 justify-end">
           <Button variant="outline" onClick={onCancel} disabled={loading}>Cancelar</Button>
-          <Button onClick={handleConfirm} disabled={loading || cantNum <= 0} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={handleConfirm} disabled={loading || cantNum <= 0}
+            className={esCredito ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"}>
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Confirmar Compra
+            {esCredito ? <><CreditCard className="w-3.5 h-3.5 mr-1.5" />Comprar a Crédito</> : "Confirmar Compra"}
           </Button>
         </div>
       </div>
@@ -148,16 +203,157 @@ function ComprarMaterialModal({ item, onConfirm, onCancel }) {
   );
 }
 
-// ─── Fila de material pendiente ───────────────────────────────────────────────
+// ─── Modal: Gasto Variable rápido ─────────────────────────────────────────────
+function GastoVariableModal({ locations, userLocation, onConfirm, onCancel }) {
+  const [nombre, setNombre] = useState('');
+  const [monto, setMonto] = useState('');
+  const [proveedor, setProveedor] = useState('');
+  const [fechaVenc, setFechaVenc] = useState('');
+  const [notas, setNotas] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!nombre || !monto) return;
+    setLoading(true);
+    await onConfirm({ nombre, monto: parseFloat(monto), proveedor, fechaVenc, notas });
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="px-6 py-4 border-b">
+          <h2 className="text-lg font-bold text-slate-900">Nuevo Gasto Variable</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Gasto no recurrente que se pagará después</p>
+        </div>
+        <div className="px-6 py-4 space-y-4">
+          <div>
+            <Label>Descripción *</Label>
+            <Input className="mt-1" value={nombre} onChange={e => setNombre(e.target.value)}
+              placeholder="Ej: Flete, reparación, imprevistos…" />
+          </div>
+          <div>
+            <Label>Monto *</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-slate-500">$</span>
+              <Input type="number" min="0" value={monto} onChange={e => setMonto(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <Label>Proveedor / Beneficiario</Label>
+            <Input className="mt-1" value={proveedor} onChange={e => setProveedor(e.target.value)} />
+          </div>
+          <div>
+            <Label>Fecha límite de pago</Label>
+            <Input type="date" className="mt-1" value={fechaVenc} onChange={e => setFechaVenc(e.target.value)} />
+          </div>
+          <div>
+            <Label>Notas</Label>
+            <Textarea className="mt-1" value={notas} onChange={e => setNotas(e.target.value)} rows={2} />
+          </div>
+        </div>
+        <div className="px-6 py-4 border-t flex gap-3 justify-end">
+          <Button variant="outline" onClick={onCancel} disabled={loading}>Cancelar</Button>
+          <Button onClick={handleConfirm} disabled={loading || !nombre || !monto} className="bg-orange-600 hover:bg-orange-700">
+            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Registrar Gasto
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal: Gasto Fijo (template) ─────────────────────────────────────────────
+function GastoFijoModal({ gasto, onConfirm, onCancel }) {
+  const [nombre, setNombre] = useState(gasto?.nombre || '');
+  const [monto, setMonto] = useState(String(gasto?.monto || ''));
+  const [dia, setDia] = useState(String(gasto?.dia_vencimiento || ''));
+  const [periodicidad, setPeriodicidad] = useState(gasto?.periodicidad || 'mensual');
+  const [categoria, setCategoria] = useState(gasto?.categoria || 'servicios');
+  const [loading, setLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!nombre || !monto) return;
+    setLoading(true);
+    await onConfirm({ nombre, monto: parseFloat(monto), dia_vencimiento: parseInt(dia) || null, periodicidad, categoria });
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="px-6 py-4 border-b">
+          <h2 className="text-lg font-bold text-slate-900">{gasto ? 'Editar' : 'Nuevo'} Gasto Fijo</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Compromiso recurrente predecible</p>
+        </div>
+        <div className="px-6 py-4 space-y-4">
+          <div>
+            <Label>Nombre *</Label>
+            <Input className="mt-1" value={nombre} onChange={e => setNombre(e.target.value)}
+              placeholder="Ej: Arriendo, Internet, Servicios…" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Monto *</Label>
+              <div className="flex items-center gap-1 mt-1">
+                <span className="text-slate-500 text-sm">$</span>
+                <Input type="number" min="0" value={monto} onChange={e => setMonto(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <Label>Día de vencimiento</Label>
+              <Input type="number" min="1" max="31" className="mt-1" value={dia}
+                onChange={e => setDia(e.target.value)} placeholder="1-31" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Periodicidad</Label>
+              <Select value={periodicidad} onValueChange={setPeriodicidad}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PERIODICIDAD_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Categoría</Label>
+              <Select value={categoria} onValueChange={setCategoria}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="servicios">Servicios</SelectItem>
+                  <SelectItem value="arriendo">Arriendo</SelectItem>
+                  <SelectItem value="nomina_adm">Nómina Administrativa</SelectItem>
+                  <SelectItem value="seguros">Seguros</SelectItem>
+                  <SelectItem value="otros_fijos">Otros fijos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <div className="px-6 py-4 border-t flex gap-3 justify-end">
+          <Button variant="outline" onClick={onCancel} disabled={loading}>Cancelar</Button>
+          <Button onClick={handleConfirm} disabled={loading || !nombre || !monto} className="bg-blue-600 hover:bg-blue-700">
+            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {gasto ? 'Guardar' : 'Crear'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Fila material pendiente ───────────────────────────────────────────────────
 function MaterialPendienteRow({ item, onComprar }) {
   const [expanded, setExpanded] = useState(false);
   const porcentaje = item.cantidad_total > 0 ? (item.cantidad_comprada / item.cantidad_total) * 100 : 0;
 
   const estadoBadge = {
-    borrador: "bg-slate-100 text-slate-600",
-    enviado:  "bg-blue-100 text-blue-700",
-    aprobado: "bg-emerald-100 text-emerald-700",
-    rechazado:"bg-red-100 text-red-700",
+    borrador: "bg-slate-100 text-slate-600", enviado: "bg-blue-100 text-blue-700",
+    aprobado: "bg-emerald-100 text-emerald-700", rechazado: "bg-red-100 text-red-700",
   };
 
   return (
@@ -177,7 +373,6 @@ function MaterialPendienteRow({ item, onComprar }) {
             {item._presupuesto.numero_presupuesto}
             {item._presupuesto.cliente ? ` · ${item._presupuesto.cliente}` : ""}
           </p>
-          {/* Barra de progreso */}
           <div className="mt-2 flex items-center gap-2">
             <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, porcentaje)}%` }} />
@@ -189,7 +384,7 @@ function MaterialPendienteRow({ item, onComprar }) {
         </div>
 
         <div className="text-right shrink-0">
-          <p className="text-sm font-bold text-slate-900">${(item.costo_pendiente).toLocaleString()}</p>
+          <p className="text-sm font-bold text-slate-900">{fmtMoney(item.costo_pendiente)}</p>
           <p className="text-xs text-slate-500">pendiente</p>
         </div>
 
@@ -205,7 +400,6 @@ function MaterialPendienteRow({ item, onComprar }) {
         </div>
       </div>
 
-      {/* Historial de compras */}
       {expanded && item.compras_historico.length > 0 && (
         <div className="border-t bg-slate-50 px-4 py-2 space-y-1">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Historial de compras</p>
@@ -215,6 +409,7 @@ function MaterialPendienteRow({ item, onComprar }) {
                 <CheckCircle2 size={12} className="text-emerald-500" />
                 <span>{h.fecha}</span>
                 {h.proveedor && <span className="text-slate-400">· {h.proveedor}</span>}
+                {h.esCredito && <span className="text-blue-500 font-medium">· Crédito</span>}
               </div>
               <span className="font-medium">{h.cantidad} {item.unidad_medida} {h.precio_unitario ? `· $${h.precio_unitario}/u` : ""}</span>
             </div>
@@ -225,7 +420,51 @@ function MaterialPendienteRow({ item, onComprar }) {
   );
 }
 
-// ─── Página principal ─────────────────────────────────────────────────────────
+// ─── Tarjeta de item en vista unificada ───────────────────────────────────────
+function PendienteCard({ item, onPayment }) {
+  const urgency = URGENCY(item.due_date);
+  const uStyle = URGENCY_STYLES[urgency];
+  const catMeta = getCategoryMeta(item);
+  const CatIcon = catMeta.icon;
+
+  return (
+    <div className={`border rounded-lg p-3 sm:p-4 flex items-center gap-3 ${uStyle.bg} ${uStyle.border}`}>
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${catMeta.bg}`}>
+        <CatIcon className={`w-4 h-4 ${catMeta.color}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-slate-900 text-sm truncate">{item.description || item.supplier_name}</span>
+          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${catMeta.bg} ${catMeta.color}`}>
+            {catMeta.label}
+          </span>
+        </div>
+        {item.supplier_name && item.description && item.supplier_name !== item.description && (
+          <p className="text-xs text-slate-500 truncate">{item.supplier_name}</p>
+        )}
+        <div className="flex items-center gap-2 mt-1">
+          <Calendar className="w-3 h-3 text-slate-400" />
+          <span className="text-xs text-slate-500">{fmtDate(item.due_date)}</span>
+          {urgency === 'vencida' && (
+            <span className="text-xs font-semibold text-red-600">Vencida</span>
+          )}
+        </div>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-bold text-slate-900">{fmtMoney(item.pending_amount || item.total_amount)}</p>
+        {item.total_amount && item.paid_amount > 0 && (
+          <p className="text-xs text-slate-400">de {fmtMoney(item.total_amount)}</p>
+        )}
+      </div>
+      <Button size="sm" onClick={() => onPayment(item)}
+        className="bg-emerald-600 hover:bg-emerald-700 text-xs h-8 px-2 shrink-0">
+        Pagar
+      </Button>
+    </div>
+  );
+}
+
+// ─── Página principal ──────────────────────────────────────────────────────────
 export default function AccountsPayablePage() {
   const { currentUser, userLocation, userRole, isLoading: isSessionLoading } = useSession();
 
@@ -236,24 +475,28 @@ export default function AccountsPayablePage() {
   const [opEmployees, setOpEmployees] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
   const [inventario, setInventario] = useState([]);
+  const [gastosFixed, setGastosFixed] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // UI state
   const [showForm, setShowForm] = useState(false);
   const [editingPayable, setEditingPayable] = useState(null);
   const [paymentModalData, setPaymentModalData] = useState(null);
   const [installmentsFor, setInstallmentsFor] = useState(null);
-  const [activeTab, setActiveTab] = useState("pending");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("pendientes");
   const [comprandoMaterial, setComprandoMaterial] = useState(null);
   const [filtroEstadoPres, setFiltroEstadoPres] = useState("all");
+  const [showGastoVariable, setShowGastoVariable] = useState(false);
+  const [showGastoFijo, setShowGastoFijo] = useState(false);
+  const [editandoGastoFijo, setEditandoGastoFijo] = useState(null);
 
-  useEffect(() => {
-    if (!isSessionLoading) loadData();
-  }, [isSessionLoading]);
+  useEffect(() => { if (!isSessionLoading) loadData(); }, [isSessionLoading]);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [allPayables, allSuppliers, allLocations, allOpPayments, allEmployees, allPresupuestos, allInventario] = await Promise.all([
+      const [allPayables, allSuppliers, allLocations, allOpPayments, allEmployees,
+        allPresupuestos, allInventario, allGastosFijos] = await Promise.all([
         AccountPayable.list("-created_date", 500),
         Supplier.list(),
         Location.list(),
@@ -261,6 +504,7 @@ export default function AccountsPayablePage() {
         localClient.entities.Employee.list(),
         Presupuesto.list("-created_date", 200),
         Inventario.list("-updated_date", 300),
+        FixedExpense.list(),
       ]);
       setPayables(allPayables || []);
       setSuppliers(allSuppliers || []);
@@ -269,13 +513,14 @@ export default function AccountsPayablePage() {
       setOpEmployees(allEmployees || []);
       setPresupuestos((allPresupuestos || []).filter(p => p.estado !== 'rechazado'));
       setInventario(allInventario || []);
-    } catch (error) {
-      console.error("Error loading data:", error);
+      setGastosFixed(allGastosFijos || []);
+    } catch (err) {
+      console.error("Error loading data:", err);
     }
     setIsLoading(false);
   };
 
-  // Materiales pendientes de comprar extraídos de presupuestos
+  // ── Materiales pendientes de presupuestos ──────────────────────────────────
   const materialesPendientes = useMemo(() => {
     const result = [];
     for (const pres of presupuestos) {
@@ -285,8 +530,7 @@ export default function AccountsPayablePage() {
           result.push({
             _presupuesto: { id: pres.id, numero_presupuesto: pres.numero_presupuesto, cliente: pres.cliente, estado: pres.estado },
             materia_prima_id: mat.materia_prima_id,
-            nombre: mat.nombre,
-            color: mat.color,
+            nombre: mat.nombre, color: mat.color,
             unidad_medida: mat.unidad_medida,
             precio_unitario: mat.precio_unitario || 0,
             cantidad_total: mat.cantidad_total || 0,
@@ -301,33 +545,66 @@ export default function AccountsPayablePage() {
     return result;
   }, [presupuestos]);
 
-  const materialesFiltrados = useMemo(() => {
-    if (filtroEstadoPres === "all") return materialesPendientes;
-    return materialesPendientes.filter(m => m._presupuesto.estado === filtroEstadoPres);
-  }, [materialesPendientes, filtroEstadoPres]);
+  const materialesFiltrados = useMemo(() =>
+    filtroEstadoPres === "all" ? materialesPendientes
+      : materialesPendientes.filter(m => m._presupuesto.estado === filtroEstadoPres),
+    [materialesPendientes, filtroEstadoPres]);
 
-  const totalPendienteMateriales = materialesFiltrados.reduce((s, m) => s + m.costo_pendiente, 0);
-
-  // Convierte pagos de operarios registrados en filas de CxP
+  // ── Operarios → filas CxP ──────────────────────────────────────────────────
   const operarioPayables = useMemo(() => opPayments.map(op => {
     const emp = opEmployees.find(e => e.employee_id === op.employee_id);
     return {
-      id: `op_${op.id}`,
-      _opPaymentId: op.id,
-      _isOperario: true,
+      id: `op_${op.id}`, _opPaymentId: op.id, _isOperario: true,
       supplier_name: emp?.name || op.employee_id,
       description: `Pago operario — ${emp?.name || op.employee_id}`,
-      type: 'manufacturing_salary',
-      category: 'salarios_manufactura',
-      status: 'pending',
-      total_amount: op.amount,
-      pending_amount: op.amount,
-      paid_amount: 0,
-      due_date: op.payment_date,
-      created_date: op.payment_date,
+      type: 'manufacturing_salary', category: 'salarios_manufactura',
+      status: 'pending', total_amount: op.amount, pending_amount: op.amount,
+      paid_amount: 0, due_date: op.payment_date, created_date: op.payment_date,
     };
   }), [opPayments, opEmployees]);
 
+  // ── Lista unificada pendiente ──────────────────────────────────────────────
+  const allPending = useMemo(() => {
+    const fromDb = payables.filter(p => p.status === 'pending' || p.status === 'partial');
+    return [...fromDb, ...operarioPayables].sort((a, b) => {
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date) - new Date(b.due_date);
+    });
+  }, [payables, operarioPayables]);
+
+  // ── Resumen por urgencia ──────────────────────────────────────────────────
+  const byUrgency = useMemo(() => {
+    const groups = { vencida: [], urgente: [], proximo: [], futuro: [], sin_fecha: [] };
+    for (const item of allPending) groups[URGENCY(item.due_date)].push(item);
+    return groups;
+  }, [allPending]);
+
+  // ── Balance por proveedor ─────────────────────────────────────────────────
+  const supplierBalances = useMemo(() => {
+    const map = {};
+    for (const p of allPending) {
+      const name = p.supplier_name || '(Sin proveedor)';
+      if (!map[name]) map[name] = { name, total: 0, count: 0, items: [] };
+      map[name].total += p.pending_amount || 0;
+      map[name].count += 1;
+      map[name].items.push(p);
+    }
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  }, [allPending]);
+
+  // ── Gastos fijos que necesitan generar CxP este mes ─────────────────────
+  const gastosFijosPendientesGenerar = useMemo(
+    () => gastosFixed.filter(g => g.is_active && deberiGenerarEsteMes(g)),
+    [gastosFixed]
+  );
+
+  // ── Totales ──────────────────────────────────────────────────────────────
+  const totalPending = allPending.reduce((s, p) => s + (p.pending_amount || 0), 0);
+  const totalVencido = byUrgency.vencida.reduce((s, p) => s + (p.pending_amount || 0), 0);
+  const totalMateriales = materialesFiltrados.reduce((s, m) => s + m.costo_pendiente, 0);
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleSave = async (data) => {
     try {
       if (editingPayable) {
@@ -338,31 +615,16 @@ export default function AccountsPayablePage() {
       await loadData();
       setShowForm(false);
       setEditingPayable(null);
-    } catch (error) {
-      console.error("Error saving:", error);
+    } catch (err) {
+      console.error("Error saving:", err);
       alert("Error al guardar la cuenta por pagar");
     }
   };
 
-  const handleEdit = (payable) => { setEditingPayable(payable); setShowForm(true); };
-
-  const handleDelete = async (id) => {
-    if (!confirm("¿Eliminar esta cuenta por pagar?")) return;
-    try {
-      await AccountPayable.delete(id);
-      await loadData();
-    } catch (error) {
-      console.error("Error deleting:", error);
-      alert("Error al eliminar");
-    }
-  };
-
-  const handlePayment = (payable) => setPaymentModalData(payable);
-
   const handlePaymentConfirm = async (paymentData) => {
     try {
       const payable = paymentModalData;
-      const newPaidAmount = payable.paid_amount + paymentData.amount;
+      const newPaidAmount = (payable.paid_amount || 0) + paymentData.amount;
       const newPendingAmount = payable.total_amount - newPaidAmount;
       const newStatus = newPendingAmount <= 0 ? "paid" : "partial";
 
@@ -374,7 +636,7 @@ export default function AccountsPayablePage() {
         reference: paymentData.reference || "",
         bank_account_id: paymentData.bank_account_id || null,
         location_id: paymentData.location_id,
-        notes: paymentData.notes || ""
+        notes: paymentData.notes || "",
       });
 
       if (paymentData.method === "cash" && !paymentData.skip_cash_control) {
@@ -387,7 +649,7 @@ export default function AccountsPayablePage() {
           payment_method: "cash",
           receipt_number: paymentData.reference || "",
           supplier: payable.supplier_name,
-          notes: `Abono a cuenta por pagar #${payable.id}`
+          notes: `Abono a cuenta por pagar #${payable.id}`,
         });
         await PayablePayment.update(payment.id, { expense_id: expense.id });
       }
@@ -396,113 +658,183 @@ export default function AccountsPayablePage() {
         await localClient.entities.Payment.update(payable._opPaymentId, { status: 'ejecutado' });
       } else {
         await AccountPayable.update(payable.id, {
-          paid_amount: newPaidAmount,
-          pending_amount: newPendingAmount,
-          status: newStatus
+          paid_amount: newPaidAmount, pending_amount: newPendingAmount, status: newStatus,
         });
       }
 
       await loadData();
       setPaymentModalData(null);
-      alert("Pago registrado correctamente");
-    } catch (error) {
-      console.error("Error processing payment:", error);
+    } catch (err) {
+      console.error("Error processing payment:", err);
       alert("Error al procesar el pago");
     }
   };
 
-  // Registrar compra de materia prima desde presupuesto
-  const handleComprarMaterial = async ({ cantidad, precioUnitario, proveedor }) => {
+  // Comprar material (al contado o a crédito)
+  const handleComprarMaterial = async ({ cantidad, precioUnitario, proveedor, esCredito, fechaVencimiento }) => {
     const item = comprandoMaterial;
     try {
       const pres = presupuestos.find(p => p.id === item._presupuesto.id);
       if (!pres) throw new Error("Presupuesto no encontrado");
 
       const exceso = Math.max(0, cantidad - item.cantidad_pendiente);
+      // Cantidad que va al inventario: si es crédito → TODO; si no → solo excedente
+      const cantInventario = esCredito ? cantidad : exceso;
 
-      // 1. Actualizar materiales_calculados del presupuesto
+      // 1. Actualizar presupuesto
       const materialesActualizados = (pres.materiales_calculados || []).map(mat => {
         if (mat.materia_prima_id === item.materia_prima_id && mat.color === item.color) {
-          const nuevaCantComprada = (mat.cantidad_comprada || 0) + cantidad;
           return {
             ...mat,
-            cantidad_comprada: nuevaCantComprada,
-            comprado: nuevaCantComprada >= (mat.cantidad_total || 0),
+            cantidad_comprada: (mat.cantidad_comprada || 0) + cantidad,
+            comprado: (mat.cantidad_comprada || 0) + cantidad >= (mat.cantidad_total || 0),
             compras_historico: [
               ...(mat.compras_historico || []),
               {
                 fecha: new Date().toISOString().split('T')[0],
-                cantidad,
-                proveedor: proveedor || "",
+                cantidad, proveedor: proveedor || "",
                 precio_unitario: precioUnitario,
-              }
-            ]
+                esCredito: esCredito || false,
+              },
+            ],
           };
         }
         return mat;
       });
-
       await Presupuesto.update(pres.id, { materiales_calculados: materialesActualizados });
 
-      // 2. Si hay exceso, añadir al inventario de materias primas
-      if (exceso > 0.001) {
+      // 2. Inventario
+      if (cantInventario > 0.001) {
         const movimiento = {
           id: `mov_${Date.now()}`,
           fecha: new Date().toISOString().split('T')[0],
           tipo: 'entrada',
-          cantidad: exceso,
+          cantidad: cantInventario,
           referencia: item._presupuesto.numero_presupuesto,
-          nota: `Excedente de compra — ${item._presupuesto.numero_presupuesto}`,
+          nota: esCredito ? `Compra a crédito — ${item._presupuesto.numero_presupuesto}` : `Excedente — ${item._presupuesto.numero_presupuesto}`,
         };
-
-        const existing = inventario.find(i =>
-          i.materia_prima_id === item.materia_prima_id &&
-          (i.color || '') === (item.color || '')
-        );
-
+        const existing = inventario.find(i => i.materia_prima_id === item.materia_prima_id && (i.color || '') === (item.color || ''));
         if (existing) {
           await Inventario.update(existing.id, {
-            cantidad_disponible: (existing.cantidad_disponible || 0) + exceso,
+            cantidad_disponible: (existing.cantidad_disponible || 0) + cantInventario,
             movimientos: [...(existing.movimientos || []), movimiento],
           });
         } else {
           await Inventario.create({
-            materia_prima_id: item.materia_prima_id,
-            materia_prima_nombre: item.nombre,
-            color: item.color || '',
-            unidad_medida: item.unidad_medida || 'unidad',
-            cantidad_disponible: exceso,
-            movimientos: [movimiento],
+            materia_prima_id: item.materia_prima_id, materia_prima_nombre: item.nombre,
+            color: item.color || '', unidad_medida: item.unidad_medida || 'unidad',
+            cantidad_disponible: cantInventario, movimientos: [movimiento],
           });
         }
       }
 
+      // 3. Si es crédito → crear CxP
+      if (esCredito && precioUnitario > 0) {
+        const totalDeuda = cantidad * precioUnitario;
+        await AccountPayable.create({
+          supplier_name: proveedor || 'Proveedor sin nombre',
+          description: `Materia prima a crédito: ${item.nombre}${item.color && item.color !== 'sin definir' ? ` (${item.color})` : ''} — ${item._presupuesto.numero_presupuesto}`,
+          category: 'materia_prima_credito',
+          type: 'materia_prima_credito',
+          total_amount: totalDeuda,
+          pending_amount: totalDeuda,
+          paid_amount: 0,
+          status: 'pending',
+          due_date: fechaVencimiento ? new Date(fechaVencimiento).toISOString() : null,
+          notes: `${cantidad} ${item.unidad_medida} × $${precioUnitario}`,
+        });
+      }
+
       await loadData();
       setComprandoMaterial(null);
-    } catch (error) {
-      console.error("Error registrando compra:", error);
+    } catch (err) {
+      console.error("Error registrando compra:", err);
       alert("Error al registrar la compra");
     }
   };
 
-  const isNomina = p => p._isOperario || p.type === "manufacturing_salary" || p.category === "salarios_manufactura";
+  // Gasto variable rápido
+  const handleGastoVariable = async ({ nombre, monto, proveedor, fechaVenc, notas }) => {
+    try {
+      await AccountPayable.create({
+        supplier_name: proveedor || '',
+        description: nombre,
+        category: 'gasto_variable',
+        type: 'gasto_variable',
+        total_amount: monto, pending_amount: monto, paid_amount: 0,
+        status: 'pending',
+        due_date: fechaVenc ? new Date(fechaVenc).toISOString() : null,
+        notes: notas || '',
+      });
+      await loadData();
+      setShowGastoVariable(false);
+    } catch (err) {
+      console.error(err);
+      alert("Error al registrar el gasto");
+    }
+  };
 
-  const allPending = [
-    ...payables.filter(p => p.status === "pending" || p.status === "partial"),
-    ...operarioPayables,
-  ];
-  const pendingPayables = allPending.filter(p => typeFilter === "all" ? true : isNomina(p));
-  const paidPayables = payables.filter(p => p.status === "paid").filter(p => typeFilter === "all" ? true : isNomina(p));
-  const overduePayables = allPending.filter(p => new Date(p.due_date) < new Date()).filter(p => typeFilter === "all" ? true : isNomina(p));
+  // Crear / editar gasto fijo (plantilla)
+  const handleGastoFijo = async (data) => {
+    try {
+      if (editandoGastoFijo) {
+        await FixedExpense.update(editandoGastoFijo.id, data);
+      } else {
+        await FixedExpense.create({ ...data, is_active: true, ultima_generacion: null });
+      }
+      await loadData();
+      setShowGastoFijo(false);
+      setEditandoGastoFijo(null);
+    } catch (err) {
+      console.error(err);
+      alert("Error al guardar el gasto fijo");
+    }
+  };
 
-  const totalPending = pendingPayables.reduce((sum, p) => sum + (p.pending_amount || 0), 0);
-  const totalOverdue = overduePayables.reduce((sum, p) => sum + (p.pending_amount || 0), 0);
+  // Generar CxP de un gasto fijo para el mes actual
+  const handleGenerarGastoFijo = async (gasto) => {
+    const hoy = new Date();
+    const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+    const dueDate = gasto.dia_vencimiento
+      ? new Date(hoy.getFullYear(), hoy.getMonth(), gasto.dia_vencimiento).toISOString()
+      : null;
+
+    try {
+      await AccountPayable.create({
+        supplier_name: gasto.nombre,
+        description: `${gasto.nombre} — ${mesActual}`,
+        category: 'gasto_fijo',
+        type: 'gasto_fijo',
+        total_amount: gasto.monto, pending_amount: gasto.monto, paid_amount: 0,
+        status: 'pending',
+        due_date: dueDate,
+        notes: `Generado automáticamente de gasto fijo · ${PERIODICIDAD_LABELS[gasto.periodicidad] || gasto.periodicidad}`,
+      });
+      await FixedExpense.update(gasto.id, { ultima_generacion: mesActual });
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Error al generar la CxP");
+    }
+  };
+
+  const handleToggleGastoFijo = async (gasto) => {
+    await FixedExpense.update(gasto.id, { is_active: !gasto.is_active });
+    await loadData();
+  };
+
+  const handleDeleteGastoFijo = async (id) => {
+    if (!confirm("¿Eliminar esta plantilla de gasto fijo?")) return;
+    await FixedExpense.delete(id);
+    await loadData();
+  };
 
   if (isSessionLoading || isLoading) {
     return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   }
 
   const isAdmin = currentUser?.role === 'admin' || userRole?.name === 'Administrador';
+  const paidPayables = payables.filter(p => p.status === 'paid');
 
   return (
     <div className="min-h-screen bg-slate-50 p-3 sm:p-6">
@@ -512,81 +844,75 @@ export default function AccountsPayablePage() {
         <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Cuentas por Pagar</h1>
-            <p className="text-slate-600 mt-1 text-sm sm:text-base">Gestiona deudas con proveedores y gastos a plazos</p>
+            <p className="text-slate-600 mt-1 text-sm">Obligaciones pendientes ordenadas por vencimiento</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-32 sm:w-44 text-xs sm:text-sm">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="nomina">Nómina/Operarios</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={() => { setEditingPayable(null); setShowForm(true); }} className="gap-1.5 text-xs sm:text-sm px-2 sm:px-4">
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nueva Cuenta</span>
-              <span className="sm:hidden">Nueva</span>
+            <Button variant="outline" onClick={() => setShowGastoVariable(true)} className="gap-1.5 text-xs sm:text-sm">
+              <ArrowUpRight className="w-4 h-4" /> Gasto Variable
+            </Button>
+            <Button onClick={() => { setEditingPayable(null); setShowForm(true); }} className="gap-1.5 text-xs sm:text-sm">
+              <Plus className="w-4 h-4" /> Nueva CxP
             </Button>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
           <Card>
-            <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-slate-600">Total Pendiente</p>
-                  <p className="text-base sm:text-2xl font-bold text-slate-900 truncate">${totalPending.toLocaleString()}</p>
-                </div>
-                <DollarSign className="w-5 h-5 sm:w-8 sm:h-8 text-blue-600 shrink-0 ml-1" />
-              </div>
+            <CardContent className="p-3 sm:p-5">
+              <p className="text-xs text-slate-500">Total pendiente</p>
+              <p className="text-xl font-bold text-slate-900 mt-0.5">{fmtMoney(totalPending)}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-red-200">
+            <CardContent className="p-3 sm:p-5">
+              <p className="text-xs text-red-500">Vencidas</p>
+              <p className="text-xl font-bold text-red-600 mt-0.5">{fmtMoney(totalVencido)}</p>
+              {byUrgency.vencida.length > 0 && <p className="text-xs text-red-400 mt-0.5">{byUrgency.vencida.length} ítem(s)</p>}
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-slate-600">Pendientes</p>
-                  <p className="text-base sm:text-2xl font-bold text-slate-900">{pendingPayables.length}</p>
-                </div>
-                <TrendingUp className="w-5 h-5 sm:w-8 sm:h-8 text-amber-600 shrink-0 ml-1" />
-              </div>
+            <CardContent className="p-3 sm:p-5">
+              <p className="text-xs text-slate-500">Operarios</p>
+              <p className="text-xl font-bold text-violet-700 mt-0.5">{fmtMoney(operarioPayables.reduce((s, p) => s + p.pending_amount, 0))}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{operarioPayables.length} pago(s)</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-slate-600">Vencidas</p>
-                  <p className="text-base sm:text-2xl font-bold text-red-600 truncate">${totalOverdue.toLocaleString()}</p>
-                </div>
-                <AlertCircle className="w-5 h-5 sm:w-8 sm:h-8 text-red-600 shrink-0 ml-1" />
-              </div>
+            <CardContent className="p-3 sm:p-5">
+              <p className="text-xs text-slate-500">Mat. Primas por comprar</p>
+              <p className="text-xl font-bold text-emerald-700 mt-0.5">{fmtMoney(totalMateriales)}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{materialesPendientes.length} ítem(s)</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Alerta vencidas */}
-        {overduePayables.length > 0 && (
+        {byUrgency.vencida.length > 0 && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Tienes {overduePayables.length} cuenta(s) vencida(s) por ${totalOverdue.toLocaleString()}
+              {byUrgency.vencida.length} cuenta(s) vencida(s) por {fmtMoney(totalVencido)} — requieren atención inmediata
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Formulario */}
+        {/* Alerta gastos fijos pendientes de generar */}
+        {gastosFijosPendientesGenerar.length > 0 && (
+          <Alert className="border-blue-200 bg-blue-50">
+            <Repeat className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              {gastosFijosPendientesGenerar.length} gasto(s) fijo(s) sin generar para este período.
+              <button onClick={() => setActiveTab('gastos_fijos')} className="ml-1 underline font-medium">Ver Gastos Fijos</button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Formulario CxP manual */}
         {showForm && (
           <PayableForm
-            payable={editingPayable}
-            suppliers={suppliers}
-            locations={locations}
-            userLocation={userLocation}
-            isAdmin={isAdmin}
+            payable={editingPayable} suppliers={suppliers} locations={locations}
+            userLocation={userLocation} isAdmin={isAdmin}
             onSave={handleSave}
             onCancel={() => { setShowForm(false); setEditingPayable(null); }}
           />
@@ -594,41 +920,76 @@ export default function AccountsPayablePage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="pending">Pendientes ({pendingPayables.length})</TabsTrigger>
+          <TabsList className="flex flex-wrap h-auto gap-1">
+            <TabsTrigger value="pendientes">
+              Pendientes
+              {allPending.length > 0 && (
+                <span className="ml-1.5 bg-slate-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {allPending.length}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="materiales" className="flex items-center gap-1">
-              <Package className="w-3.5 h-3.5" />
-              Materias Primas
+              <Package className="w-3.5 h-3.5" /> Materias Primas
               {materialesPendientes.length > 0 && (
-                <span className="ml-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                <span className="ml-0.5 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                   {materialesPendientes.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="paid">Pagadas ({paidPayables.length})</TabsTrigger>
-            <TabsTrigger value="all">Todas ({payables.length + operarioPayables.length})</TabsTrigger>
+            <TabsTrigger value="gastos_fijos" className="flex items-center gap-1">
+              <Repeat className="w-3.5 h-3.5" /> Gastos Fijos
+              {gastosFijosPendientesGenerar.length > 0 && (
+                <span className="ml-0.5 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {gastosFijosPendientesGenerar.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="proveedores">
+              <Building2 className="w-3.5 h-3.5 mr-1" /> Proveedores
+            </TabsTrigger>
+            <TabsTrigger value="pagadas">Pagadas ({paidPayables.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pending" className="mt-3 sm:mt-6">
-            <PayableList
-              payables={pendingPayables}
-              locations={locations}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onPayment={handlePayment}
-              onManageInstallments={setInstallmentsFor}
-            />
+          {/* ─── Pendientes unificados ──────────────────────────────────── */}
+          <TabsContent value="pendientes" className="mt-4 space-y-6">
+            {allPending.length === 0 ? (
+              <div className="text-center py-16 text-slate-400">
+                <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">Sin cuentas pendientes</p>
+              </div>
+            ) : (
+              ['vencida', 'urgente', 'proximo', 'futuro', 'sin_fecha'].map(u => {
+                const items = byUrgency[u];
+                if (items.length === 0) return null;
+                const uStyle = URGENCY_STYLES[u];
+                const groupTotal = items.reduce((s, p) => s + (p.pending_amount || 0), 0);
+                return (
+                  <div key={u}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${uStyle.dot}`} />
+                      <h3 className="font-semibold text-slate-700 text-sm">{uStyle.label}</h3>
+                      <span className="text-xs text-slate-400">({items.length})</span>
+                      <span className="ml-auto text-sm font-bold text-slate-700">{fmtMoney(groupTotal)}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {items.map(item => (
+                        <PendienteCard key={item.id} item={item} onPayment={setPaymentModalData} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </TabsContent>
 
-          {/* ─── Tab Materias Primas ─────────────────────────────────────── */}
-          <TabsContent value="materiales" className="mt-3 sm:mt-6 space-y-4">
+          {/* ─── Materias Primas ────────────────────────────────────────── */}
+          <TabsContent value="materiales" className="mt-4 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <p className="text-sm text-slate-600">
-                  {materialesFiltrados.length} material(es) pendiente(s) de comprar
-                  {totalPendienteMateriales > 0 && <> · <strong>${totalPendienteMateriales.toLocaleString()}</strong> estimado</>}
-                </p>
-              </div>
+              <p className="text-sm text-slate-600">
+                {materialesFiltrados.length} material(es) pendiente(s)
+                {totalMateriales > 0 && <> · <strong>{fmtMoney(totalMateriales)}</strong> estimado</>}
+              </p>
               <Select value={filtroEstadoPres} onValueChange={setFiltroEstadoPres}>
                 <SelectTrigger className="w-40 text-xs">
                   <SelectValue placeholder="Estado presupuesto" />
@@ -646,71 +1007,191 @@ export default function AccountsPayablePage() {
               <div className="text-center py-16 text-slate-400">
                 <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
                 <p className="font-medium">Sin materias primas pendientes</p>
-                <p className="text-sm mt-1">Todos los materiales de los presupuestos están comprados</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {materialesFiltrados.map((item, idx) => (
                   <MaterialPendienteRow
                     key={`${item._presupuesto.id}_${item.materia_prima_id}_${item.color}_${idx}`}
-                    item={item}
-                    onComprar={setComprandoMaterial}
+                    item={item} onComprar={setComprandoMaterial}
                   />
                 ))}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="paid" className="mt-3 sm:mt-6">
-            <PayableList
-              payables={paidPayables}
-              locations={locations}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onPayment={handlePayment}
-              onManageInstallments={setInstallmentsFor}
-            />
+          {/* ─── Gastos Fijos ───────────────────────────────────────────── */}
+          <TabsContent value="gastos_fijos" className="mt-4 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-sm text-slate-600">Plantillas de gastos recurrentes. Genera la obligación mensual desde aquí.</p>
+              </div>
+              <Button onClick={() => { setEditandoGastoFijo(null); setShowGastoFijo(true); }} className="gap-1.5 text-sm">
+                <Plus className="w-4 h-4" /> Nuevo Gasto Fijo
+              </Button>
+            </div>
+
+            {gastosFixed.length === 0 ? (
+              <div className="text-center py-16 text-slate-400">
+                <Repeat className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">Sin gastos fijos configurados</p>
+                <p className="text-sm mt-1">Agrega arriendo, internet, servicios y otros compromisos recurrentes</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {gastosFixed.map(g => {
+                  const pendiente = deberiGenerarEsteMes(g);
+                  return (
+                    <div key={g.id} className={`border rounded-lg bg-white p-4 flex items-center gap-4 ${!g.is_active ? 'opacity-50' : ''}`}>
+                      <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <Repeat className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-slate-900 text-sm">{g.nombre}</span>
+                          <span className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
+                            {PERIODICIDAD_LABELS[g.periodicidad] || g.periodicidad}
+                          </span>
+                          {!g.is_active && <span className="text-xs text-slate-400">Inactivo</span>}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {fmtMoney(g.monto)}
+                          {g.dia_vencimiento ? ` · vence día ${g.dia_vencimiento}` : ''}
+                          {g.ultima_generacion ? ` · última generación: ${g.ultima_generacion}` : ' · nunca generado'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {pendiente && g.is_active && (
+                          <Button size="sm" onClick={() => handleGenerarGastoFijo(g)}
+                            className="bg-blue-600 hover:bg-blue-700 text-xs h-8">
+                            Generar CxP
+                          </Button>
+                        )}
+                        <button onClick={() => { setEditandoGastoFijo(g); setShowGastoFijo(true); }}
+                          className="p-1.5 rounded hover:bg-slate-100 text-slate-400">
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => handleToggleGastoFijo(g)}
+                          className="p-1.5 rounded hover:bg-slate-100 text-slate-400"
+                          title={g.is_active ? 'Desactivar' : 'Activar'}>
+                          <Clock size={14} />
+                        </button>
+                        <button onClick={() => handleDeleteGastoFijo(g.id)}
+                          className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* CxP de gastos fijos ya generados */}
+            {payables.filter(p => p.category === 'gasto_fijo' && (p.status === 'pending' || p.status === 'partial')).length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-slate-700 mb-2">Obligaciones generadas pendientes de pago</h3>
+                <div className="space-y-2">
+                  {payables
+                    .filter(p => p.category === 'gasto_fijo' && (p.status === 'pending' || p.status === 'partial'))
+                    .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+                    .map(p => (
+                      <PendienteCard key={p.id} item={p} onPayment={setPaymentModalData} />
+                    ))}
+                </div>
+              </div>
+            )}
           </TabsContent>
 
-          <TabsContent value="all" className="mt-3 sm:mt-6">
+          {/* ─── Balance por Proveedor ──────────────────────────────────── */}
+          <TabsContent value="proveedores" className="mt-4 space-y-3">
+            {supplierBalances.length === 0 ? (
+              <div className="text-center py-16 text-slate-400">
+                <Building2 className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">Sin saldos pendientes por proveedor</p>
+              </div>
+            ) : supplierBalances.map(sup => (
+              <SupplierBalanceCard key={sup.name} supplier={sup} onPayment={setPaymentModalData} />
+            ))}
+          </TabsContent>
+
+          {/* ─── Pagadas ────────────────────────────────────────────────── */}
+          <TabsContent value="pagadas" className="mt-4">
             <PayableList
-              payables={[...payables, ...operarioPayables]}
-              locations={locations}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onPayment={handlePayment}
+              payables={paidPayables} locations={locations}
+              onEdit={p => { setEditingPayable(p); setShowForm(true); }}
+              onDelete={async id => {
+                if (!confirm("¿Eliminar?")) return;
+                await AccountPayable.delete(id);
+                await loadData();
+              }}
+              onPayment={setPaymentModalData}
               onManageInstallments={setInstallmentsFor}
             />
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Modal de pago normal */}
+      {/* Modales */}
       {paymentModalData && (
         <PaymentModal
-          payable={paymentModalData}
-          locations={locations}
-          userLocation={userLocation}
-          onConfirm={handlePaymentConfirm}
-          onCancel={() => setPaymentModalData(null)}
+          payable={paymentModalData} locations={locations} userLocation={userLocation}
+          onConfirm={handlePaymentConfirm} onCancel={() => setPaymentModalData(null)}
         />
       )}
-
       {installmentsFor && (
-        <InstallmentsManager
-          payable={installmentsFor}
-          onClose={() => setInstallmentsFor(null)}
-          onSaved={loadData}
-        />
+        <InstallmentsManager payable={installmentsFor} onClose={() => setInstallmentsFor(null)} onSaved={loadData} />
       )}
-
-      {/* Modal comprar material */}
       {comprandoMaterial && (
-        <ComprarMaterialModal
-          item={comprandoMaterial}
-          onConfirm={handleComprarMaterial}
-          onCancel={() => setComprandoMaterial(null)}
-        />
+        <ComprarMaterialModal item={comprandoMaterial} onConfirm={handleComprarMaterial}
+          onCancel={() => setComprandoMaterial(null)} />
+      )}
+      {showGastoVariable && (
+        <GastoVariableModal locations={locations} userLocation={userLocation}
+          onConfirm={handleGastoVariable} onCancel={() => setShowGastoVariable(false)} />
+      )}
+      {showGastoFijo && (
+        <GastoFijoModal gasto={editandoGastoFijo}
+          onConfirm={handleGastoFijo}
+          onCancel={() => { setShowGastoFijo(false); setEditandoGastoFijo(null); }} />
+      )}
+    </div>
+  );
+}
+
+// ─── Tarjeta balance por proveedor ────────────────────────────────────────────
+function SupplierBalanceCard({ supplier, onPayment }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="border rounded-lg bg-white overflow-hidden">
+      <div className="flex items-center gap-3 p-4">
+        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+          <Building2 className="w-4 h-4 text-slate-500" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-slate-900 text-sm">{supplier.name}</p>
+          <p className="text-xs text-slate-500">{supplier.count} obligación(es) pendiente(s)</p>
+        </div>
+        <p className="text-base font-bold text-slate-900 shrink-0">{fmtMoney(supplier.total)}</p>
+        <button onClick={() => setExpanded(e => !e)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400">
+          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+      </div>
+      {expanded && (
+        <div className="border-t bg-slate-50 px-4 py-2 space-y-2">
+          {supplier.items.map(item => (
+            <div key={item.id} className="flex items-center justify-between gap-2 text-sm py-1">
+              <div className="flex-1 min-w-0">
+                <p className="text-slate-700 truncate">{item.description || item.supplier_name}</p>
+                <p className="text-xs text-slate-400">{fmtDate(item.due_date)}</p>
+              </div>
+              <span className="font-medium text-slate-900 shrink-0">{fmtMoney(item.pending_amount)}</span>
+              <Button size="sm" onClick={() => onPayment(item)} className="bg-emerald-600 hover:bg-emerald-700 text-xs h-7 px-2 shrink-0">
+                Pagar
+              </Button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
