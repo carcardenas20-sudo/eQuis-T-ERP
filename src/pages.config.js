@@ -5,7 +5,6 @@
 
 // ── MÓDULO COMERCIAL (equistpos) ──────────────────────────────
 import AccountsPayable from './pages/AccountsPayable';
-import Assistant from './pages/Assistant';
 import BankAccounts from './pages/BankAccounts';
 import CashControl from './pages/CashControl';
 import Credits from './pages/Credits';
@@ -14,7 +13,6 @@ import Dashboard from './pages/Dashboard';
 import Debug from './pages/Debug';
 import Exchanges from './pages/Exchanges';
 import Expenses from './pages/Expenses';
-import IntegracionAPI from './pages/IntegracionAPI';
 import Inventory from './pages/Inventory';
 import InventoryAudits from './pages/InventoryAudits';
 import Locations from './pages/Locations';
@@ -26,7 +24,6 @@ import Sales from './pages/Sales';
 import Settings from './pages/Settings';
 import TestPermisos from './pages/TestPermisos';
 import Transfers from './pages/Transfers';
-import Tutorials from './pages/Tutorials';
 import Users from './pages/Users';
 import MerchandiseAssignment from './pages/MerchandiseAssignment';
 
@@ -71,7 +68,6 @@ import __Layout from './Layout.jsx';
 export const PAGES = {
   // Comercial
   "AccountsPayable": AccountsPayable,
-  "Assistant": Assistant,
   "BankAccounts": BankAccounts,
   "CashControl": CashControl,
   "Credits": Credits,
@@ -80,7 +76,6 @@ export const PAGES = {
   "Debug": Debug,
   "Exchanges": Exchanges,
   "Expenses": Expenses,
-  "IntegracionAPI": IntegracionAPI,
   "Inventory": Inventory,
   "InventoryAudits": InventoryAudits,
   "Locations": Locations,
@@ -92,7 +87,6 @@ export const PAGES = {
   "Settings": Settings,
   "TestPermisos": TestPermisos,
   "Transfers": Transfers,
-  "Tutorials": Tutorials,
   "Users": Users,
   "MerchandiseAssignment": MerchandiseAssignment,
 

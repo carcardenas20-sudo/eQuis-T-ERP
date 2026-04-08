@@ -21,7 +21,6 @@ const comercialGroups = [
     title: "Principal", items: [
       { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard, permissions: ["reports_basic"] },
       { title: "Punto de Venta", url: createPageUrl("POS"), icon: ShoppingCart, permissions: ["pos_sales"] },
-      { title: "Asistente IA", url: createPageUrl("Assistant"), icon: Sparkles, permissions: ["agent_access"] },
     ]
   },
   {
@@ -60,8 +59,6 @@ const comercialGroups = [
       { title: "Usuarios", url: createPageUrl("Users"), icon: Users, permissions: ["users_view"] },
       { title: "Sucursales", url: createPageUrl("Locations"), icon: Building2, permissions: ["locations_view"] },
       { title: "Configuración", url: createPageUrl("Settings"), icon: Settings, permissions: ["settings_system"] },
-      { title: "Integración API", url: createPageUrl("IntegracionAPI"), icon: Sparkles, permissions: [] },
-      { title: "Tutoriales", url: createPageUrl("Tutorials"), icon: BookOpen, permissions: [] },
     ]
   },
 ];
