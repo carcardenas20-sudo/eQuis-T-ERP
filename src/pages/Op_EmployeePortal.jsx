@@ -12,8 +12,12 @@ const { Delivery, Dispatch, Payment, PaymentRequest, Producto: ProductoEntity, A
 };
 
 // Carga empleado verificando PIN en el servidor
-async function fetchEmployeeWithPin(id, pin) {
-  const res = await fetch(`/api/portal/Employee/${id}?pin=${encodeURIComponent(pin)}`);
+async function portalLogin(employeeId, pin) {
+  const res = await fetch('/api/portal-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ employee_id: employeeId, pin }),
+  });
   if (res.status === 401) throw new Error('PIN_INCORRECTO');
   if (res.status === 404) throw new Error('NO_ENCONTRADO');
   if (!res.ok) throw new Error('ERROR_SERVIDOR');
@@ -385,28 +389,15 @@ export default function EmployeePortal() {
 
   // ── Pantalla de PIN ────────────────────────────────────────────────────────
   const handleVerifyPin = async () => {
-    if (!employeeId && !employeeDbIdParam) {
+    if (!employeeId) {
       setPinError('URL inválida: falta el ID del empleado.');
       return;
     }
     setPinError('');
-    // El servidor necesita el UUID (id de BD). Si la URL trae ?employee_id=EMP001,
-    // buscamos primero el UUID vía /api/portal/Employee?employee_id=EMP001
     try {
-      let dbId = employeeDbIdParam;
-      if (!dbId) {
-        // Buscar UUID por employee_id lógico
-        const res = await fetch(`/api/portal/Employee?employee_id=${encodeURIComponent(employeeId)}`);
-        if (!res.ok) { setPinError('Empleado no encontrado.'); return; }
-        const list = await res.json();
-        const emp = Array.isArray(list) ? list[0] : list;
-        if (!emp) { setPinError('Empleado no encontrado.'); return; }
-        dbId = emp.id;
-      }
-      // Verificar PIN
-      const empData = await fetchEmployeeWithPin(dbId, pinInput);
+      const empData = await portalLogin(employeeId, pinInput);
       setEmployee(empData);
-      setEmployeeDbId(dbId);
+      setEmployeeDbId(empData.id);
       setPinVerified(true);
     } catch (e) {
       if (e.message === 'PIN_INCORRECTO') setPinError('PIN incorrecto. Intenta de nuevo.');

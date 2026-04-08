@@ -69,31 +69,28 @@ const PORTAL_WRITE_ENTITIES = new Set([
   'Delivery', 'Dispatch',     // planillador registra entregas/despachos
   'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog', 'AppConfig',
 ]);
-// Verificación de PIN del empleado (antes del middleware general del portal)
-// GET /api/portal/Employee/:id?pin=XXXX  → verifica pin y devuelve el empleado si es correcto
-app.get('/api/portal/Employee/:id', async (req, res) => {
-  const { id } = req.params;
-  const { pin } = req.query;
+// POST /api/portal-login  → recibe employee_id lógico + pin, devuelve datos del empleado
+app.post('/api/portal-login', async (req, res) => {
+  const { employee_id, pin } = req.body || {};
+  if (!employee_id) return res.status(400).json({ error: 'Falta employee_id' });
   try {
     const { rows } = await query(
       `SELECT id, name, employee_id, is_active, position, phone, hire_date, data, created_date, updated_date
-       FROM entity_employee WHERE id = $1 LIMIT 1`,
-      [id]
+       FROM entity_employee WHERE employee_id = $1 LIMIT 1`,
+      [String(employee_id).trim()]
     );
     if (!rows.length) return res.status(404).json({ error: 'Empleado no encontrado' });
     const row = rows[0];
     const storedPin = row.data?.portal_pin;
-    // Si el empleado no tiene PIN configurado, acceso libre (para no romper cuentas existentes)
     if (storedPin && String(storedPin) !== String(pin || '')) {
       return res.status(401).json({ error: 'PIN incorrecto' });
     }
-    // Devolver datos sin exponer el PIN
-    const { portal_pin: _pin, ...dataRest } = row.data || {};
+    const { portal_pin: _p, ...dataRest } = row.data || {};
     res.json({ ...dataRest, id: row.id, name: row.name, employee_id: row.employee_id,
       is_active: row.is_active, position: row.position, phone: row.phone,
       hire_date: row.hire_date, created_date: row.created_date, updated_date: row.updated_date });
   } catch (e) {
-    console.error('portal employee lookup', e);
+    console.error('portal-login error', e);
     res.status(500).json({ error: 'Error interno' });
   }
 });
