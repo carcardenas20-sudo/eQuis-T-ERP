@@ -16,6 +16,7 @@ export default function MerchandiseAssignment() {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
+  // assignments[dateKey][ref][locationId] = qty
   const [assignments, setAssignments] = useState({});
 
   useEffect(() => { loadData(); }, []);
@@ -29,30 +30,17 @@ export default function MerchandiseAssignment() {
         Inventory.list(),
         Producto.list(),
       ]);
-      // Solo entregas no asignadas a inventario aún
       const pending = (deliveriesData || []).filter(d => !d.inventory_assigned);
       setDeliveries(pending);
       setLocations(locationsData || []);
       setInventory(inventoryData || []);
       setProductos((productosData || []).filter(p => p.reference));
-
-      // Inicializar asignaciones vacías por grupo de fecha
-      const groups = groupByDate(pending);
-      const initAssignments = {};
-      groups.forEach(({ dateKey }) => {
-        initAssignments[dateKey] = {};
-        (locationsData || []).forEach(loc => {
-          initAssignments[dateKey][loc.id] = "";
-        });
-      });
-      setAssignments(initAssignments);
     } catch (err) {
       console.error("Error:", err);
     }
     setLoading(false);
   };
 
-  // Agrupa entregas por fecha (YYYY-MM-DD) y acumula items por referencia
   const groupByDate = (delivs) => {
     const map = {};
     delivs.forEach(d => {
@@ -79,21 +67,50 @@ export default function MerchandiseAssignment() {
 
   const groups = useMemo(() => groupByDate(deliveries), [deliveries, productos]);
 
+  // Inicializar asignaciones cuando cambian los grupos
+  useEffect(() => {
+    if (groups.length === 0 || locations.length === 0) return;
+    setAssignments(prev => {
+      const next = { ...prev };
+      groups.forEach(({ dateKey, items }) => {
+        if (!next[dateKey]) next[dateKey] = {};
+        Object.keys(items).forEach(ref => {
+          if (!next[dateKey][ref]) next[dateKey][ref] = {};
+          locations.forEach(loc => {
+            if (next[dateKey][ref][loc.id] === undefined) {
+              next[dateKey][ref][loc.id] = "";
+            }
+          });
+        });
+      });
+      return next;
+    });
+  }, [groups.length, locations.length]);
+
+  const getAssignedForRef = (dateKey, ref) => {
+    const a = assignments[dateKey]?.[ref] || {};
+    return Object.values(a).reduce((s, v) => s + (Number(v) || 0), 0);
+  };
+
+  const getTotalAssignedAll = (dateKey) => {
+    const group = groups.find(g => g.dateKey === dateKey);
+    if (!group) return 0;
+    return Object.keys(group.items).reduce((s, ref) => s + getAssignedForRef(dateKey, ref), 0);
+  };
+
   const getTotalUnits = (dateKey) => {
     const g = groups.find(g => g.dateKey === dateKey);
     if (!g) return 0;
     return Object.values(g.items).reduce((s, i) => s + i.quantity, 0);
   };
 
-  const getTotalAssigned = (dateKey) => {
-    const a = assignments[dateKey] || {};
-    return Object.values(a).reduce((s, v) => s + (Number(v) || 0), 0);
-  };
-
-  const updateAssignment = (dateKey, locationId, value) => {
+  const updateAssignment = (dateKey, ref, locationId, value) => {
     setAssignments(prev => ({
       ...prev,
-      [dateKey]: { ...prev[dateKey], [locationId]: value },
+      [dateKey]: {
+        ...prev[dateKey],
+        [ref]: { ...(prev[dateKey]?.[ref] || {}), [locationId]: value },
+      },
     }));
   };
 
@@ -111,58 +128,53 @@ export default function MerchandiseAssignment() {
 
   const handleConfirm = async (group) => {
     const { dateKey, deliveryIds, items } = group;
-    const totalUnits = getTotalUnits(dateKey);
-    const totalAssigned = getTotalAssigned(dateKey);
+    const itemsList = Object.values(items);
 
-    if (totalAssigned === 0) {
-      alert("Debes asignar al menos una unidad a algún punto de venta.");
-      return;
+    // Validar que no se asigne más de lo disponible por referencia
+    for (const item of itemsList) {
+      const assigned = getAssignedForRef(dateKey, item.product_reference);
+      if (assigned > item.quantity) {
+        alert(`"${item.product_name}": solo hay ${item.quantity} unidades pero asignaste ${assigned}.`);
+        return;
+      }
     }
-    if (totalAssigned > totalUnits) {
-      alert(`Solo hay ${totalUnits} unidades disponibles. Has asignado ${totalAssigned}.`);
+
+    const totalAssigned = getTotalAssignedAll(dateKey);
+    if (totalAssigned === 0) {
+      alert("Debes asignar al menos una unidad.");
       return;
     }
 
     setSaving(dateKey);
     try {
-      const groupAssignments = assignments[dateKey] || {};
-      const itemsList = Object.values(items);
-
-      for (const [locationId, qty] of Object.entries(groupAssignments)) {
-        const quantity = Number(qty);
-        if (quantity <= 0) continue;
-
-        // Distribuir proporcionalmente por referencia
-        for (const item of itemsList) {
-          const proportion = totalUnits > 0 ? item.quantity / totalUnits : 0;
-          const qtyForLocation = Math.round(quantity * proportion);
-          if (qtyForLocation <= 0) continue;
+      // Por cada referencia × sucursal, actualizar inventario
+      for (const item of itemsList) {
+        const refAssignments = assignments[dateKey]?.[item.product_reference] || {};
+        for (const [locationId, qty] of Object.entries(refAssignments)) {
+          const quantity = Number(qty);
+          if (quantity <= 0) continue;
 
           const existingInv = inventory.find(
             inv => inv.product_id === item.product_reference && inv.location_id === locationId
           );
           if (existingInv) {
             await Inventory.update(existingInv.id, {
-              current_stock: (Number(existingInv.current_stock) || 0) + qtyForLocation,
-              available_stock: (Number(existingInv.available_stock) || 0) + qtyForLocation,
+              current_stock: (Number(existingInv.current_stock) || 0) + quantity,
+              available_stock: (Number(existingInv.available_stock) || 0) + quantity,
             });
           } else {
             await Inventory.create({
               product_id: item.product_reference,
               location_id: locationId,
-              current_stock: qtyForLocation,
-              available_stock: qtyForLocation,
+              current_stock: quantity,
+              available_stock: quantity,
               reserved_stock: 0,
             });
           }
         }
       }
 
-      // Marcar todas las entregas del grupo como asignadas
-      await Promise.all(
-        deliveryIds.map(id => Delivery.update(id, { inventory_assigned: true }))
-      );
-
+      await Promise.all(deliveryIds.map(id => Delivery.update(id, { inventory_assigned: true })));
       alert(`✅ ${totalAssigned} unidades asignadas al inventario correctamente.`);
       loadData();
     } catch (err) {
@@ -184,7 +196,7 @@ export default function MerchandiseAssignment() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Asignación de Mercancía</h1>
             <p className="text-slate-500 text-sm mt-1">
-              Entregas de operarios pendientes de asignar a puntos de venta.
+              Asigna cada referencia a los puntos de venta que correspondan.
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="gap-2 shrink-0">
@@ -204,13 +216,12 @@ export default function MerchandiseAssignment() {
         ) : (
           groups.map((group) => {
             const totalUnits = getTotalUnits(group.dateKey);
-            const totalAssigned = getTotalAssigned(group.dateKey);
-            const remaining = totalUnits - totalAssigned;
+            const totalAssigned = getTotalAssignedAll(group.dateKey);
             const itemsList = Object.values(group.items);
 
             return (
               <Card key={group.dateKey} className="border-amber-200">
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
                       <PackageCheck className="w-4 h-4 text-amber-600" />
@@ -220,45 +231,61 @@ export default function MerchandiseAssignment() {
                       {totalUnits} unidades totales
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {itemsList.map((item, i) => (
-                      <span key={i} className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                        {item.product_name}: {item.quantity} und
-                      </span>
-                    ))}
-                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm font-medium text-slate-700">Asignar por punto de venta:</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {locations.map(loc => (
-                      <div key={loc.id} className="space-y-1">
-                        <label className="text-sm text-slate-600 flex items-center gap-1">
-                          <Store className="w-3 h-3" /> {loc.name}
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max={totalUnits}
-                          placeholder="0 unidades"
-                          value={assignments[group.dateKey]?.[loc.id] || ""}
-                          onChange={e => updateAssignment(group.dateKey, loc.id, e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                <CardContent className="space-y-5">
 
+                  {/* Una tabla por referencia */}
+                  {itemsList.map(item => {
+                    const assignedForRef = getAssignedForRef(group.dateKey, item.product_reference);
+                    const remaining = item.quantity - assignedForRef;
+                    const over = assignedForRef > item.quantity;
+
+                    return (
+                      <div key={item.product_reference} className="border border-slate-200 rounded-lg overflow-hidden">
+                        {/* Header referencia */}
+                        <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
+                          <span className="text-sm font-semibold text-slate-800">{item.product_name}</span>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-slate-500">Disponible: <strong>{item.quantity}</strong></span>
+                            {assignedForRef > 0 && (
+                              <span className={over ? "text-red-600 font-semibold" : remaining === 0 ? "text-green-600 font-semibold" : "text-amber-600"}>
+                                {over ? `⚠️ excede en ${assignedForRef - item.quantity}` : remaining === 0 ? "✓ completo" : `faltan ${remaining}`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Inputs por sucursal */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+                          {locations.map(loc => (
+                            <div key={loc.id} className="px-3 py-2">
+                              <label className="text-xs text-slate-500 flex items-center gap-1 mb-1">
+                                <Store className="w-3 h-3" /> {loc.name}
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.quantity}
+                                placeholder="0"
+                                value={assignments[group.dateKey]?.[item.product_reference]?.[loc.id] || ""}
+                                onChange={e => updateAssignment(group.dateKey, item.product_reference, loc.id, e.target.value)}
+                                className={`w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${over ? "border-red-300 bg-red-50" : "border-slate-200"}`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Footer con totales y botones */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                     <div className="text-sm">
-                      <span className="text-slate-500">Asignado: </span>
+                      <span className="text-slate-500">Total asignado: </span>
                       <strong className={totalAssigned > totalUnits ? "text-red-600" : "text-slate-900"}>
                         {totalAssigned}
                       </strong>
                       <span className="text-slate-400"> / {totalUnits}</span>
-                      {remaining > 0 && totalAssigned > 0 && (
-                        <span className="ml-2 text-xs text-amber-600">({remaining} sin asignar)</span>
-                      )}
                     </div>
                     <div className="flex gap-2">
                       <Button
