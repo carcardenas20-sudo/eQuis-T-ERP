@@ -387,11 +387,11 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex flex-1 flex-col md:flex-row overflow-y-auto">
+          <div className="flex flex-1 flex-col md:flex-row min-h-0 overflow-hidden">
             {/* Columna izquierda: productos */}
-            <div className="flex-1 flex flex-col overflow-visible md:border-r border-0">
+            <div className="flex-1 flex flex-col overflow-hidden md:border-r border-0">
               {/* Búsqueda */}
-              <div className="p-3 border-b">
+              <div className="p-3 border-b shrink-0">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input className="pl-9" placeholder="Buscar por nombre, SKU o código de barras..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -400,7 +400,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
               </div>
 
               {/* Grid productos */}
-              <div className="flex-1 overflow-visible p-2 sm:p-3">
+              <div className="flex-1 overflow-y-auto p-2 sm:p-3">
                 <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                   {filtered.map(p => {
                     const stock = getStock(p);
@@ -445,8 +445,8 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
             </div>
 
             {/* Columna derecha: resumen */}
-            <div className="w-full md:w-80 flex flex-col overflow-visible bg-slate-50 border-t md:border-t-0">
-              <div className="flex-1 overflow-visible p-2 sm:p-3 space-y-3">
+            <div className="w-full md:w-80 flex flex-col overflow-hidden bg-slate-50 border-t md:border-t-0">
+              <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-3">
                 {/* Lista de precios */}
                 {priceLists.length > 0 && (
                   <div className="bg-white border rounded-xl p-3">
@@ -551,7 +551,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
               </div>
 
               {/* Botón procesar */}
-              <div className="p-3 border-t bg-white space-y-2">
+              <div className="p-3 border-t bg-white space-y-2 shrink-0">
                 {isProcessing
                   ? <div className="flex items-center justify-center gap-2 py-3 text-slate-500"><RefreshCw className="w-5 h-5 animate-spin" /> Procesando...</div>
                   : (

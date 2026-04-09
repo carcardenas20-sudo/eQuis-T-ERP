@@ -77,9 +77,9 @@ export default function Dashboard() {
 
   // In preview mode, admin bypass is disabled so sections reflect the previewed role
   const isAdmin = isRealAdmin && !previewRoleId;
-  const hasComercial = isAdmin || permissions?.some(p => ["pos_sales","sales_view"].includes(p));
-  const hasOperarios = isAdmin || permissions?.includes("operarios_view");
-  const hasPipeline = isAdmin || permissions?.some(p => ["produccion_pipeline_view","produccion_view"].includes(p));
+  const hasComercial = isAdmin || permissions?.includes("dashboard_comercial") || permissions?.some(p => ["pos_sales","sales_view"].includes(p));
+  const hasOperarios = isAdmin || permissions?.includes("dashboard_operarios") || permissions?.includes("operarios_view");
+  const hasPipeline = isAdmin || permissions?.includes("dashboard_produccion") || permissions?.some(p => ["produccion_pipeline_view","produccion_view"].includes(p));
 
   useEffect(() => {
     if (isSessionLoading || !currentUser) return;
@@ -527,8 +527,8 @@ export default function Dashboard() {
         {!hasComercial && !hasOperarios && !hasPipeline && (
           <div className="text-center py-16 text-slate-400">
             <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-lg font-medium">Sin módulos asignados</p>
-            <p className="text-sm mt-1">Contacta al administrador para configurar tu rol.</p>
+            <p className="text-lg font-medium">Sin acceso al dashboard</p>
+            <p className="text-sm mt-1">Tu rol no tiene permisos de dashboard asignados. Contacta al administrador.</p>
           </div>
         )}
 

@@ -19,7 +19,7 @@ import {
 const comercialGroups = [
   {
     title: "Principal", items: [
-      { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard, permissions: ["reports_basic"] },
+      { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard, permissions: ["reports_basic", "dashboard_view"] },
       { title: "Punto de Venta", url: createPageUrl("POS"), icon: ShoppingCart, permissions: ["pos_sales"] },
     ]
   },

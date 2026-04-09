@@ -14,6 +14,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Edit, Trash2, MoreHorizontal, Shield, Loader2, AlertCircle, Users, Copy } from "lucide-react";
 
 const ALL_PERMISSIONS = [
+  // ── DASHBOARD ──────────────────────────────────────────────
+  { id: "dashboard_view",       label: "Ver Dashboard",              category: "Dashboard", level: "Básico",    description: "Acceder al dashboard general del sistema" },
+  { id: "dashboard_comercial",  label: "Dashboard Comercial",        category: "Dashboard", level: "Básico",    description: "Ver métricas de ventas, caja y créditos filtradas por sucursal asignada" },
+  { id: "dashboard_produccion", label: "Dashboard Producción",       category: "Dashboard", level: "Básico",    description: "Ver pipeline de materias primas y presupuestos aprobados" },
+  { id: "dashboard_operarios",  label: "Dashboard Operarios",        category: "Dashboard", level: "Básico",    description: "Ver resumen de entregas, despachos y pagos del módulo de operarios" },
+
   // ── PUNTO DE VENTA ─────────────────────────────────────────
   { id: "pos_sales",            label: "Realizar Ventas",          category: "Punto de Venta", level: "Básico",    description: "Procesar ventas en el punto de venta" },
   { id: "pos_apply_discounts",  label: "Aplicar Descuentos",       category: "Punto de Venta", level: "Avanzado",  description: "🚨 CRÍTICO: Modifica campos de descuento en el carrito. Sin este permiso los campos están BLOQUEADOS" },
@@ -115,6 +121,14 @@ const levelColors = {
 // Module sections for grouping permissions visually
 const MODULE_SECTIONS = [
   {
+    id: "dashboard",
+    label: "Dashboard",
+    color: "amber",
+    headerClass: "bg-amber-600 text-white",
+    borderClass: "border-amber-200",
+    categories: ["Dashboard"]
+  },
+  {
     id: "comercial",
     label: "Módulo Comercial",
     color: "blue",
@@ -152,17 +166,18 @@ const PREDEFINED_ROLES = [
   {
     name: "Vendedor",
     description: "Ventas básicas sin descuentos ni devoluciones",
-    permissions: ["pos_sales", "customers_view", "customers_create", "customers_edit", "sales_view", "sales_print", "credits_view", "credits_collect", "products_view", "inventory_view", "reports_basic"]
+    permissions: ["dashboard_view", "dashboard_comercial", "pos_sales", "customers_view", "customers_create", "customers_edit", "sales_view", "sales_print", "credits_view", "credits_collect", "products_view", "inventory_view", "reports_basic"]
   },
   {
     name: "Cajero",
     description: "POS con descuentos y devoluciones",
-    permissions: ["pos_sales", "pos_apply_discounts", "pos_process_returns", "customers_view", "customers_create", "customers_edit", "sales_view", "sales_print", "credits_view", "credits_create", "credits_collect", "products_view"]
+    permissions: ["dashboard_view", "dashboard_comercial", "pos_sales", "pos_apply_discounts", "pos_process_returns", "customers_view", "customers_create", "customers_edit", "sales_view", "sales_print", "credits_view", "credits_create", "credits_collect", "products_view"]
   },
   {
     name: "Líder de Punto",
     description: "Gestión completa del punto de venta con gastos y reportes",
     permissions: [
+      "dashboard_view", "dashboard_comercial",
       "pos_sales", "pos_cancel_sales", "pos_edit_sales", "pos_delete_sales",
       "customers_view", "customers_create", "customers_edit",
       "sales_view", "sales_edit", "sales_cancel", "sales_print",
@@ -176,6 +191,7 @@ const PREDEFINED_ROLES = [
     name: "Gerente de Tienda",
     description: "POS completo + visibilidad del pipeline de producción para su tienda",
     permissions: [
+      "dashboard_view", "dashboard_comercial", "dashboard_produccion",
       "pos_sales", "pos_cancel_sales", "pos_apply_discounts", "pos_process_returns", "pos_edit_sales",
       "products_view", "products_create", "products_edit", "products_manage_prices",
       "inventory_view", "inventory_adjust", "inventory_receive",
@@ -190,27 +206,28 @@ const PREDEFINED_ROLES = [
   {
     name: "Encargado de Producción",
     description: "Acceso completo al módulo de producción",
-    permissions: ["produccion_view", "produccion_pipeline_view", "reports_basic"]
+    permissions: ["dashboard_view", "dashboard_produccion", "produccion_view", "produccion_pipeline_view", "reports_basic"]
   },
   {
     name: "Supervisor de Operarios",
     description: "Acceso administrativo completo al módulo de operarios",
-    permissions: ["operarios_view", "operarios_admin", "produccion_pipeline_view", "reports_basic"]
+    permissions: ["dashboard_view", "dashboard_operarios", "operarios_view", "operarios_admin", "produccion_pipeline_view", "reports_basic"]
   },
   {
     name: "Operario",
     description: "Acceso básico al módulo de operarios",
-    permissions: ["operarios_view"]
+    permissions: ["dashboard_view", "dashboard_operarios", "operarios_view"]
   },
   {
     name: "Planillador",
     description: "Gestión completa de operarios + seguimiento del pipeline de producción",
-    permissions: ["operarios_view", "operarios_admin", "produccion_pipeline_view", "reports_basic"]
+    permissions: ["dashboard_view", "dashboard_operarios", "operarios_view", "operarios_admin", "produccion_pipeline_view", "reports_basic"]
   },
   {
     name: "Gerente",
     description: "Acceso gerencial completo: POS, finanzas, reportes y pipeline de producción",
     permissions: [
+      "dashboard_view", "dashboard_comercial", "dashboard_produccion", "dashboard_operarios",
       "pos_sales", "pos_cancel_sales", "pos_apply_discounts", "pos_process_returns",
       "products_view", "products_create", "products_edit", "products_manage_prices",
       "inventory_view", "inventory_adjust", "inventory_transfer", "inventory_receive",
