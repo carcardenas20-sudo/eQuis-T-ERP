@@ -97,6 +97,18 @@ export default function MerchandiseAssignment() {
     }));
   };
 
+  const handleSkip = async (group) => {
+    if (!window.confirm(`¿Marcar las entregas del ${group.dateKey} como ya ingresadas al inventario? No se modificará el inventario.`)) return;
+    setSaving(group.dateKey);
+    try {
+      await Promise.all(group.deliveryIds.map(id => Delivery.update(id, { inventory_assigned: true })));
+      loadData();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+    setSaving(null);
+  };
+
   const handleConfirm = async (group) => {
     const { dateKey, deliveryIds, items } = group;
     const totalUnits = getTotalUnits(dateKey);
@@ -248,13 +260,23 @@ export default function MerchandiseAssignment() {
                         <span className="ml-2 text-xs text-amber-600">({remaining} sin asignar)</span>
                       )}
                     </div>
-                    <Button
-                      onClick={() => handleConfirm(group)}
-                      disabled={saving === group.dateKey || totalAssigned === 0}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {saving === group.dateKey ? "Confirmando..." : "Confirmar asignación"}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => handleSkip(group)}
+                        disabled={saving === group.dateKey}
+                        className="text-slate-500 border-slate-300 text-xs"
+                      >
+                        Ya ingresado
+                      </Button>
+                      <Button
+                        onClick={() => handleConfirm(group)}
+                        disabled={saving === group.dateKey || totalAssigned === 0}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {saving === group.dateKey ? "Confirmando..." : "Confirmar asignación"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
