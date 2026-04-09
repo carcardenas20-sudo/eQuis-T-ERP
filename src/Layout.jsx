@@ -56,9 +56,7 @@ const comercialGroups = [
   },
   {
     title: "Configuración", items: [
-      { title: "Usuarios", url: createPageUrl("Users"), icon: Users, permissions: ["users_view"] },
-      { title: "Sucursales", url: createPageUrl("Locations"), icon: Building2, permissions: ["locations_view"] },
-      { title: "Configuración", url: createPageUrl("Settings"), icon: Settings, permissions: ["settings_system"] },
+      { title: "Configuración", url: createPageUrl("Settings"), icon: Settings, permissions: ["settings_system", "users_view", "locations_view"] },
     ]
   },
 ];

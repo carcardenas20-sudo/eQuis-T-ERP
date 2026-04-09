@@ -46,7 +46,7 @@ function ModuleBadges({ modules }) {
   );
 }
 
-export default function UsersPage() {
+export default function UsersPage({ embedded = false }) {
   const { isRealAdmin, permissions, isLoading: isSessionLoading } = useSession();
 
   const [users, setUsers] = useState([]);
@@ -220,7 +220,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="p-3 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+    <div className={embedded ? "p-3 sm:p-6" : "p-3 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen"}>
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Usuarios y Permisos</h1>

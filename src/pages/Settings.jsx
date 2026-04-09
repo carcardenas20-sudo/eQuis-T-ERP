@@ -10,15 +10,24 @@ import { Purchase } from "@/entities/Purchase";
 import { PurchaseItem } from "@/entities/PurchaseItem";
 import { Inventory } from "@/entities/Inventory";
 import { InventoryMovement } from "@/entities/InventoryMovement";
-import { AlertTriangle, RefreshCw, Database, Trash2, UserX } from "lucide-react";
+import { AlertTriangle, RefreshCw, Database, Trash2, UserX, Users, Building2, Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 import SystemConfiguration from "../components/settings/SystemConfiguration";
+import UsersPage from "./Users";
+import LocationsPage from "./Locations";
+
+const TABS = [
+  { id: "sistema",    label: "Configuración",       icon: Settings  },
+  { id: "usuarios",   label: "Usuarios y Permisos",  icon: Users     },
+  { id: "sucursales", label: "Sucursales",           icon: Building2 },
+];
 
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState("sistema");
   const [currentUser, setCurrentUser] = useState(null);
   const [showResetModal, setShowResetModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -51,13 +60,8 @@ export default function SettingsPage() {
     }
   };
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  useEffect(() => {
-    loadTabData();
-  }, []);
+  useEffect(() => { loadUserData(); }, []);
+  useEffect(() => { loadTabData(); }, []);
 
   const refreshTabData = () => loadTabData();
 
@@ -78,92 +82,61 @@ export default function SettingsPage() {
   const handleSystemReset = async () => {
     setIsResetting(true);
     setResetProgress("Iniciando reinicio del sistema...");
-
     try {
-      // 1. Eliminar todas las ventas y elementos relacionados
       setResetProgress("Eliminando ventas...");
       const allSales = await Sale.list();
-      for (const sale of allSales) {
-        await Sale.delete(sale.id);
-      }
+      for (const sale of allSales) await Sale.delete(sale.id);
 
-      // 2. Eliminar items de venta
       setResetProgress("Eliminando items de venta...");
       const allSaleItems = await SaleItem.list();
-      for (const item of allSaleItems) {
-        await SaleItem.delete(item.id);
-      }
+      for (const item of allSaleItems) await SaleItem.delete(item.id);
 
-      // 3. Eliminar pagos
       setResetProgress("Eliminando pagos...");
       const allPayments = await Payment.list();
-      for (const payment of allPayments) {
-        await Payment.delete(payment.id);
-      }
+      for (const payment of allPayments) await Payment.delete(payment.id);
 
-      // 4. Eliminar créditos
       setResetProgress("Eliminando créditos...");
       const allCredits = await Credit.list();
-      for (const credit of allCredits) {
-        await Credit.delete(credit.id);
-      }
+      for (const credit of allCredits) await Credit.delete(credit.id);
 
-      // 5. Eliminar gastos
       setResetProgress("Eliminando gastos...");
       const allExpenses = await Expense.list();
-      for (const expense of allExpenses) {
-        await Expense.delete(expense.id);
-      }
+      for (const expense of allExpenses) await Expense.delete(expense.id);
 
-      // 6. Eliminar compras
       setResetProgress("Eliminando compras...");
       const allPurchases = await Purchase.list();
-      for (const purchase of allPurchases) {
-        await Purchase.delete(purchase.id);
-      }
+      for (const purchase of allPurchases) await Purchase.delete(purchase.id);
 
-      // 7. Eliminar items de compra
       setResetProgress("Eliminando items de compra...");
       const allPurchaseItems = await PurchaseItem.list();
-      for (const item of allPurchaseItems) {
-        await PurchaseItem.delete(item.id);
-      }
+      for (const item of allPurchaseItems) await PurchaseItem.delete(item.id);
 
-      // 8. Resetear inventario a cero
       setResetProgress("Reseteando inventario...");
       const allInventory = await Inventory.list();
       for (const inv of allInventory) {
         await Inventory.update(inv.id, {
-          current_stock: 0,
-          reserved_stock: 0,
-          available_stock: 0,
+          current_stock: 0, reserved_stock: 0, available_stock: 0,
           last_movement_date: new Date().toISOString().split('T')[0]
         });
       }
 
-      // 9. Eliminar movimientos de inventario
       setResetProgress("Eliminando movimientos de inventario...");
       const allMovements = await InventoryMovement.list();
-      for (const movement of allMovements) {
-        await InventoryMovement.delete(movement.id);
-      }
+      for (const movement of allMovements) await InventoryMovement.delete(movement.id);
 
       setResetProgress("¡Reinicio completado exitosamente!");
-
       setTimeout(() => {
         setShowResetModal(false);
         setIsResetting(false);
         setResetProgress("");
         alert("Sistema reiniciado exitosamente. Todas las transacciones han sido eliminadas pero la configuración se mantiene.");
       }, 2000);
-
     } catch (error) {
       console.error("Error during system reset:", error);
       setResetProgress("Error durante el reinicio. Algunos datos pueden no haberse eliminado correctamente.");
       setIsResetting(false);
     }
   };
-
 
   if (!currentUser) {
     return (
@@ -173,47 +146,48 @@ export default function SettingsPage() {
     );
   }
 
+  const isAdmin = currentUser.role === 'admin' || currentUser.role_id;
+
   return (
     <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-slate-900 min-h-screen overflow-x-hidden">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Configuración del Sistema</h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
-              Personaliza tu sistema JacketMaster POS
-            </p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Configuración</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Administra el sistema, usuarios y sucursales</p>
           </div>
 
-          <div className="flex gap-2 w-full lg:w-auto flex-wrap *:flex-1 sm:*:flex-none">
-            {/* Delete Account Button - Para todos los usuarios */}
-            <Button
-              onClick={() => setShowDeleteAccountModal(true)}
-              variant="outline"
-              className="gap-2 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950 select-none flex-1 lg:flex-none"
-              disabled={isDeletingAccount}
-            >
-              <UserX className="w-4 h-4" />
-              Eliminar Cuenta
-            </Button>
-
-            {/* Sistema Reset Button - Solo para admin */}
-            {(currentUser.role === 'admin' || currentUser.role_id) && (
+          {activeTab === "sistema" && (
+            <div className="flex gap-2 w-full lg:w-auto flex-wrap *:flex-1 sm:*:flex-none">
               <Button
-                onClick={() => setShowResetModal(true)}
-                variant="destructive"
-                className="gap-2 select-none flex-1 lg:flex-none"
-                disabled={isResetting}
+                onClick={() => setShowDeleteAccountModal(true)}
+                variant="outline"
+                className="gap-2 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950 select-none flex-1 lg:flex-none"
+                disabled={isDeletingAccount}
               >
-                <Database className="w-4 h-4" />
-                Reiniciar Sistema
+                <UserX className="w-4 h-4" />
+                Eliminar Cuenta
               </Button>
-            )}
-          </div>
+
+              {isAdmin && (
+                <Button
+                  onClick={() => setShowResetModal(true)}
+                  variant="destructive"
+                  className="gap-2 select-none flex-1 lg:flex-none"
+                  disabled={isResetting}
+                >
+                  <Database className="w-4 h-4" />
+                  Reiniciar Sistema
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Warning para admin */}
-        {(currentUser.role === 'admin' || currentUser.role_id) && (
+        {/* Admin warning */}
+        {isAdmin && activeTab === "sistema" && (
           <Alert className="border-amber-200 bg-amber-50">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-700">
@@ -223,11 +197,51 @@ export default function SettingsPage() {
           </Alert>
         )}
 
-        <Card className="shadow-none border-0 bg-transparent dark:bg-transparent">
-          <CardContent className="p-0">
-            <SystemConfiguration settings={systemSettings} onRefresh={refreshTabData} isLoading={isLoading.system} />
-          </CardContent>
-        </Card>
+        {/* Tabs */}
+        <div className="border-b border-slate-200 dark:border-slate-700">
+          <div className="flex gap-0 overflow-x-auto scrollbar-none">
+            {TABS.map(tab => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap select-none
+                    ${isActive
+                      ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                      : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === "sistema" && (
+          <Card className="shadow-none border-0 bg-transparent dark:bg-transparent">
+            <CardContent className="p-0">
+              <SystemConfiguration settings={systemSettings} onRefresh={refreshTabData} isLoading={isLoading.system} />
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === "usuarios" && (
+          <div className="-mx-4 sm:-mx-6">
+            <UsersPage embedded />
+          </div>
+        )}
+
+        {activeTab === "sucursales" && (
+          <div className="-mx-4 sm:-mx-6">
+            <LocationsPage embedded />
+          </div>
+        )}
+
       </div>
 
       {/* Delete Account Modal */}
@@ -242,7 +256,6 @@ export default function SettingsPage() {
               Esta acción es permanente e irreversible.
             </DialogDescription>
           </DialogHeader>
-
           <div className="py-4">
             <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-2">
               <h4 className="font-semibold text-red-800 dark:text-red-300">⚠️ Advertencia:</h4>
@@ -254,27 +267,10 @@ export default function SettingsPage() {
               </ul>
             </div>
           </div>
-
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteAccountModal(false)}
-              disabled={isDeletingAccount}
-              className="select-none"
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={isDeletingAccount}
-              className="gap-2 select-none"
-            >
-              {isDeletingAccount ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <UserX className="w-4 h-4" />
-              )}
+            <Button variant="outline" onClick={() => setShowDeleteAccountModal(false)} disabled={isDeletingAccount} className="select-none">Cancelar</Button>
+            <Button variant="destructive" onClick={handleDeleteAccount} disabled={isDeletingAccount} className="gap-2 select-none">
+              {isDeletingAccount ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
               {isDeletingAccount ? "Eliminando..." : "Confirmar Eliminación"}
             </Button>
           </DialogFooter>
@@ -293,7 +289,6 @@ export default function SettingsPage() {
               Esta acción eliminará TODAS las transacciones del sistema, incluyendo:
             </DialogDescription>
           </DialogHeader>
-
           <div className="py-4">
             <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-2">
               <h4 className="font-semibold text-red-800 dark:text-red-300">Se eliminarán:</h4>
@@ -307,7 +302,6 @@ export default function SettingsPage() {
                 <li>• El stock actual (se pondrá en cero)</li>
               </ul>
             </div>
-
             <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4 space-y-2 mt-4">
               <h4 className="font-semibold text-green-800 dark:text-green-300">Se mantendrán:</h4>
               <ul className="text-sm text-green-700 dark:text-green-400 space-y-1">
@@ -320,7 +314,6 @@ export default function SettingsPage() {
                 <li>• Cuentas bancarias</li>
               </ul>
             </div>
-
             {isResetting && (
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
@@ -331,27 +324,10 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
-
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowResetModal(false)}
-              disabled={isResetting}
-              className="select-none"
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleSystemReset}
-              disabled={isResetting}
-              className="gap-2 select-none"
-            >
-              {isResetting ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
+            <Button variant="outline" onClick={() => setShowResetModal(false)} disabled={isResetting} className="select-none">Cancelar</Button>
+            <Button variant="destructive" onClick={handleSystemReset} disabled={isResetting} className="gap-2 select-none">
+              {isResetting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {isResetting ? "Reseteando..." : "Confirmar Reinicio"}
             </Button>
           </DialogFooter>
