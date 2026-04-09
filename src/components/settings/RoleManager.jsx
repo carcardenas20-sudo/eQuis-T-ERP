@@ -65,6 +65,10 @@ const ALL_PERMISSIONS = [
   { id: "purchases_view",   label: "Ver Compras",    category: "Compras", level: "Básico",     description: "Consultar órdenes de compra" },
   { id: "purchases_create", label: "Crear Compras",  category: "Compras", level: "Intermedio", description: "Crear nuevas órdenes de compra" },
 
+  // ── CUENTAS POR PAGAR ──────────────────────────────────────
+  { id: "accounts_payable_view",   label: "Ver Cuentas por Pagar",    category: "Cuentas por Pagar", level: "Gerencial",   description: "Consultar cuentas por pagar pendientes" },
+  { id: "accounts_payable_manage", label: "Gestionar Cuentas x Pagar",category: "Cuentas por Pagar", level: "Gerencial",   description: "Crear, editar y marcar pagos en cuentas por pagar" },
+
   // ── REPORTES ───────────────────────────────────────────────
   { id: "reports_basic",     label: "Reportes Básicos",     category: "Reportes", level: "Básico",     description: "Ver reportes de ventas básicos y acceder al dashboard" },
   { id: "reports_advanced",  label: "Reportes Avanzados",   category: "Reportes", level: "Intermedio", description: "Ver reportes detallados y análisis" },
@@ -116,7 +120,7 @@ const MODULE_SECTIONS = [
     color: "blue",
     headerClass: "bg-blue-600 text-white",
     borderClass: "border-blue-200",
-    categories: ["Punto de Venta", "Ventas", "Productos", "Inventario", "Clientes", "Créditos", "Gastos", "Compras", "Reportes", "Contabilidad"]
+    categories: ["Punto de Venta", "Ventas", "Productos", "Inventario", "Clientes", "Créditos", "Gastos", "Compras", "Cuentas por Pagar", "Reportes", "Contabilidad"]
   },
   {
     id: "produccion",
@@ -217,7 +221,8 @@ const PREDEFINED_ROLES = [
       "reports_basic", "reports_advanced", "reports_financial", "reports_export",
       "accounting_view_transactions", "accounting_manage_bank_accounts",
       "purchases_view", "purchases_create",
-      "users_view", "users_edit", "locations_view", "settings_price_lists", "data_export",
+      "accounts_payable_view", "accounts_payable_manage",
+      "users_view", "users_edit", "locations_view", "data_export",
       "produccion_pipeline_view"
     ]
   }

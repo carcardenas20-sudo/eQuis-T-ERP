@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { User } from "@/entities/User";
-import { Plus, Loader2, AlertTriangle, Search, Filter, Users } from "lucide-react";
+import { Plus, Loader2, AlertTriangle, Search, Filter, Shield, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { MoreHorizontal, Edit, EyeOff, Eye, Trash2 } from "lucide-react";
 import { Location } from "@/entities/Location";
 import { Role } from "@/entities/Role";
 import UserForm from "../components/users/UserForm";
+import RoleManager from "../components/settings/RoleManager";
 
 const COMERCIAL_PERMS = ["pos_sales","sales_view","customers_view","products_view","expenses_view","reports_basic","credits_view","inventory_view"];
 
@@ -54,6 +55,7 @@ export default function UsersPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("usuarios");
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -212,6 +214,26 @@ export default function UsersPage() {
           <p className="text-slate-600 mt-1">Administra usuarios, roles y accesos del personal.</p>
         </div>
 
+        <div className="flex gap-2 mb-4 border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab("usuarios")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === "usuarios" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+          >
+            <Users className="w-4 h-4" /> Usuarios
+            <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">{users.length}</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("roles")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === "roles" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+          >
+            <Shield className="w-4 h-4" /> Roles y Permisos
+            <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">{roles.length}</span>
+          </button>
+        </div>
+
+        {activeTab === "roles" ? (
+          <RoleManager roles={roles} onRefresh={loadData} isLoading={isLoading} />
+        ) : (
         <div className="space-y-4">
             {/* Header tab usuarios */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
@@ -421,6 +443,7 @@ export default function UsersPage() {
           </CardContent>
         </Card>
         </div>
+        )}
       </div>
 
       {isFormOpen && editingUser && (

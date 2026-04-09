@@ -48,7 +48,7 @@ const comercialGroups = [
   {
     title: "Finanzas", items: [
       { title: "Gastos", url: createPageUrl("Expenses"), icon: Receipt, permissions: ["expenses_view"] },
-      { title: "Cuentas por Pagar", url: createPageUrl("AccountsPayable"), icon: CreditCard, permissions: ["expenses_view"] },
+      { title: "Cuentas por Pagar", url: createPageUrl("AccountsPayable"), icon: CreditCard, permissions: ["accounts_payable_view"] },
       { title: "Control de Efectivo", url: createPageUrl("CashControl"), icon: Wallet, permissions: ["accounting_view_transactions"] },
       { title: "Cuentas Bancarias", url: createPageUrl("BankAccounts"), icon: Building2, permissions: ["accounting_view_transactions"] },
       { title: "Reportes", url: createPageUrl("Reports"), icon: BarChart3, permissions: ["reports_basic"] },
@@ -122,7 +122,7 @@ const operariosGroups = [
 ];
 
 const MODULE_ACCESS_PERMS = {
-  comercial: ["pos_sales","sales_view","products_view","products_create","inventory_view","purchases_view","expenses_view","reports_basic","customers_view","credits_view","inventory_transfer","accounting_view_transactions","users_view","locations_view","settings_system","agent_access"],
+  comercial: ["pos_sales","sales_view","products_view","products_create","inventory_view","purchases_view","expenses_view","reports_basic","customers_view","credits_view","inventory_transfer","accounting_view_transactions","accounts_payable_view","users_view","locations_view","settings_system","agent_access"],
   produccion: ["produccion_view", "produccion_pipeline_view"],
   operarios: ["operarios_view","operarios_admin"],
 };
