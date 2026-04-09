@@ -10,46 +10,24 @@ import { Purchase } from "@/entities/Purchase";
 import { PurchaseItem } from "@/entities/PurchaseItem";
 import { Inventory } from "@/entities/Inventory";
 import { InventoryMovement } from "@/entities/InventoryMovement";
-import { PriceList } from "@/entities/PriceList";
-import { Role } from "@/entities/Role";
-import {
-  Settings as SettingsIcon,
-  DollarSign,
-  Shield,
-  AlertTriangle,
-  RefreshCw,
-  Database,
-  Trash2,
-  UserX
-} from "lucide-react";
+import { AlertTriangle, RefreshCw, Database, Trash2, UserX } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 import SystemConfiguration from "../components/settings/SystemConfiguration";
-import PriceListManager from "../components/settings/PriceListManager";
-import RoleManager from "../components/settings/RoleManager";
-import CategoryManager from "../components/settings/CategoryManager";
 
 export default function SettingsPage() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("system");
   const [showResetModal, setShowResetModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetProgress, setResetProgress] = useState("");
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-  // Add state for managing data for each tab
   const [systemSettings, setSystemSettings] = useState(null);
-  const [priceLists, setPriceLists] = useState([]);
-  const [roles, setRoles] = useState([]);
-  const [isLoading, setIsLoading] = useState({
-    system: false,
-    prices: false,
-    roles: false
-  });
+  const [isLoading, setIsLoading] = useState({ system: false });
 
   const loadUserData = async () => {
     try {
@@ -60,45 +38,16 @@ export default function SettingsPage() {
     }
   };
 
-  const loadTabData = async (tabId) => {
-    setIsLoading(prev => ({ ...prev, [tabId]: true }));
-
+  const loadTabData = async () => {
+    setIsLoading({ system: true });
     try {
-      switch (tabId) {
-        case "system":
-          const settings = await SystemSettings.list();
-          setSystemSettings(settings.length > 0 ? settings[0] : null);
-          break;
-        case "prices":
-          const prices = await PriceList.list();
-          setPriceLists(prices || []);
-          break;
-        case "roles":
-          const rolesData = await Role.list();
-          setRoles(rolesData || []);
-          break;
-        default:
-          // Handle unknown tabId or no action needed
-          break;
-      }
+      const settings = await SystemSettings.list();
+      setSystemSettings(settings.length > 0 ? settings[0] : null);
     } catch (error) {
-      console.error(`Error loading ${tabId} data:`, error);
-      // Set empty arrays/null to prevent undefined errors
-      switch (tabId) {
-        case "prices":
-          setPriceLists([]);
-          break;
-        case "roles":
-          setRoles([]);
-          break;
-        case "system":
-          setSystemSettings(null);
-          break;
-        default:
-          break;
-      }
+      console.error("Error loading settings:", error);
+      setSystemSettings(null);
     } finally {
-      setIsLoading(prev => ({ ...prev, [tabId]: false }));
+      setIsLoading({ system: false });
     }
   };
 
@@ -106,14 +55,11 @@ export default function SettingsPage() {
     loadUserData();
   }, []);
 
-  // Load data when tab changes
   useEffect(() => {
-    loadTabData(activeTab);
-  }, [activeTab]);
+    loadTabData();
+  }, []);
 
-  const refreshTabData = () => {
-    loadTabData(activeTab);
-  };
+  const refreshTabData = () => loadTabData();
 
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true);
@@ -218,34 +164,6 @@ export default function SettingsPage() {
     }
   };
 
-  const tabs = [
-    { id: "system", label: "Configuración General", icon: SettingsIcon, component: SystemConfiguration },
-    { id: "prices", label: "Listas de Precios", icon: DollarSign, component: PriceListManager },
-    { id: "roles", label: "Roles y Permisos", icon: Shield, component: RoleManager },
-  ];
-
-  const getTabProps = (tabId) => {
-    switch (tabId) {
-      case "system":
-        return { settings: systemSettings, onRefresh: refreshTabData, isLoading: isLoading.system };
-      case "prices":
-        return {
-          priceLists: priceLists,
-          onRefresh: refreshTabData,
-          isLoading: isLoading.prices
-        };
-      case "roles":
-        return {
-          roles: roles,
-          onRefresh: refreshTabData,
-          isLoading: isLoading.roles
-        };
-      default:
-        return {};
-    }
-  };
-
-  const ActiveTabComponent = tabs.find(tab => tab.id === activeTab)?.component;
 
   if (!currentUser) {
     return (
@@ -305,28 +223,9 @@ export default function SettingsPage() {
           </Alert>
         )}
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 bg-slate-100 p-2 rounded-lg w-full">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap flex-1 sm:flex-none ${
-                activeTab === tab.id
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
         <Card className="shadow-none border-0 bg-transparent dark:bg-transparent">
           <CardContent className="p-0">
-            {ActiveTabComponent && <ActiveTabComponent {...getTabProps(activeTab)} />}
+            <SystemConfiguration settings={systemSettings} onRefresh={refreshTabData} isLoading={isLoading.system} />
           </CardContent>
         </Card>
       </div>

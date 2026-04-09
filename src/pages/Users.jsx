@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { User } from "@/entities/User";
-import { Plus, Loader2, AlertTriangle, Search, Filter, Shield, Users } from "lucide-react";
+import { Plus, Loader2, AlertTriangle, Search, Filter, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -12,7 +11,6 @@ import { MoreHorizontal, Edit, EyeOff, Eye, Trash2 } from "lucide-react";
 import { Location } from "@/entities/Location";
 import { Role } from "@/entities/Role";
 import UserForm from "../components/users/UserForm";
-import RoleManager from "../components/settings/RoleManager";
 
 const COMERCIAL_PERMS = ["pos_sales","sales_view","customers_view","products_view","expenses_view","reports_basic","credits_view","inventory_view"];
 
@@ -214,19 +212,7 @@ export default function UsersPage() {
           <p className="text-slate-600 mt-1">Administra usuarios, roles y accesos del personal.</p>
         </div>
 
-        <Tabs defaultValue="usuarios">
-          <TabsList className="mb-2">
-            <TabsTrigger value="usuarios" className="gap-2">
-              <Users className="w-4 h-4" /> Usuarios
-              <span className="ml-1 text-xs bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{users.length}</span>
-            </TabsTrigger>
-            <TabsTrigger value="roles" className="gap-2">
-              <Shield className="w-4 h-4" /> Roles y Permisos
-              <span className="ml-1 text-xs bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{roles.length}</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="usuarios" className="space-y-4">
+        <div className="space-y-4">
             {/* Header tab usuarios */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
               <div className="flex flex-col sm:flex-row gap-3 flex-1">
@@ -434,12 +420,7 @@ export default function UsersPage() {
             </Table>
           </CardContent>
         </Card>
-          </TabsContent>
-
-          <TabsContent value="roles">
-            <RoleManager roles={roles} onRefresh={loadData} isLoading={isLoading} />
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
 
       {isFormOpen && editingUser && (
