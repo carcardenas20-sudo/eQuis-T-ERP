@@ -220,6 +220,15 @@ async function runMigrations(client) {
       }
     },
     {
+      name: 'add_devolucion_defect_type_and_date_returned',
+      sql: async () => {
+        await client.query(`ALTER TABLE entity_devolucion ADD COLUMN IF NOT EXISTS defect_type TEXT`);
+        await client.query(`ALTER TABLE entity_devolucion ADD COLUMN IF NOT EXISTS date_returned TIMESTAMPTZ`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_entity_devolucion_date_returned ON entity_devolucion(date_returned)`);
+        console.log('✅ Migration: defect_type + date_returned columns added to entity_devolucion');
+      }
+    },
+    {
       name: 'add_producto_reference_and_costo_cols',
       sql: async () => {
         await client.query(`ALTER TABLE entity_producto_produccion ADD COLUMN IF NOT EXISTS reference TEXT`);
