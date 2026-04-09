@@ -113,10 +113,11 @@ export default function Dashboard() {
         ? { location_id: userLocation.id }
         : (isAdmin && selectedLocation !== 'all' ? { location_id: selectedLocation } : {});
 
-      const [allSales, todayExpenses, allCredits] = await Promise.all([
+      const [allSales, todayExpenses, allCredits, creditPaymentsToday] = await Promise.all([
         Sale.filter({ status: 'completed', ...locationFilter }),
         Expense.filter(locationFilter),
-        Credit.filter(locationFilter)
+        Credit.filter(locationFilter),
+        Payment.filter({ type: 'credit_payment', ...locationFilter }),
       ]);
 
       const salesToday = allSales.filter(s => {
@@ -138,6 +139,16 @@ export default function Dashboard() {
           cashIncome += Number(sale.total_amount) || 0;
         }
       });
+
+      // Sumar abonos a créditos de hoy
+      creditPaymentsToday
+        .filter(p => String(p.payment_date || '').slice(0, 10) === todayStr)
+        .forEach(p => {
+          const amt = Number(p.amount) || 0;
+          if (p.method === 'cash') cashIncome += amt;
+          else if (p.method === 'card') cardIncome += amt;
+          else if (p.method === 'transfer' || p.method === 'qr') transferIncome += amt;
+        });
 
       const expensesToday = todayExpenses.filter(e => String(e.expense_date || '').slice(0, 10) === todayStr);
       const cashExpenses = expensesToday.filter(e => e.payment_method === 'cash').reduce((s, e) => s + (Number(e.amount) || 0), 0);

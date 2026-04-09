@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { CashControl, Expense, Location, Sale } from "@/entities/all";
+import { CashControl, Expense, Location, Sale, Payment } from "@/entities/all";
 import { User } from "@/entities/User";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,9 +76,14 @@ export default function CashControlPage() {
         expensesFilter.expense_date = { $gte: startStr };
       }
 
-      const [sales, expenses] = await Promise.all([
+      let paymentsFilter = { type: 'credit_payment' };
+      if (filters.location !== "all") paymentsFilter.location_id = filters.location;
+      if (applyDateFilter) paymentsFilter.payment_date = { $gte: startStr };
+
+      const [sales, expenses, creditPayments] = await Promise.all([
         Sale.filter(salesFilter),
-        Expense.filter(expensesFilter)
+        Expense.filter(expensesFilter),
+        Payment.filter(paymentsFilter),
       ]);
 
       const dataByKey = {};
@@ -107,6 +112,19 @@ export default function CashControlPage() {
           const amt = Number(sale.total_amount) || 0;
           if (amt > 0) dataByKey[key].cash += amt;
         }
+      });
+
+      // Abonos a créditos — se suman al control de efectivo por método de pago
+      creditPayments.forEach(p => {
+        const date = toDateOnly(p.payment_date);
+        if (!date) return;
+        const locationId = p.location_id || null;
+        const key = ensureKey(date, locationId);
+        const amt = Number(p.amount) || 0;
+        if (amt <= 0) return;
+        if (p.method === 'cash') dataByKey[key].cash += amt;
+        else if (p.method === 'transfer' || p.method === 'qr') dataByKey[key].transfers += amt;
+        else if (p.method === 'card') dataByKey[key].card += amt;
       });
 
       expenses.forEach(expense => {
