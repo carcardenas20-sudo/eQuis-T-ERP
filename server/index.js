@@ -298,7 +298,7 @@ async function initDB() {
     for (const [entityType, schema] of Object.entries(ENTITY_SCHEMAS)) {
       await client.query(buildCreateTableSQL(entityType, schema));
       for (const indexSQL of buildIndexSQL(schema)) {
-        await client.query(indexSQL);
+        try { await client.query(indexSQL); } catch { /* columna puede no existir aún — migración la añade */ }
       }
     }
     console.log(`✅ Per-entity tables created (${Object.keys(ENTITY_SCHEMAS).length} types)`);

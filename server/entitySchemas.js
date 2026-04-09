@@ -359,7 +359,7 @@ export const ENTITY_SCHEMAS = {
       status: 'TEXT',
       date_returned: 'TIMESTAMPTZ',
     },
-    indexes: ['employee_id', 'status', 'date_sent', 'date_returned'],
+    indexes: ['employee_id', 'status', 'date_sent'],
   },
 
   Delivery: {
