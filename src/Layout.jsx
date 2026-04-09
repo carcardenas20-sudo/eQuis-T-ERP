@@ -112,7 +112,6 @@ const operariosGroups = [
       { title: "Transferencias", url: createPageUrl("Op_BankTransfers"), icon: ArrowRightLeft, permissions: ["operarios_admin"] },
       { title: "Cotizador Salario", url: createPageUrl("Op_SalaryQuote"), icon: Calculator, permissions: ["operarios_view"] },
       { title: "Compras Empleados", url: createPageUrl("Op_EmployeePurchases"), icon: ShoppingBag, permissions: ["operarios_view"] },
-      { title: "Entrada de Mercancía", url: createPageUrl("Op_MerchandiseEntry"), icon: PackageCheck, permissions: ["operarios_view"] },
       { title: "Solicitud de Pago", url: createPageUrl("Op_PaymentRequest"), icon: Receipt, permissions: ["operarios_view"] },
       { title: "Auditoría Op.", url: createPageUrl("Op_AuditLog"), icon: Eye, permissions: ["operarios_admin"] },
     ]
