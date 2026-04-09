@@ -31,7 +31,8 @@ export default function MerchandiseAssignment() {
         Inventory.list(),
         Producto.list(),
       ]);
-      const entriesData = (allEntriesData || []).filter(e => e.status === "pendiente");
+      // Mostrar cualquier entrada que no esté explícitamente marcada como asignada
+      const entriesData = (allEntriesData || []).filter(e => e.status !== "asignado");
       setPendingEntries(entriesData);
       setLocations(locationsData || []);
       setInventory(inventoryData || []);
