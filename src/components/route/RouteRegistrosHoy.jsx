@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Delivery, Dispatch, Inventory, StockMovement } from "@/api/publicEntities";
-import { Edit2, Trash2, Save, X, ChevronDown, ChevronUp, PackageCheck, Truck } from "lucide-react";
+import { Edit2, Save, X, ChevronDown, ChevronUp, PackageCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const getColombiaToday = () => {
@@ -143,7 +143,7 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5 ml-6">{(d.delivery_date || '').slice(0, 10)}</p>
                 </div>
-                {/* Botones editar/eliminar */}
+                {/* Botón editar */}
                 {editingDelivery?.id !== d.id && (
                   <div className="flex gap-1 shrink-0">
                     <button
@@ -151,12 +151,6 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
                       className="w-10 h-10 flex items-center justify-center rounded-xl text-blue-500 hover:bg-blue-50 active:bg-blue-100"
                     >
                       <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteDelivery(d.id)}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl text-red-400 hover:bg-red-50 active:bg-red-100"
-                    >
-                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 )}
@@ -246,12 +240,6 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
                         className="w-10 h-10 flex items-center justify-center rounded-xl text-blue-500 hover:bg-blue-50 active:bg-blue-100"
                       >
                         <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => deleteDispatch(d)}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl text-red-400 hover:bg-red-50 active:bg-red-100"
-                      >
-                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   )}

@@ -25,13 +25,14 @@ export default function MerchandiseAssignment() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [entriesData, locationsData, inventoryData, productosData] = await Promise.all([
-        MerchandiseEntry.filter({ status: "pendiente" }),
+      const [allEntriesData, locationsData, inventoryData, productosData] = await Promise.all([
+        MerchandiseEntry.list("-entry_date"),
         Location.list(),
         Inventory.list(),
         Producto.list(),
       ]);
-      setPendingEntries(entriesData || []);
+      const entriesData = (allEntriesData || []).filter(e => e.status === "pendiente");
+      setPendingEntries(entriesData);
       setLocations(locationsData || []);
       setInventory(inventoryData || []);
       setProductos((productosData || []).filter(p => p.reference));
