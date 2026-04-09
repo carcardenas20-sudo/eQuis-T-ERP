@@ -71,6 +71,10 @@ export default function CashControlPage() {
         salesFilter.location_id = filters.location;
         expensesFilter.location_id = filters.location;
       }
+      if (applyDateFilter) {
+        salesFilter.sale_date = { $gte: startStr };
+        expensesFilter.expense_date = { $gte: startStr };
+      }
 
       const [sales, expenses] = await Promise.all([
         Sale.filter(salesFilter),
@@ -88,7 +92,7 @@ export default function CashControlPage() {
 
       sales.forEach(sale => {
         const date = toDateOnly(sale.sale_date);
-        if (!date || (applyDateFilter && date < startStr)) return;
+        if (!date) return;
         const locationId = sale.location_id || null;
         const key = ensureKey(date, locationId);
         const methods = Array.isArray(sale.payment_methods) ? sale.payment_methods : [];
@@ -107,7 +111,7 @@ export default function CashControlPage() {
 
       expenses.forEach(expense => {
         const date = toDateOnly(expense.expense_date);
-        if (!date || (applyDateFilter && date < startStr)) return;
+        if (!date) return;
         const locationId = expense.location_id || null;
         const key = ensureKey(date, locationId);
         if (expense.payment_method === 'cash') {

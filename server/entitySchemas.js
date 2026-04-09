@@ -274,10 +274,14 @@ export const ENTITY_SCHEMAS = {
     table: 'entity_cash_control',
     typed: {
       location_id: 'TEXT',
-      status: 'TEXT',
-      opened_at: 'TIMESTAMPTZ',
+      control_date: 'TEXT',
+      cash_amount: 'NUMERIC(14,2) DEFAULT 0',
+      transfer_amount: 'NUMERIC(14,2) DEFAULT 0',
+      card_amount: 'NUMERIC(14,2) DEFAULT 0',
+      cash_collected: 'BOOLEAN DEFAULT false',
+      transfers_verified: 'BOOLEAN DEFAULT false',
     },
-    indexes: ['location_id', 'status'],
+    indexes: ['location_id', 'control_date', 'cash_collected', 'transfers_verified'],
   },
 
   Exchange: {

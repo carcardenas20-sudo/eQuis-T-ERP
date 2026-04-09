@@ -91,6 +91,7 @@ export const PAGES = {
   "MerchandiseAssignment": MerchandiseAssignment,
 
   // Producción / Chaquetas
+
   "Prod_Dashboard": Prod_Dashboard,
   "Prod_Remisiones": Prod_Remisiones,
   "Prod_PlanificacionRemisiones": Prod_PlanificacionRemisiones,
@@ -126,7 +127,6 @@ export const PAGES = {
   "Op_PhotoCapture": Op_PhotoCapture,
   "Op_Empleado": Op_Empleado,
   "Op_MerchandiseEntry": Op_MerchandiseEntry,
-"MerchandiseAssignment": MerchandiseAssignment,
 };
 
 export const pagesConfig = {

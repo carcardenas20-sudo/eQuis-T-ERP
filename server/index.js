@@ -229,6 +229,31 @@ async function runMigrations(client) {
       }
     },
     {
+      name: 'add_cash_control_typed_cols',
+      sql: async () => {
+        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS control_date TEXT`);
+        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS cash_amount NUMERIC(14,2) DEFAULT 0`);
+        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS transfer_amount NUMERIC(14,2) DEFAULT 0`);
+        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS card_amount NUMERIC(14,2) DEFAULT 0`);
+        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS cash_collected BOOLEAN DEFAULT false`);
+        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS transfers_verified BOOLEAN DEFAULT false`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_entity_cash_control_control_date ON entity_cash_control(control_date)`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_entity_cash_control_cash_collected ON entity_cash_control(cash_collected)`);
+        // Migrate existing JSONB values to typed columns
+        await client.query(`
+          UPDATE entity_cash_control SET
+            control_date = NULLIF(data->>'control_date', ''),
+            cash_amount = NULLIF(data->>'cash_amount', '')::NUMERIC,
+            transfer_amount = NULLIF(data->>'transfer_amount', '')::NUMERIC,
+            card_amount = NULLIF(data->>'card_amount', '')::NUMERIC,
+            cash_collected = (data->>'cash_collected')::BOOLEAN,
+            transfers_verified = (data->>'transfers_verified')::BOOLEAN
+          WHERE control_date IS NULL
+        `);
+        console.log('✅ Migration: cash_control typed columns added');
+      }
+    },
+    {
       name: 'add_producto_reference_and_costo_cols',
       sql: async () => {
         await client.query(`ALTER TABLE entity_producto_produccion ADD COLUMN IF NOT EXISTS reference TEXT`);

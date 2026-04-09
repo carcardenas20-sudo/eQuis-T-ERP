@@ -2,28 +2,18 @@ import React, { useState, useEffect } from "react";
 import { localClient } from "@/api/localClient";
 import { Location } from "@/entities/Location";
 import { Inventory } from "@/entities/Inventory";
-import { Product } from "@/entities/Product";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { PackageCheck, CheckCircle2, AlertTriangle, Store } from "lucide-react";
+import { PackageCheck, CheckCircle2, Store } from "lucide-react";
 
 const MerchandiseEntry = localClient.entities["MerchandiseEntry"];
-
-// Mapa de reference de producción → product_id comercial
-const REFERENCE_TO_PRODUCT = {
-  "001": "68cf045f708944a44db15537", // Embone → Hombre
-  "002": "68cf045f708944a44db15537", // Neo → Hombre
-  "003": "68cf045f708944a44db15537", // Unicolor → Hombre
-  "004": "68cf045f708944a44db15537", // Chulo → Hombre
-  "090": "69aee24b1a68e61589ee7db4", // Colombia → Colombia
-  "596": "68cf045f708944a44db15537", // Mujer/Ovejera → Hombre (ajustar si tiene familia propia)
-};
+const Producto = localClient.entities["Producto"];
 
 export default function MerchandiseAssignment() {
   const [pendingEntries, setPendingEntries] = useState([]);
   const [locations, setLocations] = useState([]);
   const [inventory, setInventory] = useState([]);
+  const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
   const [assignments, setAssignments] = useState({});
@@ -35,14 +25,16 @@ export default function MerchandiseAssignment() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [entriesData, locationsData, inventoryData] = await Promise.all([
+      const [entriesData, locationsData, inventoryData, productosData] = await Promise.all([
         MerchandiseEntry.filter({ status: "pendiente" }),
         Location.list(),
         Inventory.list(),
+        Producto.list(),
       ]);
       setPendingEntries(entriesData || []);
       setLocations(locationsData || []);
       setInventory(inventoryData || []);
+      setProductos((productosData || []).filter(p => p.reference));
 
       // Inicializar asignaciones vacías
       const initAssignments = {};
@@ -57,6 +49,11 @@ export default function MerchandiseAssignment() {
       console.error("Error:", err);
     }
     setLoading(false);
+  };
+
+  const prodName = (ref) => {
+    const p = productos.find(p => p.reference === ref);
+    return p ? `${ref} — ${p.nombre || p.name}` : ref;
   };
 
   const updateAssignment = (entryId, locationId, value) => {
@@ -95,19 +92,18 @@ export default function MerchandiseAssignment() {
 
         const location = locations.find((l) => l.id === locationId);
 
-        // Para cada item de la entrada, distribuir proporcionalmente
+        // Para cada item de la entrada, sumar al inventario por referencia de producción
         for (const item of entry.items || []) {
-          const productId = REFERENCE_TO_PRODUCT[item.product_reference];
-          if (!productId) continue;
+          if (!item.product_reference) continue;
 
           // Proporción de este item en el total
-          const proportion = item.quantity / entry.total_units;
+          const proportion = entry.total_units > 0 ? item.quantity / entry.total_units : 0;
           const qtyForLocation = Math.round(quantity * proportion);
           if (qtyForLocation <= 0) continue;
 
-          // Buscar inventario existente para este producto y sucursal
+          // Usar la referencia de producción como clave de inventario
           const existingInv = inventory.find(
-            (inv) => inv.product_id === productId && inv.location_id === locationId
+            (inv) => inv.product_id === item.product_reference && inv.location_id === locationId
           );
 
           if (existingInv) {
@@ -117,7 +113,7 @@ export default function MerchandiseAssignment() {
             });
           } else {
             await Inventory.create({
-              product_id: productId,
+              product_id: item.product_reference,
               location_id: locationId,
               current_stock: qtyForLocation,
               available_stock: qtyForLocation,
@@ -188,7 +184,7 @@ export default function MerchandiseAssignment() {
                   <div className="flex flex-wrap gap-1 mt-2">
                     {(entry.items || []).map((item, i) => (
                       <span key={i} className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                        {item.product_name || item.product_reference}: {item.quantity} und
+                        {item.product_name || prodName(item.product_reference)}: {item.quantity} und
                       </span>
                     ))}
                   </div>
