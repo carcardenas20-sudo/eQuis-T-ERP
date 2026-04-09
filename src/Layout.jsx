@@ -19,7 +19,7 @@ import {
 const comercialGroups = [
   {
     title: "Principal", items: [
-      { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard, permissions: ["reports_basic", "dashboard_view"] },
+      { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard, permissions: ["reports_basic", "dashboard_view", "dashboard_comercial", "dashboard_produccion", "dashboard_operarios"] },
       { title: "Punto de Venta", url: createPageUrl("POS"), icon: ShoppingCart, permissions: ["pos_sales"] },
     ]
   },
@@ -122,7 +122,7 @@ const operariosGroups = [
 ];
 
 const MODULE_ACCESS_PERMS = {
-  comercial: ["pos_sales","sales_view","products_view","products_create","inventory_view","purchases_view","expenses_view","reports_basic","customers_view","credits_view","inventory_transfer","accounting_view_transactions","accounts_payable_view","users_view","locations_view","settings_system","agent_access"],
+  comercial: ["pos_sales","sales_view","products_view","products_create","inventory_view","purchases_view","expenses_view","reports_basic","dashboard_view","dashboard_comercial","customers_view","credits_view","inventory_transfer","accounting_view_transactions","accounts_payable_view","users_view","locations_view","settings_system","agent_access"],
   produccion: ["produccion_view", "produccion_pipeline_view"],
   operarios: ["operarios_view","operarios_admin"],
 };

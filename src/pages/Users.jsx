@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { User } from "@/entities/User";
-import { Plus, Loader2, AlertTriangle, Search, Filter, Shield, Users } from "lucide-react";
+import { useSession } from "../components/providers/SessionProvider";
+import { Plus, Loader2, AlertTriangle, Search, Filter, Shield, Users, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,8 @@ function ModuleBadges({ modules }) {
 }
 
 export default function UsersPage() {
+  const { isRealAdmin, permissions, isLoading: isSessionLoading } = useSession();
+
   const [users, setUsers] = useState([]);
   const [locations, setLocations] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -205,6 +208,16 @@ export default function UsersPage() {
     { value: "operarios",  label: "🟣 Operarios" },
     { value: "sin_modulo", label: "Sin módulo" },
   ];
+
+  if (!isSessionLoading && !isRealAdmin && !permissions?.includes("users_view")) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+        <Lock className="w-12 h-12 text-slate-300 mb-3" />
+        <p className="text-lg font-semibold text-slate-600">Acceso restringido</p>
+        <p className="text-sm text-slate-400 mt-1">No tienes permiso para ver esta sección.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-3 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
