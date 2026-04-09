@@ -65,7 +65,7 @@ function ExchangePaymentModal({ total, onConfirm, onCancel, isProcessing }) {
 
   return (
     <Dialog open onOpenChange={onCancel}>
-      <DialogContent className="max-w-md w-[95vw] z-[60]">
+      <DialogContent className="max-w-md w-[95vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <CreditCard className="w-5 h-5 text-blue-600" />
@@ -177,7 +177,7 @@ function ExchangePaymentModal({ total, onConfirm, onCancel, isProcessing }) {
                   <Label className="text-xs">Cuenta bancaria</Label>
                   <Select value={currentPayment.bank_account} onValueChange={v => setCurrentPayment(prev => ({ ...prev, bank_account: v }))}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="-- Sin especificar --" /></SelectTrigger>
-                    <SelectContent className="z-[80]" position="popper">
+                    <SelectContent className="z-[420]" position="popper">
                       {bankAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name} - {a.account_number}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -376,7 +376,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
   return (
     <>
       <Dialog open onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl w-full h-[100dvh] sm:h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-xl pb-safe z-[70]">
+        <DialogContent className="max-w-6xl w-full h-[100dvh] sm:h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-xl pb-safe">
           <DialogHeader className="px-5 pt-4 pb-3 border-b shrink-0">
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               <RefreshCw className="w-5 h-5 text-orange-500" />
@@ -456,7 +456,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
                     </div>
                     <Select value={selectedPriceList || ""} onValueChange={setSelectedPriceList}>
                       <SelectTrigger className="h-8 text-sm focus:ring-2 focus:ring-blue-500"><SelectValue placeholder="Seleccionar lista" /></SelectTrigger>
-                      <SelectContent className="z-[80]" position="popper">
+                      <SelectContent className="z-[420]" position="popper">
                         {priceLists.map(pl => <SelectItem key={pl.code} value={pl.code}>{pl.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
