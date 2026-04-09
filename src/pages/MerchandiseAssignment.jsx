@@ -4,7 +4,7 @@ import { Location } from "@/entities/Location";
 import { Inventory } from "@/entities/Inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PackageCheck, CheckCircle2, Store, RefreshCw } from "lucide-react";
+import { PackageCheck, CheckCircle2, Store, RefreshCw, Trash2 } from "lucide-react";
 
 const MerchandiseEntry = localClient.entities["MerchandiseEntry"];
 const Producto = localClient.entities["Producto"];
@@ -66,6 +66,16 @@ export default function MerchandiseAssignment() {
   const getTotalAssigned = (entryId) => {
     const entryAssignments = assignments[entryId] || {};
     return Object.values(entryAssignments).reduce((s, v) => s + (Number(v) || 0), 0);
+  };
+
+  const handleDelete = async (entry) => {
+    if (!window.confirm(`¿Eliminar esta entrada del ${entry.entry_date}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await MerchandiseEntry.delete(entry.id);
+      loadData();
+    } catch (err) {
+      alert("Error al eliminar: " + err.message);
+    }
   };
 
   const handleConfirm = async (entry) => {
@@ -183,9 +193,19 @@ export default function MerchandiseAssignment() {
                       <PackageCheck className="w-4 h-4 text-amber-600" />
                       Entrada del {entry.entry_date}
                     </CardTitle>
-                    <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
-                      {entry.total_units} unidades totales
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
+                        {entry.total_units} unidades totales
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(entry)}
+                        className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {(entry.items || []).map((item, i) => (

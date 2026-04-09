@@ -417,7 +417,7 @@ function MaterialPendienteRow({ item, onComprar }) {
 }
 
 // ─── Tarjeta de item en vista unificada (con historial de abonos) ────────────
-function PendienteCard({ item, onPayment, abonos = [] }) {
+function PendienteCard({ item, onPayment, onDelete, abonos = [] }) {
   const [expanded, setExpanded] = useState(false);
   const urgency = URGENCY(item.due_date);
   const uStyle = URGENCY_STYLES[urgency];
@@ -480,6 +480,12 @@ function PendienteCard({ item, onPayment, abonos = [] }) {
             className="bg-emerald-600 hover:bg-emerald-700 text-xs h-8 px-2">
             Pagar
           </Button>
+          {item._isOperario && onDelete && (
+            <button onClick={() => onDelete(item)}
+              className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500">
+              <Trash2 size={14} />
+            </button>
+          )}
           {hasAbonos && (
             <button onClick={() => setExpanded(e => !e)}
               className="p-1.5 rounded hover:bg-white/60 text-slate-400">
@@ -873,6 +879,16 @@ export default function AccountsPayablePage() {
     }
   };
 
+  const handleDeleteOperarioPayment = async (item) => {
+    if (!confirm(`¿Eliminar el pago de ${item.supplier_name} por ${fmtMoney(item.total_amount)}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await localClient.entities.Payment.delete(item._opPaymentId);
+      await loadData();
+    } catch (err) {
+      alert("Error al eliminar: " + err.message);
+    }
+  };
+
   const handleToggleGastoFijo = async (gasto) => {
     await FixedExpense.update(gasto.id, { is_active: !gasto.is_active });
     await loadData();
@@ -928,9 +944,9 @@ export default function AccountsPayablePage() {
           </Card>
           <Card>
             <CardContent className="p-3 sm:p-5">
-              <p className="text-xs text-slate-500">Operarios</p>
+              <p className="text-xs text-slate-500">Operarios (Transferencias)</p>
               <p className="text-xl font-bold text-violet-700 mt-0.5">{fmtMoney(operarioPayables.reduce((s, p) => s + p.pending_amount, 0))}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{operarioPayables.length} pago(s)</p>
+              <p className="text-xs text-slate-400 mt-0.5">{operarioPayables.length} pendiente(s)</p>
             </CardContent>
           </Card>
           <Card>
@@ -1158,6 +1174,7 @@ export default function AccountsPayablePage() {
                             {items.map(item => (
                               <PendienteCard
                                 key={item.id} item={item} onPayment={setPaymentModalData}
+                                onDelete={handleDeleteOperarioPayment}
                                 abonos={allAbonos.filter(a => a.payable_id === item.id)}
                               />
                             ))}
