@@ -141,6 +141,20 @@ export default function Productos() {
     }
   };
 
+  const handleCreateFamilia = async (data) => {
+    try {
+      const created = await Product.create(data);
+      // Refrescar familias para que aparezca en el dropdown
+      const updated = await Product.list();
+      setFamilias(updated || []);
+      // Devolver el id del nuevo Product para auto-seleccionarlo
+      return created?.id || data.sku;
+    } catch (err) {
+      alert('Error al crear familia en POS: ' + err.message);
+      return null;
+    }
+  };
+
   return (
     <div className="p-3 sm:p-8 space-y-4 sm:space-y-8 bg-transparent">
       <div className="max-w-7xl mx-auto">
@@ -186,6 +200,7 @@ export default function Productos() {
               setShowForm(false);
               setEditingProducto(null);
             }}
+            onCreateFamilia={handleCreateFamilia}
           />
         )}
 

@@ -150,12 +150,16 @@ export default function MerchandiseAssignment() {
       // Por cada referencia × sucursal, actualizar inventario
       for (const item of itemsList) {
         const refAssignments = assignments[dateKey]?.[item.product_reference] || {};
+        // Usar familia_id como product_id del POS (= Product.sku); fallback a reference
+        const prod = productos.find(p => p.reference === item.product_reference);
+        const productId = prod?.familia_id || item.product_reference;
+
         for (const [locationId, qty] of Object.entries(refAssignments)) {
           const quantity = Number(qty);
           if (quantity <= 0) continue;
 
           const existingInv = inventory.find(
-            inv => inv.product_id === item.product_reference && inv.location_id === locationId
+            inv => inv.product_id === productId && inv.location_id === locationId
           );
           if (existingInv) {
             await Inventory.update(existingInv.id, {
@@ -164,7 +168,7 @@ export default function MerchandiseAssignment() {
             });
           } else {
             await Inventory.create({
-              product_id: item.product_reference,
+              product_id: productId,
               location_id: locationId,
               current_stock: quantity,
               available_stock: quantity,

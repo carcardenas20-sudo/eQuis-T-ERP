@@ -60,9 +60,7 @@ const comercialGroups = [
 const produccionGroups = [
   {
     title: "Producción", items: [
-      { title: "Remisiones", url: createPageUrl("Prod_Remisiones"), icon: Truck, permissions: ["produccion_view", "produccion_pipeline_view"] },
-      { title: "Planificador", url: createPageUrl("Prod_PlanificacionRemisiones"), icon: ListChecks, permissions: ["produccion_view", "produccion_pipeline_view"] },
-      { title: "Asignaciones", url: createPageUrl("Prod_AsignacionesIndividualesPage"), icon: UserCheck, permissions: ["produccion_view"] },
+      { title: "Asignaciones", url: createPageUrl("Prod_Asignaciones"), icon: UserCheck, permissions: ["produccion_view"] },
       { title: "Operaciones", url: createPageUrl("Prod_Operaciones"), icon: Wrench, permissions: ["produccion_view"] },
     ]
   },

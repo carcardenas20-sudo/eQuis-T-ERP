@@ -40,6 +40,7 @@ import Prod_Inventario from './pages/Prod_Inventario';
 import Prod_Proveedores from './pages/Prod_Proveedores';
 import Prod_Compras from './pages/Prod_Compras';
 import Prod_Presupuestos from './pages/Prod_Presupuestos';
+import Prod_Asignaciones from './pages/Prod_Asignaciones';
 import Prod_EstadoCuentaPublico from './pages/Prod_EstadoCuentaPublico';
 
 // ── MÓDULO OPERARIOS (produccionequist) ───────────────────────
@@ -104,6 +105,7 @@ export const PAGES = {
   "Prod_Proveedores": Prod_Proveedores,
   "Prod_Compras": Prod_Compras,
   "Prod_Presupuestos": Prod_Presupuestos,
+  "Prod_Asignaciones": Prod_Asignaciones,
   "Prod_EstadoCuentaPublico": Prod_EstadoCuentaPublico,
 
   // Operarios

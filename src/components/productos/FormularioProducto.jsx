@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import GestorCombinacionesPredefinidas from './GestorCombinacionesPredefinidas';
 
-export default function FormularioProducto({ producto, materiasPrimas, colores = [], familias = [], onSubmit, onCancel }) {
+export default function FormularioProducto({ producto, materiasPrimas, colores = [], familias = [], onSubmit, onCancel, onCreateFamilia }) {
   const DRAFT_KEY = `producto_draft_${producto?.id || 'nuevo'}`;
 
   const [formData, setFormData] = useState(() => {
@@ -76,6 +76,9 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
   }, [formData]);
 
   const [tallaInput, setTallaInput] = useState("");
+  const [showNuevaFamilia, setShowNuevaFamilia] = useState(false);
+  const [nuevaFamiliaData, setNuevaFamiliaData] = useState({ sku: "", name: "", sale_price: "" });
+  const [savingFamilia, setSavingFamilia] = useState(false);
 
   const costoTotalMateriales = useMemo(() => {
     return (formData.materiales_requeridos || []).reduce((total, material) => {
@@ -121,6 +124,27 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
       ...prev,
       materiales_requeridos: prev.materiales_requeridos.map((m, i) => i === index ? { ...m, [campo]: valor } : m)
     }));
+  };
+
+  const handleGuardarNuevaFamilia = async () => {
+    if (!nuevaFamiliaData.sku.trim() || !nuevaFamiliaData.name.trim()) {
+      alert("SKU y Nombre son obligatorios.");
+      return;
+    }
+    setSavingFamilia(true);
+    const createdId = await onCreateFamilia({
+      sku: nuevaFamiliaData.sku.trim(),
+      name: nuevaFamiliaData.name.trim(),
+      sale_price: parseFloat(nuevaFamiliaData.sale_price) || 0,
+      category: "chaquetas_hombre",
+      is_active: true,
+    });
+    if (createdId) {
+      setFormData(prev => ({ ...prev, familia_id: createdId }));
+    }
+    setShowNuevaFamilia(false);
+    setNuevaFamiliaData({ sku: "", name: "", sale_price: "" });
+    setSavingFamilia(false);
   };
 
   const handleSubmit = (e) => {
@@ -300,23 +324,101 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                       </div>
                       <div className="space-y-2">
                         <Label>Familia POS</Label>
-                        <Select
-                          value={formData.familia_id || ""}
-                          onValueChange={(v) => setFormData({ ...formData, familia_id: v === "_none" ? "" : v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sin familia" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="_none">Sin familia</SelectItem>
-                            {familias.map(f => (
-                              <SelectItem key={f.id} value={f.id}>
-                                {f.name} {f.sku ? `(${f.sku})` : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                          <Select
+                            value={formData.familia_id || ""}
+                            onValueChange={(v) => setFormData({ ...formData, familia_id: v === "_none" ? "" : v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sin familia" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_none">Sin familia</SelectItem>
+                              {familias.map(f => (
+                                <SelectItem key={f.id} value={f.id}>
+                                  {f.name} {f.sku ? `(${f.sku})` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {onCreateFamilia && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="shrink-0 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                              title="Crear nueva familia POS"
+                              onClick={() => {
+                                setNuevaFamiliaData({
+                                  sku: formData.reference || "",
+                                  name: formData.nombre || "",
+                                  sale_price: formData.precio_venta || "",
+                                });
+                                setShowNuevaFamilia(true);
+                              }}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                         <p className="text-xs text-slate-500">Grupo comercial en el POS — <span className="font-medium text-indigo-600">requerido para sincronizar precios</span></p>
+
+                        {/* Mini-modal nueva familia */}
+                        {showNuevaFamilia && (
+                          <div className="mt-2 p-3 border border-indigo-200 rounded-lg bg-indigo-50 space-y-2">
+                            <p className="text-xs font-semibold text-indigo-700">Nueva familia en el catálogo POS</p>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <Label className="text-xs text-slate-500">SKU *</Label>
+                                <Input
+                                  value={nuevaFamiliaData.sku}
+                                  onChange={e => setNuevaFamiliaData(prev => ({ ...prev, sku: e.target.value }))}
+                                  className="h-8 text-xs mt-0.5"
+                                  placeholder="Ej: CHJ-001"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Label className="text-xs text-slate-500">Nombre *</Label>
+                                <Input
+                                  value={nuevaFamiliaData.name}
+                                  onChange={e => setNuevaFamiliaData(prev => ({ ...prev, name: e.target.value }))}
+                                  className="h-8 text-xs mt-0.5"
+                                  placeholder="Nombre para el POS"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-slate-500">Precio venta detal ($)</Label>
+                              <Input
+                                type="number"
+                                value={nuevaFamiliaData.sale_price}
+                                onChange={e => setNuevaFamiliaData(prev => ({ ...prev, sale_price: e.target.value }))}
+                                className="h-8 text-xs mt-0.5"
+                                placeholder="0"
+                              />
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 flex-1"
+                                onClick={handleGuardarNuevaFamilia}
+                                disabled={savingFamilia}
+                              >
+                                {savingFamilia ? "Creando..." : "Crear y seleccionar"}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() => setShowNuevaFamilia(false)}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 

@@ -149,8 +149,8 @@ export default function Dashboard() {
             deliveries={data.deliveries}
             dispatches={data.dispatches}
           />
-          <AvailableForDispatch 
-            inventory={data.inventory}
+          <AvailableForDispatch
+            dispatches={data.dispatches}
             products={data.products}
           />
         </div>

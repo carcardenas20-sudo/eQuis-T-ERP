@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Calendar, TruckIcon, PackageCheck, Plus, Trash2, Save } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { User, Calendar, TruckIcon, PackageCheck, Plus, Trash2, Save, ClipboardList } from "lucide-react";
 import BulkDeliveryForm from "@/components/operations/BulkDeliveryForm";
 
 const getColombiaTodayString = () => {
@@ -26,6 +27,9 @@ export default function DailyOperations() {
   const [loading, setLoading] = useState(true);
   const [allDispatches, setAllDispatches] = useState([]);
   const [allDeliveries, setAllDeliveries] = useState([]);
+  const [lotesDispatches, setLotesDispatches] = useState([]); // despachos sin operario (de asignaciones)
+  const [asignandoLote, setAsignandoLote] = useState(null);   // dispatch id siendo asignado
+  const [loteEmployee, setLoteEmployee] = useState({});        // { dispatchId: employeeId }
 
   useEffect(() => {
     loadData();
@@ -46,6 +50,11 @@ export default function DailyOperations() {
       setInventory(inventoryData || []);
       setAllDispatches(dispatchesData || []);
       setAllDeliveries(deliveriesData || []);
+      // Lotes pendientes: despachos creados desde Asignaciones sin operario aún
+      const pendientes = (dispatchesData || []).filter(
+        d => (d.estado_lote === "pendiente" || d.lote_remision) && !d.employee_id
+      );
+      setLotesDispatches(pendientes);
     } catch (err) {
       console.error("Error:", err);
     }
@@ -270,6 +279,23 @@ export default function DailyOperations() {
     }
   };
 
+  const handleAsignarLote = async (dispatch) => {
+    const empId = loteEmployee[dispatch.id];
+    if (!empId) { alert("Selecciona un operario para este lote."); return; }
+    setAsignandoLote(dispatch.id);
+    try {
+      await base44.entities.Dispatch.update(dispatch.id, {
+        employee_id: empId,
+        dispatch_date: getColombiaTodayString(),
+        estado_lote: "asignado",
+      });
+      loadData();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+    setAsignandoLote(null);
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
@@ -292,6 +318,14 @@ export default function DailyOperations() {
           <TabsList className="mb-4 sm:mb-6">
             <TabsTrigger value="individual">Individual</TabsTrigger>
             <TabsTrigger value="masivo">Registro Masivo</TabsTrigger>
+            <TabsTrigger value="lotes" className="relative">
+              Lotes Pendientes
+              {lotesDispatches.length > 0 && (
+                <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">
+                  {lotesDispatches.length}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="masivo">
@@ -502,6 +536,69 @@ export default function DailyOperations() {
           </Card>
           </div>
           </TabsContent>
+
+          {/* ── Tab Lotes Pendientes ── */}
+          <TabsContent value="lotes">
+            {lotesDispatches.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <ClipboardList className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                  <p className="text-slate-500 font-medium">No hay lotes pendientes de asignación.</p>
+                  <p className="text-slate-400 text-sm mt-1">Los lotes se crean desde Producción → Asignaciones.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {lotesDispatches.map(dispatch => (
+                  <Card key={dispatch.id} className="border-amber-200">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <PackageCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span className="font-semibold text-slate-800">{dispatch.product_reference}</span>
+                            <Badge className="bg-amber-100 text-amber-700 text-xs">{dispatch.quantity} uds</Badge>
+                          </div>
+                          {dispatch.observations && (
+                            <p className="text-xs text-slate-500 mt-1 ml-6 truncate">{dispatch.observations}</p>
+                          )}
+                          {dispatch.lote_remision && (
+                            <p className="text-xs text-slate-400 mt-0.5 ml-6 font-mono">{dispatch.lote_remision}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Select
+                            value={loteEmployee[dispatch.id] || ""}
+                            onValueChange={v => setLoteEmployee(prev => ({ ...prev, [dispatch.id]: v }))}
+                          >
+                            <SelectTrigger className="w-44 h-9 text-sm">
+                              <SelectValue placeholder="Operario..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {employees.map(e => (
+                                <SelectItem key={e.employee_id} value={e.employee_id}>
+                                  {e.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 h-9"
+                            onClick={() => handleAsignarLote(dispatch)}
+                            disabled={asignandoLote === dispatch.id || !loteEmployee[dispatch.id]}
+                          >
+                            {asignandoLote === dispatch.id ? "..." : "Despachar"}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           </Tabs>
       </div>
     </div>
