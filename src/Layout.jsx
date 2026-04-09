@@ -33,16 +33,10 @@ const comercialGroups = [
   },
   {
     title: "Inventario", items: [
-      { title: "Productos", url: createPageUrl("Products"), icon: Package, permissions: ["products_view", "products_create"] },
       { title: "Inventario", url: createPageUrl("Inventory"), icon: MapPin, permissions: ["inventory_view"] },
       { title: "Auditorías", url: createPageUrl("InventoryAudits"), icon: MapPin, permissions: ["inventory_view"] },
       { title: "Traslados", url: createPageUrl("Transfers"), icon: ArrowRightLeft, permissions: ["inventory_transfer"] },
       { title: "Asignación Mercancía", url: createPageUrl("MerchandiseAssignment"), icon: PackageCheck, permissions: ["inventory_view"] },
-    ]
-  },
-  {
-    title: "Compras", items: [
-      { title: "Compras", url: createPageUrl("Purchases"), icon: ShoppingBag, permissions: ["purchases_view"] },
     ]
   },
   {
