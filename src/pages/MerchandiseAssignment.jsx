@@ -4,7 +4,7 @@ import { Location } from "@/entities/Location";
 import { Inventory } from "@/entities/Inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PackageCheck, CheckCircle2, Store } from "lucide-react";
+import { PackageCheck, CheckCircle2, Store, RefreshCw } from "lucide-react";
 
 const MerchandiseEntry = localClient.entities["MerchandiseEntry"];
 const Producto = localClient.entities["Producto"];
@@ -149,11 +149,17 @@ export default function MerchandiseAssignment() {
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-5xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Asignación de Mercancía</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Asigna las entradas de bodega a cada punto de venta. Las cantidades se sumarán automáticamente al inventario.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Asignación de Mercancía</h1>
+            <p className="text-slate-500 text-sm mt-1">
+              Asigna las entradas de bodega a cada punto de venta. Las cantidades se sumarán automáticamente al inventario.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="gap-2 shrink-0">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Recargar
+          </Button>
         </div>
 
         {pendingEntries.length === 0 ? (

@@ -268,6 +268,49 @@ async function runMigrations(client) {
         `);
         console.log('✅ Migration: reference + costo_mano_obra columns added to entity_producto_produccion');
       }
+    },
+    {
+      name: 'migrate_merchandise_entry_from_jsonb',
+      sql: async () => {
+        // Move existing MerchandiseEntry rows from app_entities to entity_merchandise_entry
+        await client.query(`
+          INSERT INTO entity_merchandise_entry (id, entry_date, status, total_units, assigned_date, data, created_date, updated_date, created_by_id)
+          SELECT
+            id,
+            NULLIF(data->>'entry_date', ''),
+            COALESCE(NULLIF(data->>'status', ''), 'pendiente'),
+            COALESCE(NULLIF(data->>'total_units', '')::NUMERIC, 0),
+            NULLIF(data->>'assigned_date', ''),
+            data,
+            created_date,
+            updated_date,
+            created_by_id
+          FROM app_entities
+          WHERE entity_type = 'MerchandiseEntry'
+          ON CONFLICT (id) DO NOTHING
+        `);
+        console.log('✅ Migration: MerchandiseEntry rows moved to entity_merchandise_entry');
+      }
+    },
+    {
+      name: 'migrate_app_config_from_jsonb',
+      sql: async () => {
+        await client.query(`
+          INSERT INTO entity_app_config (id, key, value, data, created_date, updated_date, created_by_id)
+          SELECT
+            id,
+            NULLIF(data->>'key', ''),
+            NULLIF(data->>'value', ''),
+            data,
+            created_date,
+            updated_date,
+            created_by_id
+          FROM app_entities
+          WHERE entity_type = 'AppConfig'
+          ON CONFLICT (id) DO NOTHING
+        `);
+        console.log('✅ Migration: AppConfig rows moved to entity_app_config');
+      }
     }
   ];
 

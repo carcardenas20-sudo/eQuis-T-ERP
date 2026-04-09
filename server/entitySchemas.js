@@ -536,6 +536,26 @@ export const ENTITY_SCHEMAS = {
     },
     indexes: ['factura_id', 'proveedor_id'],
   },
+
+  MerchandiseEntry: {
+    table: 'entity_merchandise_entry',
+    typed: {
+      entry_date: 'TEXT',
+      status: "TEXT DEFAULT 'pendiente'",
+      total_units: 'NUMERIC(14,4) DEFAULT 0',
+      assigned_date: 'TEXT',
+    },
+    indexes: ['status', 'entry_date'],
+  },
+
+  AppConfig: {
+    table: 'entity_app_config',
+    typed: {
+      key: 'TEXT',
+      value: 'TEXT',
+    },
+    indexes: ['key'],
+  },
 };
 
 /**
