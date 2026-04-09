@@ -136,6 +136,12 @@ export default function UsersPage() {
           setIsSaving(false);
           return;
         }
+        const emailExists = users.some(u => u.email?.toLowerCase() === dataToSend.email?.toLowerCase());
+        if (emailExists) {
+          alert(`Ya existe un usuario con el email "${dataToSend.email}". Usa un email diferente.`);
+          setIsSaving(false);
+          return;
+        }
         await User.create(dataToSend);
         setIsFormOpen(false);
         setEditingUser(null);
@@ -162,7 +168,12 @@ export default function UsersPage() {
       }
     } catch (error) {
       console.error("Error saving user:", error);
-      alert("Error al guardar usuario: " + error.message);
+      const msg = error.message || '';
+      if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('email')) {
+        alert("Ya existe un usuario con ese email. Usa un email diferente.");
+      } else {
+        alert("Error al guardar usuario: " + msg);
+      }
     }
     setIsSaving(false);
   };
