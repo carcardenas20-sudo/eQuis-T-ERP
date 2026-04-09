@@ -274,14 +274,14 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
             todosCuadran ? "bg-green-700 border-green-700 text-white" : "bg-slate-800 border-slate-800 text-white"
           }`}>
             <p className="text-xs font-semibold opacity-70 uppercase tracking-wide mb-3">📦 Entregas registradas en sistema</p>
-            <div className="flex gap-3 flex-wrap items-start">
+            <div className="grid grid-cols-2 gap-2">
               <div className="bg-white/10 rounded-lg px-3 py-2">
                 <p className="text-xs opacity-70">Total general</p>
                 <p className="text-2xl font-bold">{totalGeneral.toLocaleString("es-CO")} uds</p>
               </div>
               {Object.entries(totalPorRef).map(([ref, qty]) => (
                 <div key={ref} className="bg-white/10 rounded-lg px-3 py-2">
-                  <p className="text-xs opacity-70">{prodName(ref)}</p>
+                  <p className="text-xs opacity-70 truncate">{prodName(ref)}</p>
                   <p className="text-xl font-bold">{qty.toLocaleString("es-CO")} uds</p>
                 </div>
               ))}

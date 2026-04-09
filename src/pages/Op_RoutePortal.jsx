@@ -144,7 +144,7 @@ export default function RoutePortal() {
                           <p className="text-xs text-green-200">operarios activos entregaron</p>
                         </div>
                       </div>
-                      <div className="flex gap-3 flex-wrap items-start mb-3">
+                      <div className="grid grid-cols-2 gap-2 mb-3">
                         <div className="bg-green-800 rounded-lg px-3 py-1.5 border border-green-500">
                           <p className="text-xs text-green-200 leading-tight">Total entregas</p>
                           <p className="text-lg font-bold">{Object.values(unitsByRef).reduce((s, q) => s + q, 0).toLocaleString("es-CO")} uds</p>
@@ -153,7 +153,7 @@ export default function RoutePortal() {
                           const prod = data.products.find(p => p.reference === ref);
                           return (
                             <div key={ref} className="bg-green-600 rounded-lg px-3 py-1.5">
-                              <p className="text-xs text-green-200 leading-tight">{prod?.name || `Ref. ${ref}`}</p>
+                              <p className="text-xs text-green-200 leading-tight truncate">{prod?.name || `Ref. ${ref}`}</p>
                               <p className="text-lg font-bold">{qty.toLocaleString("es-CO")} uds</p>
                             </div>
                           );
@@ -166,7 +166,7 @@ export default function RoutePortal() {
                   {totalReparadas > 0 && (
                     <>
                       <p className="text-xs font-semibold text-green-200 mt-3 mb-2 uppercase tracking-wide">🔧 Reparadas retornadas hoy</p>
-                      <div className="flex gap-3 flex-wrap items-start mb-3">
+                      <div className="grid grid-cols-2 gap-2 mb-3">
                         <div className="bg-orange-800 rounded-lg px-3 py-1.5 border border-orange-500">
                           <p className="text-xs text-orange-200 leading-tight">Total reparadas</p>
                           <p className="text-lg font-bold">{totalReparadas.toLocaleString("es-CO")} uds</p>
@@ -175,7 +175,7 @@ export default function RoutePortal() {
                           const prod = data.products.find(p => p.reference === ref);
                           return (
                             <div key={ref} className="bg-orange-700 rounded-lg px-3 py-1.5">
-                              <p className="text-xs text-orange-200 leading-tight">{prod?.name || `Ref. ${ref}`}</p>
+                              <p className="text-xs text-orange-200 leading-tight truncate">{prod?.name || `Ref. ${ref}`}</p>
                               <p className="text-lg font-bold">{qty.toLocaleString("es-CO")} uds</p>
                             </div>
                           );
@@ -188,7 +188,7 @@ export default function RoutePortal() {
                   {totalDispatched > 0 && (
                     <>
                       <p className="text-xs font-semibold text-green-200 mt-3 mb-2 uppercase tracking-wide">🚧 Despachos de hoy</p>
-                      <div className="flex gap-3 flex-wrap items-start">
+                      <div className="grid grid-cols-2 gap-2">
                         <div className="bg-blue-800 rounded-lg px-3 py-1.5 border border-blue-500">
                           <p className="text-xs text-blue-200 leading-tight">Total despachado</p>
                           <p className="text-lg font-bold">{totalDispatched.toLocaleString("es-CO")} uds</p>
@@ -197,7 +197,7 @@ export default function RoutePortal() {
                           const prod = data.products.find(p => p.reference === ref);
                           return (
                             <div key={ref} className="bg-blue-700 rounded-lg px-3 py-1.5">
-                              <p className="text-xs text-blue-200 leading-tight">{prod?.name || `Ref. ${ref}`}</p>
+                              <p className="text-xs text-blue-200 leading-tight truncate">{prod?.name || `Ref. ${ref}`}</p>
                               <p className="text-lg font-bold">{qty.toLocaleString("es-CO")} uds</p>
                             </div>
                           );
