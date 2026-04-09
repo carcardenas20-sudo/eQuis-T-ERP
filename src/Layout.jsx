@@ -103,7 +103,6 @@ const operariosGroups = [
       { title: "Entregas", url: createPageUrl("Op_Deliveries"), icon: PackageCheck, permissions: ["operarios_view"] },
       { title: "Despachos", url: createPageUrl("Op_Dispatches"), icon: TruckIcon, permissions: ["operarios_view"] },
       { title: "Pendientes", url: createPageUrl("Op_Pending"), icon: Clock, permissions: ["operarios_view"] },
-      { title: "Mis Entregas", url: createPageUrl("Op_MyDeliveries"), icon: PackageCheck, permissions: ["operarios_view"] },
     ]
   },
   {
@@ -112,7 +111,6 @@ const operariosGroups = [
       { title: "Transferencias", url: createPageUrl("Op_BankTransfers"), icon: ArrowRightLeft, permissions: ["operarios_admin"] },
       { title: "Cotizador Salario", url: createPageUrl("Op_SalaryQuote"), icon: Calculator, permissions: ["operarios_view"] },
       { title: "Compras Empleados", url: createPageUrl("Op_EmployeePurchases"), icon: ShoppingBag, permissions: ["operarios_view"] },
-      { title: "Solicitud de Pago", url: createPageUrl("Op_PaymentRequest"), icon: Receipt, permissions: ["operarios_view"] },
       { title: "Auditoría Op.", url: createPageUrl("Op_AuditLog"), icon: Eye, permissions: ["operarios_admin"] },
     ]
   },
