@@ -92,6 +92,14 @@ export default function GestorCombinacionesPredefinidas({ formData, setFormData,
     return entry?.color_id || '';
   };
 
+  const getTextColor = (hex) => {
+    if (!hex || hex.length < 7) return '#ffffff';
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#333333' : '#ffffff';
+  };
+
   const getSeccionLabel = (seccion) => {
     const labels = {
       superior: 'Superior', central: 'Central', inferior: 'Inferior',
@@ -215,13 +223,28 @@ export default function GestorCombinacionesPredefinidas({ formData, setFormData,
                                   setOpenCell(isOpenPalette ? null : { combId: comb.id, rowId: mat.row_id });
                                   setFillOpen(null);
                                 }}
-                                className={`w-8 h-8 rounded-full border-2 mx-auto block transition-all hover:scale-110 ${
+                                className={`w-11 h-11 rounded-full border-2 mx-auto flex items-center justify-center overflow-hidden transition-all hover:scale-105 ${
                                   selectedColor
                                     ? 'border-slate-300 shadow-sm'
                                     : 'border-dashed border-slate-300 bg-slate-100'
                                 }`}
                                 style={selectedColor ? { backgroundColor: selectedColor.codigo_hex } : {}}
-                              />
+                              >
+                                {selectedColor && (
+                                  <span
+                                    className="text-center leading-tight px-0.5 break-words pointer-events-none select-none"
+                                    style={{
+                                      fontSize: '6.5px',
+                                      color: getTextColor(selectedColor.codigo_hex),
+                                      lineHeight: '1.15',
+                                      maxWidth: '90%',
+                                      wordBreak: 'break-word',
+                                    }}
+                                  >
+                                    {selectedColor.nombre}
+                                  </span>
+                                )}
+                              </button>
                               {isOpenPalette && (
                                 <div
                                   className="absolute top-full left-1/2 -translate-x-1/2 z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-3 mt-1 w-52"
