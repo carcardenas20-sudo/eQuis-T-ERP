@@ -454,17 +454,6 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                        const hayObjetivo = totalObjetivo > 0;
                        const diferencia = totalAsignado - totalObjetivo;
 
-                       const actualizarObjetivo = (talla, valor) => {
-                         setFormData(prev => {
-                           const newProductos = [...prev.productos];
-                           newProductos[prodIndex] = {
-                             ...newProductos[prodIndex],
-                             objetivo_por_talla: { ...objetivoPorTalla, [talla]: parseInt(valor) || 0 }
-                           };
-                           return { ...prev, productos: newProductos };
-                         });
-                       };
-
                        return (
                          <Card key={item.id} className="border border-slate-200">
                            <CardContent className="p-3 sm:p-4">
@@ -497,8 +486,6 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                                 producto={producto}
                                 materiasPrimas={materiasPrimas}
                                 colores={colores}
-                                objetivoPorTalla={objetivoPorTalla}
-                                onUpdateObjetivo={actualizarObjetivo}
                                 onChange={(nuevasCombinaciones) => {
                                   setFormData(prev => {
                                     const newProductos = [...prev.productos];
