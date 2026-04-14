@@ -65,16 +65,18 @@ export default function Presupuestos() {
   };
 
   const handleSubmit = async (data) => {
-    let presupuestoActualizado;
-    if (editingPresupuesto?.id) { // Check if there's an ID, meaning it's an existing budget
-      presupuestoActualizado = await Presupuesto.update(editingPresupuesto.id, data);
-    } else { // No ID means it's a new budget (either fresh or duplicated)
-      presupuestoActualizado = await Presupuesto.create(data);
+    try {
+      if (editingPresupuesto?.id) {
+        await Presupuesto.update(editingPresupuesto.id, data);
+      } else {
+        await Presupuesto.create(data);
+      }
+      setShowForm(false);
+      setEditingPresupuesto(null);
+      loadData();
+    } catch (err) {
+      alert('Error al guardar el presupuesto: ' + err.message);
     }
-
-    setShowForm(false);
-    setEditingPresupuesto(null);
-    loadData();
   };
 
   const handleAsignacionIndividual = (presupuesto) => {

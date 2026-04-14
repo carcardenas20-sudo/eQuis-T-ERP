@@ -297,11 +297,6 @@ function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, 
         
         <CardContent className="space-y-4 flex-1 flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 text-sm">
-              <User className="w-4 h-4 text-slate-400" />
-              <span className="font-medium text-slate-900">{presupuesto.cliente}</span>
-            </div>
-
             {presupuesto.fecha_entrega && (
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="w-4 h-4 text-slate-400" />
