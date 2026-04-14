@@ -315,7 +315,11 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
       alert("Complete los campos obligatorios");
       return;
     }
-    onSubmit(formData);
+    const dataToSend = {
+      ...formData,
+      fecha_entrega: formData.fecha_entrega || null,
+    };
+    onSubmit(dataToSend);
   };
 
   const esCopia = presupuesto && !presupuesto.id && presupuesto.numero_presupuesto?.includes(' - Copia');
