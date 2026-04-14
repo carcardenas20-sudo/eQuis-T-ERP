@@ -489,37 +489,6 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                                    )}
                                  </div>
 
-                                 {/* Objetivo por talla + comparativo */}
-                                 {tallas.length > 0 && (
-                                   <div className="mt-2 space-y-1">
-                                     <p className="text-xs text-slate-400 font-medium">Objetivo por talla → asignado:</p>
-                                     <div className="flex flex-wrap gap-2">
-                                       {tallas.map(talla => {
-                                         const obj = objetivoPorTalla[talla] || 0;
-                                         const asig = asignadoPorTalla[talla] || 0;
-                                         const diff = asig - obj;
-                                         const color = obj === 0 ? 'border-slate-200 bg-slate-50 text-slate-500'
-                                           : diff === 0 ? 'border-green-300 bg-green-50 text-green-700'
-                                           : diff > 0 ? 'border-red-300 bg-red-50 text-red-700'
-                                           : 'border-orange-300 bg-orange-50 text-orange-700';
-                                         return (
-                                           <div key={talla} className={`flex items-center gap-1 border rounded-lg px-2 py-1 ${color}`}>
-                                             <span className="text-xs font-bold w-5 text-center">{talla}</span>
-                                             <Input
-                                               type="number" min="0"
-                                               value={obj || ''}
-                                               placeholder="0"
-                                               onChange={(e) => actualizarObjetivo(talla, e.target.value)}
-                                               onClick={e => e.stopPropagation()}
-                                               className="w-12 h-5 text-xs text-center border-0 bg-transparent p-0 font-medium"
-                                             />
-                                             <span className="text-xs opacity-70">→ {asig}</span>
-                                           </div>
-                                         );
-                                       })}
-                                     </div>
-                                   </div>
-                                 )}
                                   <div className="mt-2 max-w-xs">
                                     <Label className="text-xs text-slate-500">Unidades por Asignación</Label>
                                     <Input
@@ -546,6 +515,8 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                                 producto={producto}
                                 materiasPrimas={materiasPrimas}
                                 colores={colores}
+                                objetivoPorTalla={objetivoPorTalla}
+                                onUpdateObjetivo={actualizarObjetivo}
                                 onChange={(nuevasCombinaciones) => {
                                   setFormData(prev => {
                                     const newProductos = [...prev.productos];
