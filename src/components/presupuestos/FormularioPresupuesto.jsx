@@ -489,20 +489,6 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                                    )}
                                  </div>
 
-                                  <div className="mt-2 max-w-xs">
-                                    <Label className="text-xs text-slate-500">Unidades por Asignación</Label>
-                                    <Input
-                                      type="number"
-                                      value={item.unidades_por_asignacion || 20}
-                                      onChange={(e) => {
-                                        const nuevosProductos = [...formData.productos];
-                                        nuevosProductos[prodIndex].unidades_por_asignacion = parseInt(e.target.value) || 0;
-                                        setFormData(prev => ({ ...prev, productos: nuevosProductos }));
-                                      }}
-                                      className="h-7 mt-1 text-sm w-24"
-                                      min="0"
-                                    />
-                                  </div>
                                 </div>
                                 <Button variant="ghost" size="sm" onClick={() => eliminarProducto(prodIndex)}
                                   className="text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0">
