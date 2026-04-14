@@ -36,8 +36,7 @@ export default function Presupuestos() {
 
       if (searchTerm) {
         filtered = filtered.filter(p =>
-          p.numero_presupuesto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.cliente.toLowerCase().includes(searchTerm.toLowerCase())
+          p.numero_presupuesto.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
       setFilteredPresupuestos(filtered);
@@ -158,7 +157,7 @@ export default function Presupuestos() {
             <div className="relative">
               <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
               <Input
-                placeholder="Buscar por número de presupuesto o cliente..."
+                placeholder="Buscar por número de presupuesto..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 h-12 border-slate-200 focus:ring-2 focus:ring-green-500"

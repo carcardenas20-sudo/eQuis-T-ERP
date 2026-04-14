@@ -311,7 +311,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.numero_presupuesto || !formData.cliente) {
+    if (!formData.numero_presupuesto) {
       alert("Complete los campos obligatorios");
       return;
     }
@@ -346,7 +346,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                 {esCopia && (
                   <p className="text-xs text-yellow-600 mt-0.5 flex items-center gap-1">
                     <Copy className="w-3 h-3" />
-                    Estás editando una copia. Cambia el cliente y guarda.
+                    Estás editando una copia. Cambia el número y guarda.
                   </p>
                 )}
               </div>
@@ -376,14 +376,10 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                 {/* TAB 1: INFO */}
                 {activeTab === 'info' && (
                   <div className="space-y-4 mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
                         <Label>Número de Presupuesto *</Label>
                         <Input value={formData.numero_presupuesto} onChange={(e) => setFormData({ ...formData, numero_presupuesto: e.target.value })} required />
-                      </div>
-                      <div>
-                        <Label>Cliente *</Label>
-                        <Input value={formData.cliente} onChange={(e) => setFormData({ ...formData, cliente: e.target.value })} required />
                       </div>
                       <div>
                         <Label>Fecha de Entrega</Label>
@@ -705,7 +701,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                         <CardContent className="p-4 space-y-3">
                           <h4 className="font-semibold text-slate-800 text-sm">Resumen del Presupuesto</h4>
                           <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-slate-500">Cliente:</span><span className="font-medium">{formData.cliente || '—'}</span></div>
+
                             <div className="flex justify-between"><span className="text-slate-500">Productos:</span><span className="font-medium">{formData.productos.length}</span></div>
                             <div className="flex justify-between"><span className="text-slate-500">Combinaciones:</span>
                               <span className="font-medium">{formData.productos.reduce((s, p) => s + (p.combinaciones || []).length, 0)}</span>
