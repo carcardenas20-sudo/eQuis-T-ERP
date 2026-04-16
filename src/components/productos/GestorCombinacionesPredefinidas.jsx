@@ -1,13 +1,52 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Copy, ChevronDown } from "lucide-react";
+
+// Paleta flotante que se renderiza fuera del contenedor con overflow
+function FloatingPalette({ anchorRef, children, onClose }) {
+  const [pos, setPos] = useState(null);
+  const paletteRef = useRef(null);
+
+  useEffect(() => {
+    if (!anchorRef?.current) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    const paletteW = 220;
+    let left = rect.left + rect.width / 2 - paletteW / 2;
+    // Evitar que se salga por la derecha
+    if (left + paletteW > window.innerWidth - 8) left = window.innerWidth - paletteW - 8;
+    if (left < 8) left = 8;
+    // Si queda cortada abajo, ponerla arriba
+    const spaceBelow = window.innerHeight - rect.bottom;
+    let top = rect.bottom + 4;
+    if (spaceBelow < 200) top = rect.top - 200;
+    setPos({ top, left });
+  }, [anchorRef]);
+
+  if (!pos) return null;
+
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+      <div
+        ref={paletteRef}
+        className="fixed z-[9999] bg-white border border-slate-200 rounded-xl shadow-2xl p-3"
+        style={{ top: pos.top, left: pos.left, width: 220, maxHeight: 200, overflowY: 'auto' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </>,
+    document.body
+  );
+}
 
 export default function GestorCombinacionesPredefinidas({ formData, setFormData, materiasPrimas = [], colores = [] }) {
   const combinaciones = formData.combinaciones_predefinidas || [];
   const materiales = formData.materiales_requeridos || [];
 
-  // openCell: { combId, rowId } | null
-  // fillOpen: rowId | null
+  // openCell: { combId, rowId, ref } | null
+  // fillOpen: { rowId, ref } | null
   const [openCell, setOpenCell] = useState(null);
   const [fillOpen, setFillOpen] = useState(null);
 
@@ -108,8 +147,6 @@ export default function GestorCombinacionesPredefinidas({ formData, setFormData,
     return labels[seccion] || seccion;
   };
 
-  const anyOpen = openCell !== null || fillOpen !== null;
-
   if (materiales.length === 0) return (
     <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm">
       Primero agrega los materiales del producto.
@@ -124,11 +161,6 @@ export default function GestorCombinacionesPredefinidas({ formData, setFormData,
 
   return (
     <div className="space-y-3">
-      {/* Backdrop para cerrar paletas */}
-      {anyOpen && (
-        <div className="fixed inset-0 z-20" onClick={closeAll} />
-      )}
-
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500 font-medium">
           {combinaciones.length} combinación{combinaciones.length !== 1 ? 'es' : ''}
@@ -154,44 +186,19 @@ export default function GestorCombinacionesPredefinidas({ formData, setFormData,
                   </th>
                   {materialesVariables.map(mat => {
                     const mp = mpMap.get(mat.materia_prima_id);
-                    const isOpenFill = fillOpen === mat.row_id;
                     return (
-                      <th key={mat.row_id} className="px-2 py-2 text-center">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-xs font-semibold text-slate-600">{mp?.nombre || '?'}</span>
-                          <span className="text-xs text-slate-400">{getSeccionLabel(mat.seccion)}</span>
-                          {/* Botón "Aplicar a todas" */}
-                          <div className="relative mt-1">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setFillOpen(isOpenFill ? null : mat.row_id); setOpenCell(null); }}
-                              className="text-xs text-indigo-500 hover:text-indigo-700 flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-indigo-50 transition"
-                            >
-                              Todas <ChevronDown className="w-3 h-3" />
-                            </button>
-                            {isOpenFill && (
-                              <div
-                                className="absolute top-full left-1/2 -translate-x-1/2 z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-3 mt-1 w-52"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <p className="text-xs text-slate-500 mb-2 font-medium">Aplicar a todas las filas:</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {coloresActivos.map(color => (
-                                    <button
-                                      key={color.id}
-                                      type="button"
-                                      title={color.nombre}
-                                      onClick={() => aplicarATodas(mat.row_id, color.id)}
-                                      className="w-6 h-6 rounded-full border-2 border-transparent hover:border-slate-500 hover:scale-110 transition-all"
-                                      style={{ backgroundColor: color.codigo_hex }}
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </th>
+                      <HeaderCell
+                        key={mat.row_id}
+                        mat={mat}
+                        mp={mp}
+                        fillOpen={fillOpen}
+                        setFillOpen={setFillOpen}
+                        setOpenCell={setOpenCell}
+                        coloresActivos={coloresActivos}
+                        aplicarATodas={aplicarATodas}
+                        getSeccionLabel={getSeccionLabel}
+                        closeAll={closeAll}
+                      />
                     );
                   })}
                   <th className="w-14 px-2 py-2" />
@@ -207,72 +214,22 @@ export default function GestorCombinacionesPredefinidas({ formData, setFormData,
                     >
                       <td className="px-3 py-2 text-xs font-bold text-slate-400">{idx + 1}</td>
 
-                      {materialesVariables.map(mat => {
-                        const selectedId = getColorDeComb(comb, mat.row_id);
-                        const selectedColor = coloresMap.get(selectedId);
-                        const isOpenPalette = openCell?.combId === comb.id && openCell?.rowId === mat.row_id;
-
-                        return (
-                          <td key={mat.row_id} className="px-2 py-2 text-center">
-                            <div className="relative inline-block">
-                              <button
-                                type="button"
-                                title={selectedColor?.nombre || 'Seleccionar color'}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenCell(isOpenPalette ? null : { combId: comb.id, rowId: mat.row_id });
-                                  setFillOpen(null);
-                                }}
-                                className={`w-11 h-11 rounded-full border-2 mx-auto flex items-center justify-center overflow-hidden transition-all hover:scale-105 ${
-                                  selectedColor
-                                    ? 'border-slate-300 shadow-sm'
-                                    : 'border-dashed border-slate-300 bg-slate-100'
-                                }`}
-                                style={selectedColor ? { backgroundColor: selectedColor.codigo_hex } : {}}
-                              >
-                                {selectedColor && (
-                                  <span
-                                    className="text-center leading-tight px-0.5 break-words pointer-events-none select-none"
-                                    style={{
-                                      fontSize: '6.5px',
-                                      color: getTextColor(selectedColor.codigo_hex),
-                                      lineHeight: '1.15',
-                                      maxWidth: '90%',
-                                      wordBreak: 'break-word',
-                                    }}
-                                  >
-                                    {selectedColor.nombre}
-                                  </span>
-                                )}
-                              </button>
-                              {isOpenPalette && (
-                                <div
-                                  className="absolute top-full left-1/2 -translate-x-1/2 z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-3 mt-1 w-52"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {coloresActivos.map(color => {
-                                      const isSel = selectedId === color.id;
-                                      return (
-                                        <button
-                                          key={color.id}
-                                          type="button"
-                                          title={color.nombre}
-                                          onClick={() => actualizarColor(comb.id, mat.row_id, color.id)}
-                                          className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${
-                                            isSel ? 'border-slate-900 scale-110 shadow-md' : 'border-transparent hover:border-slate-400'
-                                          }`}
-                                          style={{ backgroundColor: color.codigo_hex }}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
+                      {materialesVariables.map(mat => (
+                        <ColorCell
+                          key={mat.row_id}
+                          comb={comb}
+                          mat={mat}
+                          openCell={openCell}
+                          setOpenCell={setOpenCell}
+                          setFillOpen={setFillOpen}
+                          coloresMap={coloresMap}
+                          coloresActivos={coloresActivos}
+                          getColorDeComb={getColorDeComb}
+                          getTextColor={getTextColor}
+                          actualizarColor={actualizarColor}
+                          closeAll={closeAll}
+                        />
+                      ))}
 
                       <td className="px-2 py-2">
                         <div className="flex items-center gap-1 justify-end">
@@ -307,5 +264,118 @@ export default function GestorCombinacionesPredefinidas({ formData, setFormData,
         Usa "Todas" en la cabecera para rellenar una columna de un clic, luego duplica y ajusta el color que varía.
       </p>
     </div>
+  );
+}
+
+// Celda de cabecera con "Aplicar a todas"
+function HeaderCell({ mat, mp, fillOpen, setFillOpen, setOpenCell, coloresActivos, aplicarATodas, getSeccionLabel, closeAll }) {
+  const btnRef = useRef(null);
+  const isOpenFill = fillOpen?.rowId === mat.row_id;
+
+  return (
+    <th className="px-2 py-2 text-center">
+      <div className="flex flex-col items-center gap-0.5">
+        <span className="text-xs font-semibold text-slate-600">{mp?.nombre || '?'}</span>
+        <span className="text-xs text-slate-400">{getSeccionLabel(mat.seccion)}</span>
+        <div className="mt-1">
+          <button
+            ref={btnRef}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFillOpen(isOpenFill ? null : { rowId: mat.row_id, ref: btnRef });
+              setOpenCell(null);
+            }}
+            className="text-xs text-indigo-500 hover:text-indigo-700 flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-indigo-50 transition"
+          >
+            Todas <ChevronDown className="w-3 h-3" />
+          </button>
+          {isOpenFill && (
+            <FloatingPalette anchorRef={btnRef} onClose={closeAll}>
+              <p className="text-xs text-slate-500 mb-2 font-medium">Aplicar a todas las filas:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {coloresActivos.map(color => (
+                  <button
+                    key={color.id}
+                    type="button"
+                    title={color.nombre}
+                    onClick={() => aplicarATodas(mat.row_id, color.id)}
+                    className="w-6 h-6 rounded-full border-2 border-transparent hover:border-slate-500 hover:scale-110 transition-all"
+                    style={{ backgroundColor: color.codigo_hex }}
+                  />
+                ))}
+              </div>
+            </FloatingPalette>
+          )}
+        </div>
+      </div>
+    </th>
+  );
+}
+
+// Celda de color individual
+function ColorCell({ comb, mat, openCell, setOpenCell, setFillOpen, coloresMap, coloresActivos, getColorDeComb, getTextColor, actualizarColor, closeAll }) {
+  const btnRef = useRef(null);
+  const selectedId = getColorDeComb(comb, mat.row_id);
+  const selectedColor = coloresMap.get(selectedId);
+  const isOpenPalette = openCell?.combId === comb.id && openCell?.rowId === mat.row_id;
+
+  return (
+    <td className="px-2 py-2 text-center">
+      <div className="inline-block">
+        <button
+          ref={btnRef}
+          type="button"
+          title={selectedColor?.nombre || 'Seleccionar color'}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenCell(isOpenPalette ? null : { combId: comb.id, rowId: mat.row_id, ref: btnRef });
+            setFillOpen(null);
+          }}
+          className={`w-11 h-11 rounded-full border-2 mx-auto flex items-center justify-center overflow-hidden transition-all hover:scale-105 ${
+            selectedColor
+              ? 'border-slate-300 shadow-sm'
+              : 'border-dashed border-slate-300 bg-slate-100'
+          }`}
+          style={selectedColor ? { backgroundColor: selectedColor.codigo_hex } : {}}
+        >
+          {selectedColor && (
+            <span
+              className="text-center leading-tight px-0.5 break-words pointer-events-none select-none"
+              style={{
+                fontSize: '6.5px',
+                color: getTextColor(selectedColor.codigo_hex),
+                lineHeight: '1.15',
+                maxWidth: '90%',
+                wordBreak: 'break-word',
+              }}
+            >
+              {selectedColor.nombre}
+            </span>
+          )}
+        </button>
+        {isOpenPalette && (
+          <FloatingPalette anchorRef={btnRef} onClose={closeAll}>
+            <div className="flex flex-wrap gap-1.5">
+              {coloresActivos.map(color => {
+                const isSel = selectedId === color.id;
+                return (
+                  <button
+                    key={color.id}
+                    type="button"
+                    title={color.nombre}
+                    onClick={() => actualizarColor(comb.id, mat.row_id, color.id)}
+                    className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${
+                      isSel ? 'border-slate-900 scale-110 shadow-md' : 'border-transparent hover:border-slate-400'
+                    }`}
+                    style={{ backgroundColor: color.codigo_hex }}
+                  />
+                );
+              })}
+            </div>
+          </FloatingPalette>
+        )}
+      </div>
+    </td>
   );
 }
