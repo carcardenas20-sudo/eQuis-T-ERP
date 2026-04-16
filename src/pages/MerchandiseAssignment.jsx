@@ -5,7 +5,7 @@ import { Inventory } from "@/entities/Inventory";
 import { Product } from "@/entities/all";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PackageCheck, CheckCircle2, Store, RefreshCw } from "lucide-react";
+import { PackageCheck, CheckCircle2, Store, RefreshCw, Undo2, ChevronDown, ChevronUp } from "lucide-react";
 
 const Delivery = localClient.entities["Delivery"];
 const Producto = localClient.entities["Producto"];
@@ -19,6 +19,9 @@ export default function MerchandiseAssignment() {
   const [saving, setSaving] = useState(null);
   // assignments[dateKey][ref][locationId] = qty
   const [assignments, setAssignments] = useState({});
+  const [showRevert, setShowRevert] = useState(false);
+  const [assignedDeliveries, setAssignedDeliveries] = useState([]);
+  const [reverting, setReverting] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -32,8 +35,10 @@ export default function MerchandiseAssignment() {
         Producto.list(),
         Product.list(),
       ]);
-      const pending = (deliveriesData || []).filter(d => !d.inventory_assigned);
-      setDeliveries(pending);
+      const allDeliveries = deliveriesData || [];
+      setDeliveries(allDeliveries.filter(d => !d.inventory_assigned));
+      // Entregas ya asignadas desde 2026-04-09 para revertir
+      setAssignedDeliveries(allDeliveries.filter(d => d.inventory_assigned && (d.delivery_date || '') >= '2026-04-09'));
       setLocations(locationsData || []);
       setInventory(inventoryData || []);
       // Enriquecer productos de producción con el sku del POS
@@ -193,6 +198,44 @@ export default function MerchandiseAssignment() {
     setSaving(null);
   };
 
+  // Agrupar entregas asignadas por fecha
+  const assignedGroups = useMemo(() => {
+    const map = {};
+    assignedDeliveries.forEach(d => {
+      const dateKey = (d.delivery_date || "").slice(0, 10);
+      if (!dateKey) return;
+      if (!map[dateKey]) map[dateKey] = { dateKey, ids: [], totalUnits: 0 };
+      map[dateKey].ids.push(d.id);
+      map[dateKey].totalUnits += (d.items || []).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+    });
+    return Object.values(map).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+  }, [assignedDeliveries]);
+
+  const handleRevertGroup = async (group) => {
+    if (!window.confirm(`¿Revertir las ${group.ids.length} entregas del ${group.dateKey}? Volverán a aparecer como pendientes de asignación.`)) return;
+    setReverting(true);
+    try {
+      await Promise.all(group.ids.map(id => Delivery.update(id, { inventory_assigned: false })));
+      await loadData();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+    setReverting(false);
+  };
+
+  const handleRevertAll = async () => {
+    const total = assignedDeliveries.length;
+    if (!window.confirm(`¿Revertir TODAS las ${total} entregas asignadas desde el 9 de abril? Todas volverán a aparecer como pendientes.`)) return;
+    setReverting(true);
+    try {
+      await Promise.all(assignedDeliveries.map(d => Delivery.update(d.id, { inventory_assigned: false })));
+      await loadData();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+    setReverting(false);
+  };
+
   if (loading) return (
     <div className="p-6 flex justify-center">
       <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
@@ -209,11 +252,51 @@ export default function MerchandiseAssignment() {
               Asigna cada referencia a los puntos de venta que correspondan.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="gap-2 shrink-0">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Recargar
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {assignedGroups.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setShowRevert(v => !v)} className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50">
+                <Undo2 className="w-4 h-4" />
+                Revertir ({assignedDeliveries.length})
+                {showRevert ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="gap-2">
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              Recargar
+            </Button>
+          </div>
         </div>
+
+        {/* Panel de revertir */}
+        {showRevert && assignedGroups.length > 0 && (
+          <Card className="border-amber-300 bg-amber-50/50">
+            <CardContent className="py-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-amber-800">
+                  Entregas ya asignadas (desde 9 abril)
+                </p>
+                <Button size="sm" variant="outline" onClick={handleRevertAll} disabled={reverting}
+                  className="text-red-600 border-red-300 hover:bg-red-50 text-xs">
+                  {reverting ? "Revirtiendo..." : "Revertir todas"}
+                </Button>
+              </div>
+              <div className="space-y-1.5">
+                {assignedGroups.map(g => (
+                  <div key={g.dateKey} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-amber-200">
+                    <div className="text-sm">
+                      <span className="font-medium text-slate-800">{g.dateKey}</span>
+                      <span className="text-slate-500 ml-2">{g.ids.length} entrega(s) · {g.totalUnits} unidades</span>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => handleRevertGroup(g)} disabled={reverting}
+                      className="text-amber-700 hover:bg-amber-100 text-xs h-7 px-2">
+                      <Undo2 className="w-3 h-3 mr-1" /> Revertir
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {groups.length === 0 ? (
           <Card>
