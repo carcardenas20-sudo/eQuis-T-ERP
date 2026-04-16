@@ -7,17 +7,28 @@ import { Switch } from "@/components/ui/switch";
 import { Save, X, UserPlus } from "lucide-react";
 
 export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmployees = [] }) {
-  const [formData, setFormData] = useState(employee ? {
-    ...employee,
-    hire_date: employee.hire_date ? new Date(employee.hire_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-  } : {
-    name: "",
-    employee_id: "",
-    phone: "",
-    position: "",
-    hire_date: new Date().toISOString().split('T')[0],
-    is_active: true,
-    salary_per_unit: ""
+  const [formData, setFormData] = useState(() => {
+    if (employee) {
+      return {
+        ...employee,
+        hire_date: employee.hire_date ? new Date(employee.hire_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      };
+    }
+    // Auto-generar código de 3 dígitos
+    const usedNums = existingEmployees
+      .map(e => parseInt(e.employee_id, 10))
+      .filter(n => !isNaN(n) && n > 0 && n < 1000);
+    const next = usedNums.length > 0 ? Math.max(...usedNums) + 1 : 1;
+    const autoId = String(next).padStart(3, '0');
+    return {
+      name: "",
+      employee_id: autoId,
+      phone: "",
+      position: "",
+      hire_date: new Date().toISOString().split('T')[0],
+      is_active: true,
+      salary_per_unit: ""
+    };
   });
   const [errors, setErrors] = useState({});
 
