@@ -163,9 +163,9 @@ export default function POS() {
     if (!selectedPriceList || !product) return product?.sale_price || 0;
 
     const productSku = product.sku || product.id;
-    
+
     const matchingRules = priceRules.filter(rule =>
-      rule.product_sku === productSku &&
+      (rule.product_sku === productSku || rule.product_sku === product.id) &&
       rule.price_list_code === selectedPriceList &&
       rule.min_quantity <= quantity
     );
