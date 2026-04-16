@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Employee, Delivery, Dispatch, Payment, PaymentRequest } from "@/api/entitiesProduccion";
-import { base44 } from "@/api/base44Combined";
+import { portalClient } from "@/api/portalClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,7 @@ export default function EmployeePortal() {
   useEffect(() => {
     const checkPaymentWindow = async () => {
       try {
-        const configs = await base44.entities.AppConfig.filter({ key: "payment_window_opened_at" });
+        const configs = await portalClient.entities.AppConfig.filter({ key: "payment_window_opened_at" });
         if (configs.length > 0 && configs[0].value) {
           const openedAt = new Date(configs[0].value);
           const now = new Date();
@@ -58,7 +57,7 @@ export default function EmployeePortal() {
       setLoading(true);
       setError(null);
       try {
-        const [employeeData] = await Employee.filter({ employee_id: employeeId });
+        const [employeeData] = await portalClient.entities.Employee.filter({ employee_id: employeeId });
         if (!employeeData) {
           setError("Empleado no encontrado.");
           setLoading(false);
@@ -68,12 +67,12 @@ export default function EmployeePortal() {
         setEmployee(employeeData);
 
         const [deliveries, dispatches, payments, products, existingRequests, purchases] = await Promise.all([
-          Delivery.filter({ employee_id: employeeId }),
-          Dispatch.filter({ employee_id: employeeId }),
-          Payment.filter({ employee_id: employeeId }, '-payment_date'),
-          base44.entities.Producto.list(),
-          PaymentRequest.filter({ employee_id: employeeId, status: 'pending' }),
-          base44.entities.EmployeePurchase.filter({ employee_id: employeeId })
+          portalClient.entities.Delivery.filter({ employee_id: employeeId }),
+          portalClient.entities.Dispatch.filter({ employee_id: employeeId }),
+          portalClient.entities.Payment.filter({ employee_id: employeeId }, '-payment_date'),
+          portalClient.entities.Producto.list(),
+          portalClient.entities.PaymentRequest.filter({ employee_id: employeeId, status: 'pending' }),
+          portalClient.entities.EmployeePurchase.filter({ employee_id: employeeId })
         ]);
         
         const normProducts = (products || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra }));
@@ -362,7 +361,7 @@ export default function EmployeePortal() {
           request_time: colombiaTime.toTimeString().split(' ')[0],
           status: 'pending'
         };
-        await PaymentRequest.create(requestData);
+        await portalClient.entities.PaymentRequest.create(requestData);
         setHasPendingRequest(true);
         alert("Tu solicitud de pago ha sido enviada con éxito.");
       } catch (error) {

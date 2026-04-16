@@ -58,6 +58,14 @@ app.use('/api/entities', requireAuth, entityRoutes);
 app.use('/api/upload', requireAuth, uploadRoutes);
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date() }));
 
+// ─── Public portal API (no auth, read-only + limited writes) ────────────────
+const PORTAL_ALLOWED = new Set(['Employee','Delivery','Dispatch','Payment','PaymentRequest','Producto','EmployeePurchase','AppConfig']);
+app.use('/api/portal/:type', (req, res, next) => {
+  if (!PORTAL_ALLOWED.has(req.params.type)) return res.status(403).json({ error: 'Entidad no disponible en portal público' });
+  next();
+});
+app.use('/api/portal', entityRoutes);
+
 // ─── Serve frontend (React build) ────────────────────────────────────────────
 const DIST_DIR = join(__dirname, '..', 'dist');
 app.use(express.static(DIST_DIR));
