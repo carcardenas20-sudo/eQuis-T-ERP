@@ -27,6 +27,7 @@ import Sales from './pages/Sales';
 import Settings from './pages/Settings';
 import TestPermisos from './pages/TestPermisos';
 import Transfers from './pages/Transfers';
+import MerchandiseAssignment from './pages/MerchandiseAssignment';
 import Tutorials from './pages/Tutorials';
 import Users from './pages/Users';
 
@@ -93,6 +94,7 @@ export const PAGES = {
   "Settings": Settings,
   "TestPermisos": TestPermisos,
   "Transfers": Transfers,
+  "MerchandiseAssignment": MerchandiseAssignment,
   "Tutorials": Tutorials,
   "Users": Users,
 
