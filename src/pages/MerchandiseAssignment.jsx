@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { localClient } from "@/api/localClient";
 import { Location } from "@/entities/Location";
 import { Inventory } from "@/entities/Inventory";
+import { Product } from "@/entities/all";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PackageCheck, CheckCircle2, Store, RefreshCw } from "lucide-react";
@@ -24,17 +25,23 @@ export default function MerchandiseAssignment() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [deliveriesData, locationsData, inventoryData, productosData] = await Promise.all([
+      const [deliveriesData, locationsData, inventoryData, productosData, posProducts] = await Promise.all([
         Delivery.list("-delivery_date"),
         Location.list(),
         Inventory.list(),
         Producto.list(),
+        Product.list(),
       ]);
       const pending = (deliveriesData || []).filter(d => !d.inventory_assigned);
       setDeliveries(pending);
       setLocations(locationsData || []);
       setInventory(inventoryData || []);
-      setProductos((productosData || []).filter(p => p.reference));
+      // Enriquecer productos de producción con el sku del POS
+      const enriched = (productosData || []).filter(p => p.reference).map(p => {
+        const posProduct = (posProducts || []).find(pp => pp.sku === p.reference || pp.name === p.nombre);
+        return { ...p, _posSku: posProduct?.sku || p.reference };
+      });
+      setProductos(enriched);
     } catch (err) {
       console.error("Error:", err);
     }
@@ -150,9 +157,8 @@ export default function MerchandiseAssignment() {
       // Por cada referencia × sucursal, actualizar inventario
       for (const item of itemsList) {
         const refAssignments = assignments[dateKey]?.[item.product_reference] || {};
-        // Usar familia_id como product_id del POS (= Product.sku); fallback a reference
         const prod = productos.find(p => p.reference === item.product_reference);
-        const productId = prod?.familia_id || item.product_reference;
+        const productId = prod?._posSku || item.product_reference;
 
         for (const [locationId, qty] of Object.entries(refAssignments)) {
           const quantity = Number(qty);
