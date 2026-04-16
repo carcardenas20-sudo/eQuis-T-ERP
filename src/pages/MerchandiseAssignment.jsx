@@ -42,8 +42,10 @@ export default function MerchandiseAssignment() {
       setLocations(locationsData || []);
       setInventory(inventoryData || []);
       // Enriquecer productos de producción con el sku del POS
+      // familia_id del Producto = id del Product en POS; POS inventory usa Product.sku
+      const posMap = new Map((posProducts || []).map(pp => [pp.id, pp]));
       const enriched = (productosData || []).filter(p => p.reference).map(p => {
-        const posProduct = (posProducts || []).find(pp => pp.sku === p.reference || pp.name === p.nombre);
+        const posProduct = p.familia_id ? posMap.get(p.familia_id) : null;
         return { ...p, _posSku: posProduct?.sku || p.reference };
       });
       setProductos(enriched);
