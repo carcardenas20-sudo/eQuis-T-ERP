@@ -518,7 +518,7 @@ export default function POS() {
         })
       );
     }
-  }, [selectedPriceList]);
+  }, [selectedPriceList, getPriceForProduct]);
 
   if (isSessionLoading || isLoadingData) {
     return (
