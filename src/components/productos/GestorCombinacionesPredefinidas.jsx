@@ -144,8 +144,8 @@ export default function GestorCombinacionesPredefinidas({ formData, setFormData,
           Sin combinaciones. Crea la primera.
         </div>
       ) : (
-        <div className="border border-slate-200 rounded-lg overflow-hidden">
-          <div className="overflow-y-auto max-h-[460px]">
+        <div className="border border-slate-200 rounded-lg">
+          <div className="overflow-x-auto overflow-y-auto max-h-[460px]">
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
                 <tr>
