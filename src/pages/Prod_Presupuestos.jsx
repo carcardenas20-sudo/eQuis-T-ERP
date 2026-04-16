@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Presupuesto, Producto, MateriaPrima, Color, Remision, Operacion } from "@/api/entitiesChaquetas";
+import { Inventory, StockMovement } from "@/entities/all";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import _ from 'lodash';
 
 import FormularioPresupuesto from "../components/presupuestos/FormularioPresupuesto";
 import TarjetaPresupuesto from "../components/presupuestos/TarjetaPresupuesto";
-import AsignacionesIndividuales from "../components/remisiones/AsignacionesIndividuales"; // Importar nuevo componente
+import AsignacionesIndividuales from "../components/remisiones/AsignacionesIndividuales";
 
 export default function Presupuestos() {
   const [presupuestos, setPresupuestos] = useState([]);
@@ -66,11 +67,60 @@ export default function Presupuestos() {
 
   const handleSubmit = async (data) => {
     try {
+      const wasApproved = editingPresupuesto?.id && editingPresupuesto.estado !== 'aprobado' && data.estado === 'aprobado';
+      const isNewApproved = !editingPresupuesto?.id && data.estado === 'aprobado';
+
+      let presupuestoActualizado;
       if (editingPresupuesto?.id) {
-        await Presupuesto.update(editingPresupuesto.id, data);
+        presupuestoActualizado = await Presupuesto.update(editingPresupuesto.id, data);
       } else {
-        await Presupuesto.create(data);
+        presupuestoActualizado = await Presupuesto.create(data);
       }
+
+      // Al aprobar: crear stock en inventario de operarios por cada producto
+      if (wasApproved || isNewApproved) {
+        try {
+          const inventoryItems = await Inventory.list();
+          const presNum = data.numero_presupuesto || presupuestoActualizado.numero_presupuesto || '';
+          const today = new Date().toISOString().split('T')[0];
+
+          for (const productoItem of (data.productos || [])) {
+            const producto = productos.find(p => p.id === productoItem.producto_id);
+            if (!producto || !producto.reference) continue;
+
+            const totalUnidades = (productoItem.combinaciones || []).reduce((sum, comb) =>
+              sum + (comb.tallas_cantidades || []).reduce((s, tc) => s + (tc.cantidad || 0), 0), 0);
+            if (totalUnidades <= 0) continue;
+
+            const existing = (inventoryItems || []).find(inv => inv.product_reference === producto.reference);
+            const prevStock = existing ? (Number(existing.current_stock) || 0) : 0;
+            const newStock = prevStock + totalUnidades;
+
+            await StockMovement.create({
+              product_reference: producto.reference,
+              movement_type: "entrada",
+              quantity: totalUnidades,
+              movement_date: today,
+              reason: `Presupuesto aprobado ${presNum}`,
+              previous_stock: prevStock,
+              new_stock: newStock,
+            });
+
+            if (existing) {
+              await Inventory.update(existing.id, { current_stock: newStock });
+            } else {
+              await Inventory.create({
+                product_reference: producto.reference,
+                current_stock: newStock,
+                min_stock: 0,
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Error creando stock al aprobar presupuesto:", err);
+        }
+      }
+
       setShowForm(false);
       setEditingPresupuesto(null);
       loadData();
