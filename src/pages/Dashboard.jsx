@@ -77,9 +77,9 @@ export default function Dashboard() {
 
   // In preview mode, admin bypass is disabled so sections reflect the previewed role
   const isAdmin = isRealAdmin && !previewRoleId;
-  const hasComercial = isAdmin || permissions?.includes("dashboard_comercial") || permissions?.some(p => ["pos_sales","sales_view"].includes(p));
-  const hasOperarios = isAdmin || permissions?.includes("dashboard_operarios") || permissions?.includes("operarios_view");
-  const hasPipeline = isAdmin || permissions?.includes("dashboard_produccion") || permissions?.some(p => ["produccion_pipeline_view","produccion_view"].includes(p));
+  const hasComercial = isAdmin || permissions?.some(p => ["pos_sales","sales_view"].includes(p));
+  const hasOperarios = isAdmin || permissions?.includes("operarios_view");
+  const hasPipeline = isAdmin || permissions?.some(p => ["produccion_pipeline_view","produccion_view"].includes(p));
 
   useEffect(() => {
     if (isSessionLoading || !currentUser) return;
@@ -113,11 +113,10 @@ export default function Dashboard() {
         ? { location_id: userLocation.id }
         : (isAdmin && selectedLocation !== 'all' ? { location_id: selectedLocation } : {});
 
-      const [allSales, todayExpenses, allCredits, creditPaymentsToday] = await Promise.all([
+      const [allSales, todayExpenses, allCredits] = await Promise.all([
         Sale.filter({ status: 'completed', ...locationFilter }),
         Expense.filter(locationFilter),
-        Credit.filter(locationFilter),
-        Payment.filter({ type: 'credit_payment', ...locationFilter }),
+        Credit.filter(locationFilter)
       ]);
 
       const salesToday = allSales.filter(s => {
@@ -139,16 +138,6 @@ export default function Dashboard() {
           cashIncome += Number(sale.total_amount) || 0;
         }
       });
-
-      // Sumar abonos a créditos de hoy
-      creditPaymentsToday
-        .filter(p => String(p.payment_date || '').slice(0, 10) === todayStr)
-        .forEach(p => {
-          const amt = Number(p.amount) || 0;
-          if (p.method === 'cash') cashIncome += amt;
-          else if (p.method === 'card') cardIncome += amt;
-          else if (p.method === 'transfer' || p.method === 'qr') transferIncome += amt;
-        });
 
       const expensesToday = todayExpenses.filter(e => String(e.expense_date || '').slice(0, 10) === todayStr);
       const cashExpenses = expensesToday.filter(e => e.payment_method === 'cash').reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -538,8 +527,8 @@ export default function Dashboard() {
         {!hasComercial && !hasOperarios && !hasPipeline && (
           <div className="text-center py-16 text-slate-400">
             <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-lg font-medium">Sin acceso al dashboard</p>
-            <p className="text-sm mt-1">Tu rol no tiene permisos de dashboard asignados. Contacta al administrador.</p>
+            <p className="text-lg font-medium">Sin módulos asignados</p>
+            <p className="text-sm mt-1">Contacta al administrador para configurar tu rol.</p>
           </div>
         )}
 

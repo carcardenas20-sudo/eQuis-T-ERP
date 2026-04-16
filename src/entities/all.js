@@ -68,4 +68,3 @@ export const Exchange = makeEntity('Exchange');
 export const HoldCart = makeEntity('HoldCart');
 export const InventoryAudit = makeEntity('InventoryAudit');
 export const InventoryAuditItem = makeEntity('InventoryAuditItem');
-export const FixedExpense = makeEntity('FixedExpense');

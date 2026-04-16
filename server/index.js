@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { pool, query } from './db.js';
+import { pool } from './db.js';
 import { JWT_SECRET } from './config.js';
 import { ENTITY_SCHEMAS, buildCreateTableSQL, buildIndexSQL } from './entitySchemas.js';
 import authRoutes from './routes/auth.js';
@@ -54,273 +54,16 @@ const requireAuth = (req, res, next) => {
 
 app.use(authMiddleware);
 app.use('/api/auth', authRoutes);
-
-// ─── Portal público de empleados (sin auth requerida) ────────────────────────
-// Solo permite leer entidades específicas del módulo operarios
-const PORTAL_PUBLIC_ENTITIES = new Set([
-  // Portal operario (lectura)
-  'Employee', 'Payment', 'PaymentRequest', 'EmployeePurchase', 'Producto', 'AppConfig',
-  // Planillador (lectura + escritura)
-  'Delivery', 'Dispatch', 'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog',
-]);
-// Entidades en las que el portal puede escribir
-const PORTAL_WRITE_ENTITIES = new Set([
-  'PaymentRequest',           // operario solicita pago
-  'Delivery', 'Dispatch',     // planillador registra entregas/despachos
-  'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog', 'AppConfig',
-]);
-// POST /api/portal-login  → recibe employee_id lógico + pin, devuelve datos del empleado
-app.post('/api/portal-login', async (req, res) => {
-  const { employee_id, pin } = req.body || {};
-  if (!employee_id) return res.status(400).json({ error: 'Falta employee_id' });
-  try {
-    const { rows } = await query(
-      `SELECT id, name, is_active, position, phone, hire_date, data, created_date, updated_date
-       FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
-      [String(employee_id).trim()]
-    );
-    if (!rows.length) return res.status(404).json({ error: 'Empleado no encontrado' });
-    const row = rows[0];
-    const storedPin = row.data?.portal_pin;
-    if (storedPin && String(storedPin) !== String(pin || '')) {
-      return res.status(401).json({ error: 'PIN incorrecto' });
-    }
-    const { portal_pin: _p, ...dataRest } = row.data || {};
-    res.json({ ...dataRest, id: row.id, name: row.name, employee_id: row.data?.employee_id,
-      is_active: row.is_active, position: row.position, phone: row.phone,
-      hire_date: row.hire_date, created_date: row.created_date, updated_date: row.updated_date });
-  } catch (e) {
-    console.error('portal-login error', e);
-    res.status(500).json({ error: 'Error interno' });
-  }
-});
-
-app.use('/api/portal', (req, res, next) => {
-  const type = req.path.split('/')[1];
-  if (!PORTAL_PUBLIC_ENTITIES.has(type)) {
-    return res.status(403).json({ error: 'Acceso no permitido' });
-  }
-  const isRead = req.method === 'GET';
-  const isWrite = ['POST', 'PUT', 'PATCH'].includes(req.method) && PORTAL_WRITE_ENTITIES.has(type);
-  if (!isRead && !isWrite) {
-    return res.status(403).json({ error: 'Acceso no permitido' });
-  }
-  next();
-}, entityRoutes);
-
 app.use('/api/entities', requireAuth, entityRoutes);
 app.use('/api/upload', requireAuth, uploadRoutes);
-app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
-
-// ─── Function: simulateOperariosSalary ───────────────────────────────────────
-// Reads pending operario deliveries and creates AccountPayable records for each
-// employee that has unpaid balance.
-app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res) => {
-  try {
-    const { rows: employees } = await query(`SELECT id, name, data FROM entity_employee WHERE is_active = true`);
-    const { rows: deliveries } = await query(`SELECT id, employee_id, total_amount, status, data FROM entity_delivery`);
-    const { rows: payments } = await query(`SELECT id, employee_id, amount, data FROM entity_payment`);
-
-    const created = [];
-
-    for (const emp of employees) {
-      const empId = emp.data?.employee_id || emp.id;
-      const empName = emp.name || emp.data?.name || empId;
-
-      // Total earned from deliveries
-      const empDeliveries = deliveries.filter(d => {
-        const dEmpId = d.employee_id || d.data?.employee_id;
-        return dEmpId === empId;
-      });
-
-      const totalEarned = empDeliveries.reduce((sum, d) => {
-        const amt = parseFloat(d.total_amount) || parseFloat(d.data?.total_amount) || 0;
-        return sum + amt;
-      }, 0);
-
-      // Total paid
-      const empPayments = payments.filter(p => {
-        const pEmpId = p.employee_id || p.data?.employee_id;
-        return pEmpId === empId;
-      });
-
-      const totalPaid = empPayments.reduce((sum, p) => {
-        return sum + (parseFloat(p.amount) || parseFloat(p.data?.amount) || 0);
-      }, 0);
-
-      const pending = totalEarned - totalPaid;
-      if (pending <= 0) continue;
-
-      // Check if there's already a pending AccountPayable for this employee
-      const { rows: existing } = await query(
-        `SELECT id FROM entity_account_payable WHERE supplier_id = $1 AND status != 'paid'`,
-        [empId]
-      );
-      if (existing.length > 0) continue;
-
-      const now = new Date().toISOString();
-      const id = `sal_${empId}_${Date.now()}`;
-      const dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
-      await query(
-        `INSERT INTO entity_account_payable
-          (id, supplier_id, status, due_date, pending_amount, paid_amount, data, created_date, updated_date)
-         VALUES ($1,$2,'pending',$3,$4,0,$5,$6,$6)`,
-        [
-          id, empId, dueDate, pending,
-          JSON.stringify({
-            supplier_name: empName,
-            description: `Salario pendiente operario ${empName}`,
-            type: 'manufacturing_salary',
-            category: 'salarios_manufactura',
-            total_amount: pending,
-          }),
-          now,
-        ]
-      );
-      created.push({ employee: empName, amount: pending });
-    }
-
-    res.json({ ok: true, created });
-  } catch (err) {
-    console.error('simulateOperariosSalary:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date() }));
 
 // ─── Serve frontend (React build) ────────────────────────────────────────────
 const DIST_DIR = join(__dirname, '..', 'dist');
-console.log('🗂️  DIST_DIR:', DIST_DIR);
 app.use(express.static(DIST_DIR));
-app.get('/{*path}', (_req, res) => {
+app.get('/{*path}', (req, res) => {
   res.sendFile(join(DIST_DIR, 'index.html'));
 });
-
-async function runMigrations(client) {
-  const migrations = [
-    {
-      name: 'deduplicate_employees_by_employee_id',
-      sql: async () => {
-        // Keep the oldest record per employee_id, delete the rest
-        await client.query(`
-          DELETE FROM entity_employee
-          WHERE id IN (
-            SELECT id FROM (
-              SELECT id,
-                ROW_NUMBER() OVER (
-                  PARTITION BY COALESCE(name, data->>'employee_id', data->>'name')
-                  ORDER BY created_date ASC
-                ) AS rn
-              FROM entity_employee
-            ) ranked
-            WHERE rn > 1
-          )
-        `);
-        console.log('✅ Migration: duplicate employees removed');
-      }
-    },
-    {
-      name: 'add_devolucion_defect_type_and_date_returned',
-      sql: async () => {
-        await client.query(`ALTER TABLE entity_devolucion ADD COLUMN IF NOT EXISTS defect_type TEXT`);
-        await client.query(`ALTER TABLE entity_devolucion ADD COLUMN IF NOT EXISTS date_returned TIMESTAMPTZ`);
-        await client.query(`CREATE INDEX IF NOT EXISTS idx_entity_devolucion_date_returned ON entity_devolucion(date_returned)`);
-        console.log('✅ Migration: defect_type + date_returned columns added to entity_devolucion');
-      }
-    },
-    {
-      name: 'add_cash_control_typed_cols',
-      sql: async () => {
-        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS control_date TEXT`);
-        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS cash_amount NUMERIC(14,2) DEFAULT 0`);
-        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS transfer_amount NUMERIC(14,2) DEFAULT 0`);
-        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS card_amount NUMERIC(14,2) DEFAULT 0`);
-        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS cash_collected BOOLEAN DEFAULT false`);
-        await client.query(`ALTER TABLE entity_cash_control ADD COLUMN IF NOT EXISTS transfers_verified BOOLEAN DEFAULT false`);
-        await client.query(`CREATE INDEX IF NOT EXISTS idx_entity_cash_control_control_date ON entity_cash_control(control_date)`);
-        await client.query(`CREATE INDEX IF NOT EXISTS idx_entity_cash_control_cash_collected ON entity_cash_control(cash_collected)`);
-        // Migrate existing JSONB values to typed columns
-        await client.query(`
-          UPDATE entity_cash_control SET
-            control_date = NULLIF(data->>'control_date', ''),
-            cash_amount = NULLIF(data->>'cash_amount', '')::NUMERIC,
-            transfer_amount = NULLIF(data->>'transfer_amount', '')::NUMERIC,
-            card_amount = NULLIF(data->>'card_amount', '')::NUMERIC,
-            cash_collected = (data->>'cash_collected')::BOOLEAN,
-            transfers_verified = (data->>'transfers_verified')::BOOLEAN
-          WHERE control_date IS NULL
-        `);
-        console.log('✅ Migration: cash_control typed columns added');
-      }
-    },
-    {
-      name: 'add_producto_reference_and_costo_cols',
-      sql: async () => {
-        await client.query(`ALTER TABLE entity_producto_produccion ADD COLUMN IF NOT EXISTS reference TEXT`);
-        await client.query(`ALTER TABLE entity_producto_produccion ADD COLUMN IF NOT EXISTS costo_mano_obra NUMERIC(14,4)`);
-        await client.query(`CREATE INDEX IF NOT EXISTS idx_entity_producto_produccion_reference ON entity_producto_produccion(reference)`);
-        // Migrate existing values from JSONB to typed columns
-        await client.query(`
-          UPDATE entity_producto_produccion
-          SET reference = NULLIF(data->>'reference', ''),
-              costo_mano_obra = NULLIF(data->>'costo_mano_obra', '')::NUMERIC
-          WHERE (reference IS NULL OR costo_mano_obra IS NULL)
-        `);
-        console.log('✅ Migration: reference + costo_mano_obra columns added to entity_producto_produccion');
-      }
-    },
-    {
-      name: 'migrate_merchandise_entry_from_jsonb',
-      sql: async () => {
-        // Move existing MerchandiseEntry rows from app_entities to entity_merchandise_entry
-        await client.query(`
-          INSERT INTO entity_merchandise_entry (id, entry_date, status, total_units, assigned_date, data, created_date, updated_date, created_by_id)
-          SELECT
-            id,
-            NULLIF(data->>'entry_date', ''),
-            COALESCE(NULLIF(data->>'status', ''), 'pendiente'),
-            COALESCE(NULLIF(data->>'total_units', '')::NUMERIC, 0),
-            NULLIF(data->>'assigned_date', ''),
-            data,
-            created_date,
-            updated_date,
-            created_by_id
-          FROM app_entities
-          WHERE entity_type = 'MerchandiseEntry'
-          ON CONFLICT (id) DO NOTHING
-        `);
-        console.log('✅ Migration: MerchandiseEntry rows moved to entity_merchandise_entry');
-      }
-    },
-    {
-      name: 'migrate_app_config_from_jsonb',
-      sql: async () => {
-        await client.query(`
-          INSERT INTO entity_app_config (id, key, value, data, created_date, updated_date, created_by_id)
-          SELECT
-            id,
-            NULLIF(data->>'key', ''),
-            NULLIF(data->>'value', ''),
-            data,
-            created_date,
-            updated_date,
-            created_by_id
-          FROM app_entities
-          WHERE entity_type = 'AppConfig'
-          ON CONFLICT (id) DO NOTHING
-        `);
-        console.log('✅ Migration: AppConfig rows moved to entity_app_config');
-      }
-    }
-  ];
-
-  for (const migration of migrations) {
-    const already = await client.query('SELECT 1 FROM schema_migrations WHERE name = $1', [migration.name]);
-    if (already.rows.length > 0) continue;
-    await migration.sql();
-    await client.query('INSERT INTO schema_migrations (name) VALUES ($1) ON CONFLICT DO NOTHING', [migration.name]);
-  }
-}
 
 async function initDB() {
   const client = await pool.connect();
@@ -366,27 +109,21 @@ async function initDB() {
     for (const [entityType, schema] of Object.entries(ENTITY_SCHEMAS)) {
       await client.query(buildCreateTableSQL(entityType, schema));
       for (const indexSQL of buildIndexSQL(schema)) {
-        try { await client.query(indexSQL); } catch { /* columna puede no existir aún — migración la añade */ }
+        await client.query(indexSQL);
       }
     }
     console.log(`✅ Per-entity tables created (${Object.keys(ENTITY_SCHEMAS).length} types)`);
 
-    // ─── Migrations (antes del sync para que las columnas existan) ───────────
-    await runMigrations(client);
-
-    console.log('✅ DB schema initialized');
-
-    // ─── Auto-import historical data if DB is empty ─────────────────────────
-    await seedExportsData(client);
-
-    // ─── Sync: copy rows from app_entities → per-entity tables ───────────────
-    // Runs after import so data is always available in typed tables.
+    // ─── Idempotent sync: copy any new rows from app_entities → per-entity tables ─
+    // Runs on every startup with ON CONFLICT DO NOTHING, so it's safe to repeat.
+    // This ensures data imported via scripts always reaches per-entity tables.
     {
       let migrated = 0;
       for (const [entityType, schema] of Object.entries(ENTITY_SCHEMAS)) {
         const typedCols = Object.keys(schema.typed);
         const typedTypes = schema.typed;
 
+        // Build SELECT expressions with proper type casting and NULLIF for empty strings
         const selectExprs = typedCols.map(col => {
           const colType = typedTypes[col].split(' ')[0].toUpperCase().replace(/\(.*\)/, '');
           const rawExpr = `NULLIF(data->>'${col}', '')`;
@@ -403,6 +140,7 @@ async function initDB() {
           }
         });
 
+        // Remove typed fields from remaining JSONB data
         const removeKeys = typedCols.map(c => `'${c}'`).join(', ');
         const dataExpr = typedCols.length > 0
           ? `data - ARRAY[${removeKeys}]`
@@ -423,27 +161,13 @@ async function initDB() {
         migrated += result.rowCount || 0;
       }
 
-      if (migrated > 0) console.log(`✅ Synced ${migrated} records to per-entity tables`);
+      if (migrated > 0) console.log(`✅ Synced ${migrated} new records to per-entity tables`);
     }
 
-    // ─── Post-sync dedup: always remove duplicate employees after sync ────────
-    const dedupResult = await client.query(`
-      DELETE FROM entity_employee
-      WHERE id IN (
-        SELECT id FROM (
-          SELECT id,
-            ROW_NUMBER() OVER (
-              PARTITION BY name
-              ORDER BY created_date ASC
-            ) AS rn
-          FROM entity_employee
-        ) ranked
-        WHERE rn > 1
-      )
-    `);
-    if (dedupResult.rowCount > 0) {
-      console.log(`✅ Post-sync dedup: removed ${dedupResult.rowCount} duplicate employee(s)`);
-    }
+    console.log('✅ DB schema initialized');
+
+    // ─── Auto-import historical data if DB is empty ─────────────────────────
+    await seedExportsData(client);
 
     // ─── Auto-seed admin user if no users exist ──────────────────────────────
     await seedAdminUser(client);

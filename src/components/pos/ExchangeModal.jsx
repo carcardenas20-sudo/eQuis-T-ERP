@@ -65,7 +65,7 @@ function ExchangePaymentModal({ total, onConfirm, onCancel, isProcessing }) {
 
   return (
     <Dialog open onOpenChange={onCancel}>
-      <DialogContent className="max-w-md w-[95vw]">
+      <DialogContent className="max-w-md w-[95vw] z-[60]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <CreditCard className="w-5 h-5 text-blue-600" />
@@ -177,7 +177,7 @@ function ExchangePaymentModal({ total, onConfirm, onCancel, isProcessing }) {
                   <Label className="text-xs">Cuenta bancaria</Label>
                   <Select value={currentPayment.bank_account} onValueChange={v => setCurrentPayment(prev => ({ ...prev, bank_account: v }))}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="-- Sin especificar --" /></SelectTrigger>
-                    <SelectContent className="z-[420]" position="popper">
+                    <SelectContent className="z-[80]" position="popper">
                       {bankAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name} - {a.account_number}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -376,7 +376,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
   return (
     <>
       <Dialog open onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl w-full h-[100dvh] sm:h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-xl pb-safe">
+        <DialogContent className="max-w-6xl w-full h-[100dvh] sm:h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-none sm:rounded-xl pb-safe z-[70]">
           <DialogHeader className="px-5 pt-4 pb-3 border-b shrink-0">
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               <RefreshCw className="w-5 h-5 text-orange-500" />
@@ -387,11 +387,11 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex flex-1 flex-col md:flex-row min-h-0 overflow-hidden">
+          <div className="flex flex-1 flex-col md:flex-row overflow-y-auto">
             {/* Columna izquierda: productos */}
-            <div className="flex-1 flex flex-col overflow-hidden md:border-r border-0">
+            <div className="flex-1 flex flex-col overflow-visible md:border-r border-0">
               {/* Búsqueda */}
-              <div className="p-3 border-b shrink-0">
+              <div className="p-3 border-b">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input className="pl-9" placeholder="Buscar por nombre, SKU o código de barras..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -400,7 +400,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
               </div>
 
               {/* Grid productos */}
-              <div className="flex-1 overflow-y-auto p-2 sm:p-3">
+              <div className="flex-1 overflow-visible p-2 sm:p-3">
                 <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                   {filtered.map(p => {
                     const stock = getStock(p);
@@ -445,8 +445,8 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
             </div>
 
             {/* Columna derecha: resumen */}
-            <div className="w-full md:w-80 flex flex-col overflow-hidden bg-slate-50 border-t md:border-t-0">
-              <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-3">
+            <div className="w-full md:w-80 flex flex-col overflow-visible bg-slate-50 border-t md:border-t-0">
+              <div className="flex-1 overflow-visible p-2 sm:p-3 space-y-3">
                 {/* Lista de precios */}
                 {priceLists.length > 0 && (
                   <div className="bg-white border rounded-xl p-3">
@@ -456,7 +456,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
                     </div>
                     <Select value={selectedPriceList || ""} onValueChange={setSelectedPriceList}>
                       <SelectTrigger className="h-8 text-sm focus:ring-2 focus:ring-blue-500"><SelectValue placeholder="Seleccionar lista" /></SelectTrigger>
-                      <SelectContent className="z-[420]" position="popper">
+                      <SelectContent className="z-[80]" position="popper">
                         {priceLists.map(pl => <SelectItem key={pl.code} value={pl.code}>{pl.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -551,7 +551,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
               </div>
 
               {/* Botón procesar */}
-              <div className="p-3 border-t bg-white space-y-2 shrink-0">
+              <div className="p-3 border-t bg-white space-y-2">
                 {isProcessing
                   ? <div className="flex items-center justify-center gap-2 py-3 text-slate-500"><RefreshCw className="w-5 h-5 animate-spin" /> Procesando...</div>
                   : (

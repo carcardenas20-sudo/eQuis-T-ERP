@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { localClient } from "@/api/localClient";
-const OpInventory = localClient.entities["OpInventory"];
+import { Inventory } from "@/entities/Inventory";
 import { StockMovement } from "@/entities/StockMovement";
 import { Producto } from "@/entities/Producto";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,7 +69,7 @@ export default function InventoryPage() {
 
       // Actualizar o crear inventario
       if (existingInventory) {
-        await OpInventory.update(existingInventory.id, {
+        await Inventory.update(existingInventory.id, {
           current_stock: newStock
         });
       } else {
@@ -82,7 +81,7 @@ export default function InventoryPage() {
         if (stockData.min_stock > 0) inventoryData.min_stock = stockData.min_stock;
         if (stockData.location) inventoryData.location = stockData.location;
         
-        await OpInventory.create(inventoryData);
+        await Inventory.create(inventoryData);
       }
 
       alert("Stock agregado correctamente");
@@ -152,9 +151,9 @@ export default function InventoryPage() {
 
       // Actualizar inventario
       if (newStock === 0) {
-        await OpInventory.delete(existingInventory.id);
+        await Inventory.delete(existingInventory.id);
       } else {
-        await OpInventory.update(existingInventory.id, {
+        await Inventory.update(existingInventory.id, {
           current_stock: newStock
         });
       }
@@ -226,14 +225,14 @@ export default function InventoryPage() {
 
       if (calculatedNewStock === 0) {
         if (remainingMovementsForProduct.length === 0) {
-          await OpInventory.delete(inventoryItem.id);
+          await Inventory.delete(inventoryItem.id);
           alert("Movimiento eliminado, inventario actualizado a 0 y registro de inventario eliminado.");
         } else {
-          await OpInventory.update(inventoryItem.id, { current_stock: 0 });
+          await Inventory.update(inventoryItem.id, { current_stock: 0 });
           alert("Movimiento eliminado e inventario ajustado a 0.");
         }
       } else {
-        await OpInventory.update(inventoryItem.id, { current_stock: calculatedNewStock });
+        await Inventory.update(inventoryItem.id, { current_stock: calculatedNewStock });
         alert("Movimiento eliminado y stock ajustado.");
       }
       

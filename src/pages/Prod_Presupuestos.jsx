@@ -10,7 +10,7 @@ import _ from 'lodash';
 
 import FormularioPresupuesto from "../components/presupuestos/FormularioPresupuesto";
 import TarjetaPresupuesto from "../components/presupuestos/TarjetaPresupuesto";
-import AsignacionesIndividuales from "../components/remisiones/AsignacionesIndividuales";
+import AsignacionesIndividuales from "../components/remisiones/AsignacionesIndividuales"; // Importar nuevo componente
 
 export default function Presupuestos() {
   const [presupuestos, setPresupuestos] = useState([]);

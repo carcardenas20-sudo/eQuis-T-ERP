@@ -212,39 +212,49 @@ export default function UserForm({ user, locations, roles: rolesProp, onSave, on
               </div>
             </div>
 
-            {/* Role selector — native select to avoid z-index conflicts inside Dialog */}
-            <select
+            {/* Role selector */}
+            <Select
               value={formData.role_id || ''}
-              onChange={e => handleRoleChange(e.target.value)}
-              className="w-full h-12 border-2 border-blue-300 rounded-lg px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onValueChange={handleRoleChange}
             >
-              <option value="">⚠️ Seleccionar rol...</option>
-              {filteredRoles.length === 0 && (
-                <option disabled>— No hay roles para este módulo —</option>
-              )}
-              {filteredRoles.map(role => {
-                const mods = getModulesForRole(role);
-                const modIcons = [
-                  mods.includes("comercial") ? "🔵" : "",
-                  mods.includes("produccion") ? "🟢" : "",
-                  mods.includes("operarios") ? "🟣" : "",
-                ].filter(Boolean).join("");
-                return (
-                  <option key={role.id} value={role.id}>
-                    {modIcons ? `${modIcons} ` : ""}{role.name} ({role.permissions?.length || 0} permisos)
-                  </option>
-                );
-              })}
-            </select>
-            {filteredRoles.length === 0 && moduleFilter !== "all" && (
-              <button
-                type="button"
-                onClick={() => setModuleFilter("all")}
-                className="text-xs text-blue-600 underline mt-1"
-              >
-                Ver todos los módulos
-              </button>
-            )}
+              <SelectTrigger className="w-full h-12 bg-white border-2 border-blue-300">
+                <SelectValue placeholder="⚠️ Seleccionar rol..." />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredRoles.length === 0 ? (
+                  <div className="py-3 px-4 text-sm text-slate-500 text-center">
+                    No hay roles para este módulo.
+                    <button
+                      type="button"
+                      onClick={() => setModuleFilter("all")}
+                      className="block mx-auto mt-1 text-blue-600 underline text-xs"
+                    >
+                      Ver todos
+                    </button>
+                  </div>
+                ) : (
+                  filteredRoles.map(role => {
+                    const mods = getModulesForRole(role);
+                    return (
+                      <SelectItem key={role.id} value={role.id}>
+                        <div className="flex items-center gap-2 py-0.5">
+                          <Shield className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <span className="font-medium">{role.name}</span>
+                          <div className="flex gap-1 ml-1">
+                            {mods.includes("comercial") && <span className="text-xs">🔵</span>}
+                            {mods.includes("produccion") && <span className="text-xs">🟢</span>}
+                            {mods.includes("operarios") && <span className="text-xs">🟣</span>}
+                          </div>
+                          <Badge variant="outline" className="ml-auto text-xs shrink-0">
+                            {role.permissions?.length || 0} permisos
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    );
+                  })
+                )}
+              </SelectContent>
+            </Select>
 
             {/* Preview of selected role */}
             {selectedRole && (
@@ -309,19 +319,22 @@ export default function UserForm({ user, locations, roles: rolesProp, onSave, on
               <Building2 className="w-3.5 h-3.5" />
               Sucursal Asignada
             </Label>
-            <select
-              id="location_id"
+            <Select
               value={formData.location_id || ''}
-              onChange={e => handleChange('location_id', e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onValueChange={value => handleChange('location_id', value)}
             >
-              <option value="">Seleccionar sucursal...</option>
-              {locations.map(loc => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.name}{loc.is_main ? " (Principal)" : ""}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="location_id" className="w-full">
+                <SelectValue placeholder="Seleccionar sucursal..." />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map(loc => (
+                  <SelectItem key={loc.id} value={loc.id}>
+                    {loc.name}
+                    {loc.is_main && <Badge variant="outline" className="ml-2 text-xs">Principal</Badge>}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Salary */}

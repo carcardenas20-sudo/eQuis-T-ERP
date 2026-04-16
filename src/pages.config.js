@@ -5,6 +5,7 @@
 
 // ── MÓDULO COMERCIAL (equistpos) ──────────────────────────────
 import AccountsPayable from './pages/AccountsPayable';
+import Assistant from './pages/Assistant';
 import BankAccounts from './pages/BankAccounts';
 import CashControl from './pages/CashControl';
 import Credits from './pages/Credits';
@@ -12,7 +13,9 @@ import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import Debug from './pages/Debug';
 import Exchanges from './pages/Exchanges';
+import ExpenseChecklist from './pages/ExpenseChecklist';
 import Expenses from './pages/Expenses';
+import IntegracionAPI from './pages/IntegracionAPI';
 import Inventory from './pages/Inventory';
 import InventoryAudits from './pages/InventoryAudits';
 import Locations from './pages/Locations';
@@ -24,8 +27,8 @@ import Sales from './pages/Sales';
 import Settings from './pages/Settings';
 import TestPermisos from './pages/TestPermisos';
 import Transfers from './pages/Transfers';
+import Tutorials from './pages/Tutorials';
 import Users from './pages/Users';
-import MerchandiseAssignment from './pages/MerchandiseAssignment';
 
 // ── MÓDULO PRODUCCIÓN / CHAQUETAS (chaquetas-pro) ─────────────
 import Prod_Dashboard from './pages/Prod_Dashboard';
@@ -40,7 +43,6 @@ import Prod_Inventario from './pages/Prod_Inventario';
 import Prod_Proveedores from './pages/Prod_Proveedores';
 import Prod_Compras from './pages/Prod_Compras';
 import Prod_Presupuestos from './pages/Prod_Presupuestos';
-import Prod_Asignaciones from './pages/Prod_Asignaciones';
 import Prod_EstadoCuentaPublico from './pages/Prod_EstadoCuentaPublico';
 
 // ── MÓDULO OPERARIOS (produccionequist) ───────────────────────
@@ -63,12 +65,13 @@ import Op_EmployeeProfile from './pages/Op_EmployeeProfile';
 import Op_DraftDeliveries from './pages/Op_DraftDeliveries';
 import Op_PhotoCapture from './pages/Op_PhotoCapture';
 import Op_Empleado from './pages/Op_Empleado';
-import Op_MerchandiseEntry from './pages/Op_MerchandiseEntry';
+
 import __Layout from './Layout.jsx';
 
 export const PAGES = {
   // Comercial
   "AccountsPayable": AccountsPayable,
+  "Assistant": Assistant,
   "BankAccounts": BankAccounts,
   "CashControl": CashControl,
   "Credits": Credits,
@@ -76,7 +79,9 @@ export const PAGES = {
   "Dashboard": Dashboard,
   "Debug": Debug,
   "Exchanges": Exchanges,
+  "ExpenseChecklist": ExpenseChecklist,
   "Expenses": Expenses,
+  "IntegracionAPI": IntegracionAPI,
   "Inventory": Inventory,
   "InventoryAudits": InventoryAudits,
   "Locations": Locations,
@@ -88,11 +93,10 @@ export const PAGES = {
   "Settings": Settings,
   "TestPermisos": TestPermisos,
   "Transfers": Transfers,
+  "Tutorials": Tutorials,
   "Users": Users,
-  "MerchandiseAssignment": MerchandiseAssignment,
 
   // Producción / Chaquetas
-
   "Prod_Dashboard": Prod_Dashboard,
   "Prod_Remisiones": Prod_Remisiones,
   "Prod_PlanificacionRemisiones": Prod_PlanificacionRemisiones,
@@ -105,7 +109,6 @@ export const PAGES = {
   "Prod_Proveedores": Prod_Proveedores,
   "Prod_Compras": Prod_Compras,
   "Prod_Presupuestos": Prod_Presupuestos,
-  "Prod_Asignaciones": Prod_Asignaciones,
   "Prod_EstadoCuentaPublico": Prod_EstadoCuentaPublico,
 
   // Operarios
@@ -128,7 +131,6 @@ export const PAGES = {
   "Op_DraftDeliveries": Op_DraftDeliveries,
   "Op_PhotoCapture": Op_PhotoCapture,
   "Op_Empleado": Op_Empleado,
-  "Op_MerchandiseEntry": Op_MerchandiseEntry,
 };
 
 export const pagesConfig = {

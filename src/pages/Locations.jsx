@@ -52,7 +52,7 @@ const LocationForm = ({ location, onSave, onCancel, isSaving }) => {
   );
 };
 
-export default function LocationsPage({ embedded = false }) {
+export default function LocationsPage() {
   const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -101,12 +101,12 @@ export default function LocationsPage({ embedded = false }) {
   };
 
   return (
-    <div className={embedded ? "p-3 sm:p-6" : "p-3 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen"}>
+    <div className="p-3 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            {!embedded && <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Gestión de Sucursales</h1>}
-            {!embedded && <p className="text-slate-600 mt-1">Administra tus puntos de venta y bodegas.</p>}
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Gestión de Sucursales</h1>
+            <p className="text-slate-600 mt-1">Administra tus puntos de venta y bodegas.</p>
           </div>
           <Button onClick={() => { setEditingLocation(null); setIsFormOpen(true); }} className="gap-2">
             <Plus className="w-5 h-5" /> Nueva Sucursal
