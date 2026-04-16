@@ -227,10 +227,21 @@ export default function MerchandiseAssignment() {
 
   const handleRevertAll = async () => {
     const total = assignedDeliveries.length;
-    if (!window.confirm(`¿Revertir TODAS las ${total} entregas asignadas desde el 9 de abril? Todas volverán a aparecer como pendientes.`)) return;
+    if (!window.confirm(`¿Revertir TODAS las ${total} entregas asignadas desde el 9 de abril y limpiar inventario huérfano? Todas volverán a aparecer como pendientes.`)) return;
     setReverting(true);
     try {
+      // 1. Revertir flag de entregas
       await Promise.all(assignedDeliveries.map(d => Delivery.update(d.id, { inventory_assigned: false })));
+
+      // 2. Limpiar inventario huérfano (product_id que no coincide con ningún sku de producto POS)
+      const [allInv, allProducts] = await Promise.all([Inventory.list(), Product.list()]);
+      const validSkus = new Set((allProducts || []).map(p => p.sku).filter(Boolean));
+      const orphans = (allInv || []).filter(inv => inv.product_id && !validSkus.has(inv.product_id));
+      if (orphans.length > 0) {
+        await Promise.all(orphans.map(inv => Inventory.delete(inv.id)));
+      }
+
+      alert(`${total} entregas revertidas. ${orphans.length} registros de inventario huérfano eliminados.`);
       await loadData();
     } catch (err) {
       alert("Error: " + err.message);
