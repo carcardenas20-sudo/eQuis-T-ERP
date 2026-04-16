@@ -29,4 +29,12 @@ dist-ssr
 
 .env
 
-git add .
+# OneDrive sync conflict files
+*-LAPTOP-*.js
+*-LAPTOP-*.jsx
+*-LAPTOP-*.json
+*-LAPTOP-*.ts
+*-LAPTOP-*.tsx
+
+# Claude Code
+.claude/
