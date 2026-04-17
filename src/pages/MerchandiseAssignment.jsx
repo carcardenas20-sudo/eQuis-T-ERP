@@ -162,10 +162,12 @@ export default function MerchandiseAssignment() {
     setSaving(dateKey);
     try {
       // Por cada referencia × sucursal, actualizar inventario
+      const debugLines = [];
       for (const item of itemsList) {
         const refAssignments = assignments[dateKey]?.[item.product_reference] || {};
         const prod = productos.find(p => p.reference === item.product_reference);
         const productId = prod?._posSku || item.product_reference;
+        debugLines.push(`${item.product_name}: ref=${item.product_reference}, familia_id=${prod?.familia_id || 'N/A'}, _posSku=${prod?._posSku || 'N/A'}, productId usado=${productId}`);
 
         for (const [locationId, qty] of Object.entries(refAssignments)) {
           const quantity = Number(qty);
@@ -192,7 +194,7 @@ export default function MerchandiseAssignment() {
       }
 
       await Promise.all(deliveryIds.map(id => Delivery.update(id, { inventory_assigned: true })));
-      alert(`✅ ${totalAssigned} unidades asignadas al inventario correctamente.`);
+      alert(`✅ ${totalAssigned} unidades asignadas.\n\nDebug mapeo:\n${debugLines.join('\n')}`);
       loadData();
     } catch (err) {
       alert("Error al asignar: " + err.message);
