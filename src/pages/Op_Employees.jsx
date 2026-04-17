@@ -3,7 +3,8 @@ import { Employee } from "@/api/entitiesProduccion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Phone, Calendar, Link as LinkIcon, Check, Eye, AlertTriangle, KeyRound } from "lucide-react";
+import { Plus, Edit, Trash2, Phone, Calendar, Link as LinkIcon, Check, Eye, AlertTriangle, KeyRound, Users } from "lucide-react";
+import { Delivery, Dispatch, Payment } from "@/api/entitiesProduccion";
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
 
@@ -105,6 +106,62 @@ export default function Employees() {
     setSavingPin(false);
   };
 
+  const handleCleanDuplicates = async () => {
+    // 1. Detectar duplicados por employee_id
+    const byId = {};
+    employees.forEach(e => {
+      if (!byId[e.employee_id]) byId[e.employee_id] = [];
+      byId[e.employee_id].push(e);
+    });
+    const duplicateGroups = Object.values(byId).filter(g => g.length > 1);
+
+    if (duplicateGroups.length === 0) {
+      alert("No se encontraron empleados duplicados.");
+      return;
+    }
+
+    // 2. Cargar actividad para decidir cuál conservar
+    const [allDeliveries, allDispatches, allPayments] = await Promise.all([
+      Delivery.list(),
+      Dispatch.list(),
+      Payment.list(),
+    ]);
+
+    const activityCount = (empId) => {
+      const d = (allDeliveries || []).filter(x => x.employee_id === empId).length;
+      const s = (allDispatches || []).filter(x => x.employee_id === empId).length;
+      const p = (allPayments || []).filter(x => x.employee_id === empId).length;
+      return d + s + p;
+    };
+
+    // 3. Por cada grupo, conservar el de más actividad (o el más antiguo si empatan)
+    const toDelete = [];
+    const summary = [];
+    for (const group of duplicateGroups) {
+      const sorted = group
+        .map(e => ({ ...e, _activity: activityCount(e.employee_id) }))
+        .sort((a, b) => b._activity - a._activity || new Date(a.created_date) - new Date(b.created_date));
+
+      const keep = sorted[0];
+      const remove = sorted.slice(1);
+      summary.push(`${keep.employee_id} "${keep.name}": conservar (${keep._activity} registros), eliminar ${remove.length} duplicado(s) (${remove.map(r => r._activity + ' registros').join(', ')})`);
+      toDelete.push(...remove);
+    }
+
+    const msg = `Se encontraron ${duplicateGroups.length} grupo(s) de duplicados:\n\n${summary.join('\n')}\n\n¿Eliminar ${toDelete.length} duplicado(s)?`;
+    if (!window.confirm(msg)) return;
+
+    try {
+      for (const emp of toDelete) {
+        await Employee.delete(emp.id);
+      }
+      alert(`${toDelete.length} duplicado(s) eliminado(s) correctamente.`);
+      loadEmployees();
+    } catch (err) {
+      alert("Error al eliminar: " + err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
@@ -123,10 +180,16 @@ export default function Employees() {
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Empleados</h1>
             <p className="text-slate-600">Gestiona la información y el acceso de los empleados.</p>
           </div>
-          <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Empleado
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleCleanDuplicates} className="text-amber-600 border-amber-300 hover:bg-amber-50">
+              <Users className="w-4 h-4 mr-2" />
+              Limpiar duplicados
+            </Button>
+            <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Empleado
+            </Button>
+          </div>
         </div>
 
         <div className="mb-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
