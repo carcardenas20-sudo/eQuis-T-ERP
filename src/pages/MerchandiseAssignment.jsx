@@ -162,12 +162,15 @@ export default function MerchandiseAssignment() {
     setSaving(dateKey);
     try {
       // Por cada referencia × sucursal, actualizar inventario
-      const debugLines = [];
+      const assignedRefs = new Set();
       for (const item of itemsList) {
         const refAssignments = assignments[dateKey]?.[item.product_reference] || {};
+        const refTotal = Object.values(refAssignments).reduce((s, v) => s + (Number(v) || 0), 0);
+        if (refTotal <= 0) continue; // Skip referencias sin asignación
+
+        assignedRefs.add(item.product_reference);
         const prod = productos.find(p => p.reference === item.product_reference);
         const productId = prod?._posSku || item.product_reference;
-        debugLines.push(`${item.product_name}: ref=${item.product_reference}, familia_id=${prod?.familia_id || 'N/A'}, _posSku=${prod?._posSku || 'N/A'}, productId usado=${productId}`);
 
         for (const [locationId, qty] of Object.entries(refAssignments)) {
           const quantity = Number(qty);
@@ -193,8 +196,21 @@ export default function MerchandiseAssignment() {
         }
       }
 
-      await Promise.all(deliveryIds.map(id => Delivery.update(id, { inventory_assigned: true })));
-      alert(`✅ ${totalAssigned} unidades asignadas.\n\nDebug mapeo:\n${debugLines.join('\n')}`);
+      // Solo marcar como asignadas las entregas que contienen referencias asignadas
+      const deliveriesToMark = deliveries
+        .filter(d => deliveryIds.includes(d.id))
+        .filter(d => {
+          const refs = (d.items || []).map(i => i.product_reference);
+          return refs.every(r => assignedRefs.has(r));
+        });
+      // Si TODAS las referencias del día se asignaron, marcar todas
+      const allRefsAssigned = itemsList.every(item => assignedRefs.has(item.product_reference));
+      const idsToMark = allRefsAssigned ? deliveryIds : deliveriesToMark.map(d => d.id);
+
+      if (idsToMark.length > 0) {
+        await Promise.all(idsToMark.map(id => Delivery.update(id, { inventory_assigned: true })));
+      }
+      alert(`✅ ${totalAssigned} unidades asignadas (${assignedRefs.size} referencia(s)). ${allRefsAssigned ? 'Todas las referencias del día completadas.' : 'Quedan referencias pendientes.'}`);
       loadData();
     } catch (err) {
       alert("Error al asignar: " + err.message);
