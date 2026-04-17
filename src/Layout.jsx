@@ -225,7 +225,7 @@ function LayoutContent({ children }) {
       {sidebarOpen && <div onClick={closeSidebar} className="fixed inset-0 bg-black/60 z-[100] lg:hidden backdrop-blur-sm" />}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 bottom-0 w-64 transform transition-transform duration-300 z-[200] flex flex-col overflow-y-auto overscroll-none scrollbar-none ${isRealAdmin ? 'top-7' : 'top-0'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+      <aside className={`fixed left-0 bottom-0 w-64 transform transition-transform duration-300 z-[200] flex flex-col overflow-hidden ${isRealAdmin ? 'top-7' : 'top-0'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{ background: sidebarBg, borderRight: `1px solid ${sidebarBorder}` }}>
 
         {/* Logo */}
@@ -244,7 +244,7 @@ function LayoutContent({ children }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto overscroll-none scrollbar-none">
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto overscroll-contain">
           {flatEntries.map((entry, idx) => {
             if (entry.type === "header") {
               const hStyle = mkHeader[entry.mk];
