@@ -215,11 +215,54 @@ export default function MerchandiseAssignment() {
     return Object.values(map).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
   }, [assignedDeliveries]);
 
+  // Descontar del inventario las cantidades de las entregas que se están revirtiendo
+  const revertInventoryForDeliveries = async (deliveryIds) => {
+    const delivsToRevert = assignedDeliveries.filter(d => deliveryIds.includes(d.id));
+    const [allInv, allProducts] = await Promise.all([Inventory.list(), Product.list()]);
+    const posMap = new Map((allProducts || []).map(pp => [pp.id, pp]));
+
+    // Sumar unidades por referencia
+    const unitsByRef = {};
+    delivsToRevert.forEach(d => {
+      (d.items || []).forEach(item => {
+        if (item.product_reference) {
+          unitsByRef[item.product_reference] = (unitsByRef[item.product_reference] || 0) + (Number(item.quantity) || 0);
+        }
+      });
+    });
+
+    let reverted = 0;
+    for (const [ref, qty] of Object.entries(unitsByRef)) {
+      const prod = productos.find(p => p.reference === ref);
+      const productId = prod?._posSku || ref;
+
+      // Buscar en todas las sucursales que tengan este producto
+      const invItems = (allInv || []).filter(inv => inv.product_id === productId);
+      let remaining = qty;
+      for (const inv of invItems) {
+        if (remaining <= 0) break;
+        const currentStock = Number(inv.current_stock) || 0;
+        const toDeduct = Math.min(remaining, currentStock);
+        if (toDeduct > 0) {
+          await Inventory.update(inv.id, {
+            current_stock: currentStock - toDeduct,
+            available_stock: Math.max(0, (Number(inv.available_stock) || 0) - toDeduct),
+          });
+          remaining -= toDeduct;
+          reverted += toDeduct;
+        }
+      }
+    }
+    return reverted;
+  };
+
   const handleRevertGroup = async (group) => {
-    if (!window.confirm(`¿Revertir las ${group.ids.length} entregas del ${group.dateKey}? Volverán a aparecer como pendientes de asignación.`)) return;
+    if (!window.confirm(`¿Revertir las ${group.ids.length} entregas del ${group.dateKey}? Se descontará del inventario y volverán como pendientes.`)) return;
     setReverting(true);
     try {
+      const reverted = await revertInventoryForDeliveries(group.ids);
       await Promise.all(group.ids.map(id => Delivery.update(id, { inventory_assigned: false })));
+      alert(`Revertido: ${reverted} unidades descontadas del inventario.`);
       await loadData();
     } catch (err) {
       alert("Error: " + err.message);
@@ -229,13 +272,17 @@ export default function MerchandiseAssignment() {
 
   const handleRevertAll = async () => {
     const total = assignedDeliveries.length;
-    if (!window.confirm(`¿Revertir TODAS las ${total} entregas asignadas desde el 9 de abril y limpiar inventario huérfano? Todas volverán a aparecer como pendientes.`)) return;
+    if (!window.confirm(`¿Revertir TODAS las ${total} entregas? Se descontará del inventario, se limpiarán huérfanos y volverán como pendientes.`)) return;
     setReverting(true);
     try {
-      // 1. Revertir flag de entregas
+      // 1. Descontar inventario
+      const allIds = assignedDeliveries.map(d => d.id);
+      const reverted = await revertInventoryForDeliveries(allIds);
+
+      // 2. Revertir flag
       await Promise.all(assignedDeliveries.map(d => Delivery.update(d.id, { inventory_assigned: false })));
 
-      // 2. Limpiar inventario huérfano (product_id que no coincide con ningún sku de producto POS)
+      // 3. Limpiar huérfanos
       const [allInv, allProducts] = await Promise.all([Inventory.list(), Product.list()]);
       const validSkus = new Set((allProducts || []).map(p => p.sku).filter(Boolean));
       const orphans = (allInv || []).filter(inv => inv.product_id && !validSkus.has(inv.product_id));
@@ -243,7 +290,7 @@ export default function MerchandiseAssignment() {
         await Promise.all(orphans.map(inv => Inventory.delete(inv.id)));
       }
 
-      alert(`${total} entregas revertidas. ${orphans.length} registros de inventario huérfano eliminados.`);
+      alert(`${total} entregas revertidas. ${reverted} unidades descontadas. ${orphans.length} huérfanos eliminados.`);
       await loadData();
     } catch (err) {
       alert("Error: " + err.message);
