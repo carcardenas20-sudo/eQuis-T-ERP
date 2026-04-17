@@ -153,6 +153,28 @@ export default function EmployeePortal() {
       return sum + (d.quantity || 0);
     }, 0);
 
+    // Calcular unidades pendientes por referencia (despachado - entregado)
+    const dispatchedByRef = {};
+    dispatches.forEach(d => {
+      const ref = d.product_reference;
+      if (ref) dispatchedByRef[ref] = (dispatchedByRef[ref] || 0) + (d.quantity || 0);
+    });
+    const deliveredByRef = {};
+    deliveries.forEach(d => {
+      if (d.items && d.items.length > 0) {
+        d.items.forEach(item => {
+          if (item.product_reference) deliveredByRef[item.product_reference] = (deliveredByRef[item.product_reference] || 0) + (item.quantity || 0);
+        });
+      } else if (d.product_reference) {
+        deliveredByRef[d.product_reference] = (deliveredByRef[d.product_reference] || 0) + (d.quantity || 0);
+      }
+    });
+    const pendingUnits = {};
+    for (const ref of Object.keys(dispatchedByRef)) {
+      const pending = (dispatchedByRef[ref] || 0) - (deliveredByRef[ref] || 0);
+      if (pending > 0) pendingUnits[ref] = pending;
+    }
+
     setStats({ totalEarned, pendingAmount, totalDelivered, pendingUnits });
   };
 
