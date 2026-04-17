@@ -5,7 +5,7 @@ import { Inventory } from "@/entities/Inventory";
 import { Product } from "@/entities/all";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PackageCheck, CheckCircle2, Store, RefreshCw, Undo2, ChevronDown, ChevronUp } from "lucide-react";
+import { PackageCheck, CheckCircle2, Store, RefreshCw, Undo2, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
 const Delivery = localClient.entities["Delivery"];
 const Producto = localClient.entities["Producto"];
@@ -249,6 +249,33 @@ export default function MerchandiseAssignment() {
     setReverting(false);
   };
 
+  // Contar huérfanos en tiempo real
+  const orphanCount = useMemo(() => {
+    const posProducts = productos; // ya enriquecidos con _posSku
+    const allInv = inventory;
+    // Un registro de inventario es huérfano si su product_id no coincide con ningún _posSku
+    const validIds = new Set(posProducts.map(p => p._posSku).filter(Boolean));
+    // También necesitamos los skus reales de Product — pero no los tenemos aquí directamente
+    // Así que simplemente contamos los que aparecen como "Producto desconocido" (product_id no matchea ningún sku conocido)
+    return allInv.filter(inv => inv.product_id && !validIds.has(inv.product_id)).length;
+  }, [inventory, productos]);
+
+  const handleCleanOrphans = async () => {
+    if (!window.confirm(`¿Eliminar ${orphanCount} registros de inventario con producto desconocido?`)) return;
+    setReverting(true);
+    try {
+      const [allInv, allProducts] = await Promise.all([Inventory.list(), Product.list()]);
+      const validSkus = new Set((allProducts || []).map(p => p.sku).filter(Boolean));
+      const orphans = (allInv || []).filter(inv => inv.product_id && !validSkus.has(inv.product_id));
+      await Promise.all(orphans.map(inv => Inventory.delete(inv.id)));
+      alert(`${orphans.length} registros huérfanos eliminados.`);
+      await loadData();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+    setReverting(false);
+  };
+
   if (loading) return (
     <div className="p-6 flex justify-center">
       <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
@@ -265,7 +292,13 @@ export default function MerchandiseAssignment() {
               Asigna cada referencia a los puntos de venta que correspondan.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+            {orphanCount > 0 && (
+              <Button variant="outline" size="sm" onClick={handleCleanOrphans} disabled={reverting} className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50">
+                <Trash2 className="w-4 h-4" />
+                Limpiar huérfanos ({orphanCount})
+              </Button>
+            )}
             {assignedGroups.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setShowRevert(v => !v)} className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50">
                 <Undo2 className="w-4 h-4" />
