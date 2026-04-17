@@ -161,12 +161,14 @@ export default function MerchandiseAssignment() {
 
     setSaving(dateKey);
     try {
-      // Por cada referencia × sucursal, actualizar inventario
+      // Cargar inventario fresco del servidor para evitar datos stale
+      let liveInventory = await Inventory.list();
+
       const assignedRefs = new Set();
       for (const item of itemsList) {
         const refAssignments = assignments[dateKey]?.[item.product_reference] || {};
         const refTotal = Object.values(refAssignments).reduce((s, v) => s + (Number(v) || 0), 0);
-        if (refTotal <= 0) continue; // Skip referencias sin asignación
+        if (refTotal <= 0) continue;
 
         assignedRefs.add(item.product_reference);
         const prod = productos.find(p => p.reference === item.product_reference);
@@ -176,41 +178,38 @@ export default function MerchandiseAssignment() {
           const quantity = Number(qty);
           if (quantity <= 0) continue;
 
-          const existingInv = inventory.find(
+          // Buscar en inventario fresco (no el state)
+          const existingInv = (liveInventory || []).find(
             inv => inv.product_id === productId && inv.location_id === locationId
           );
           if (existingInv) {
+            const newStock = (Number(existingInv.current_stock) || 0) + quantity;
+            const newAvail = (Number(existingInv.available_stock) || 0) + quantity;
             await Inventory.update(existingInv.id, {
-              current_stock: (Number(existingInv.current_stock) || 0) + quantity,
-              available_stock: (Number(existingInv.available_stock) || 0) + quantity,
+              current_stock: newStock,
+              available_stock: newAvail,
             });
+            // Actualizar en el array local para que la próxima iteración lo vea
+            existingInv.current_stock = newStock;
+            existingInv.available_stock = newAvail;
           } else {
-            await Inventory.create({
+            const created = await Inventory.create({
               product_id: productId,
               location_id: locationId,
               current_stock: quantity,
               available_stock: quantity,
               reserved_stock: 0,
             });
+            // Agregarlo al array para que no se duplique en la próxima iteración
+            liveInventory.push(created);
           }
         }
       }
 
-      // Solo marcar como asignadas las entregas que contienen referencias asignadas
-      const deliveriesToMark = deliveries
-        .filter(d => deliveryIds.includes(d.id))
-        .filter(d => {
-          const refs = (d.items || []).map(i => i.product_reference);
-          return refs.every(r => assignedRefs.has(r));
-        });
-      // Si TODAS las referencias del día se asignaron, marcar todas
-      const allRefsAssigned = itemsList.every(item => assignedRefs.has(item.product_reference));
-      const idsToMark = allRefsAssigned ? deliveryIds : deliveriesToMark.map(d => d.id);
+      // Marcar entregas como asignadas
+      await Promise.all(deliveryIds.map(id => Delivery.update(id, { inventory_assigned: true })));
 
-      if (idsToMark.length > 0) {
-        await Promise.all(idsToMark.map(id => Delivery.update(id, { inventory_assigned: true })));
-      }
-      alert(`✅ ${totalAssigned} unidades asignadas (${assignedRefs.size} referencia(s)). ${allRefsAssigned ? 'Todas las referencias del día completadas.' : 'Quedan referencias pendientes.'}`);
+      alert(`✅ ${totalAssigned} unidades asignadas (${assignedRefs.size} referencia(s)).`);
       loadData();
     } catch (err) {
       alert("Error al asignar: " + err.message);
