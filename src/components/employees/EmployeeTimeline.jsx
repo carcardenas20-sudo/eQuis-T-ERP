@@ -58,7 +58,7 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
   // Agregar entregas
   deliveries.forEach(delivery => {
     // Traslados
-    if (delivery.status === 'traslado') {
+    if (delivery.status === 'traslado' || delivery.notes?.includes('[TRASLADO]')) {
       const notes = delivery.notes || '';
       const destinoMatch = notes.match(/Transferido a ([^—\n]+)/);
       const destino = destinoMatch ? destinoMatch[1].trim() : '';
@@ -82,7 +82,7 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
     }
 
     // Bajas de prenda
-    if (delivery.status === 'baja') {
+    if (delivery.status === 'baja' || delivery.notes?.includes('[BAJA]')) {
       const notes = delivery.notes || '';
       const motivoMatch = notes.match(/Motivo: ([^—\n]+)/);
       const motivo = motivoMatch ? motivoMatch[1].trim() : '';
