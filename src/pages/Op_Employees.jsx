@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Phone, Calendar, Link as LinkIcon, Check, Eye, AlertTriangle, KeyRound, Users, ArrowRightLeft, Package } from "lucide-react";
-import { Delivery, Dispatch, Payment, Producto } from "@/api/entitiesProduccion";
+import { Delivery, Dispatch, Payment } from "@/api/entitiesProduccion";
+import { Producto } from "@/api/entitiesChaquetas";
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
 
