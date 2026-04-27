@@ -126,7 +126,6 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.nombre.trim()) { alert("El nombre del producto es obligatorio."); return; }
-    if (formData.tallas.length === 0) { alert("Debe agregar al menos una talla."); return; }
     // Limpiar borrador al guardar exitosamente
     try { localStorage.removeItem(DRAFT_KEY); } catch (_) {}
     onSubmit(formData);
