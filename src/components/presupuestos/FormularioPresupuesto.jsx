@@ -299,7 +299,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
         producto_id: productoSeleccionado,
         unidades_por_asignacion: 20,
         combinaciones: [],
-        objetivo_por_talla: (producto.tallas || []).reduce((acc, t) => ({ ...acc, [t]: 0 }), {})
+        objetivo_por_talla: (producto.tallas?.length > 0 ? producto.tallas : ['S','M','L','XL']).reduce((acc, t) => ({ ...acc, [t]: 0 }), {})
       }]
     }));
     setProductoSeleccionado("");
