@@ -57,7 +57,10 @@ export default function GestorCombinacionesPredefinidas({ formData, setFormData,
   const materialesVariables = useMemo(() =>
     materiales.filter(m => {
       const mp = mpMap.get(m.materia_prima_id);
-      return mp && !mp.color_fijo;
+      if (!mp || mp.color_fijo) return false;
+      // color_propio solo aparece si tiene color_independiente activado en este producto
+      if (m.seccion === 'color_propio' && !m.color_independiente) return false;
+      return true;
     }), [materiales, mpMap]);
 
   const newId = () => `comb_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;

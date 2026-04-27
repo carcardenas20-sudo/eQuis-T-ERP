@@ -135,7 +135,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                 colorFinal = colorObj?.nombre || 'Color no encontrado';
               } else {
                 const seccionAnclaje = mat.seccion || 'superior';
-                if (seccionAnclaje === 'color_propio') {
+                if (seccionAnclaje === 'color_propio' && !mat.color_independiente) {
                   colorFinal = 'Color Propio';
                 } else {
                   const colorId = combinacion.colores?.[seccionAnclaje];

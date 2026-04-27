@@ -46,7 +46,9 @@ export default function SelectorCombinaciones({
     const activos = (predef.colores_por_material || []).filter(cm => {
       const mat = producto?.materiales_requeridos?.find(m => m.row_id === cm.row_id);
       const mp = mpMap.get(mat?.materia_prima_id);
-      return !mp?.color_fijo && cm.color_id;
+      if (!cm.color_id || mp?.color_fijo) return false;
+      if (mat?.seccion === 'color_propio' && !mat?.color_independiente) return false;
+      return true;
     });
     if (activos.length === 0) return <span className="text-xs text-slate-400 italic">Sin colores definidos</span>;
     const secLabels = { superior: 'S', central: 'C', inferior: 'I', forro: 'F', contraste: 'K', fondo_entero: 'FE' };
