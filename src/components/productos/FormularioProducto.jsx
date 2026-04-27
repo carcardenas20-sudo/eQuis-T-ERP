@@ -461,24 +461,26 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                 </Button>
                               </div>
                             </div>
-                            {/* Toggle color independiente (solo para color_propio) */}
-                            {material.seccion === 'color_propio' && (
-                              <div className="flex items-center gap-2 pt-1 pb-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => actualizarMaterial(index, 'color_independiente', !material.color_independiente)}
-                                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${material.color_independiente ? 'bg-indigo-500' : 'bg-slate-300'}`}
-                                >
-                                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${material.color_independiente ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                                </button>
-                                <span className="text-xs text-slate-600">
-                                  Color independiente por combinación
-                                </span>
-                                {material.color_independiente && (
-                                  <span className="text-xs text-indigo-500 font-medium">— aparece como columna en combinaciones</span>
-                                )}
-                              </div>
-                            )}
+                            {/* Toggle color independiente: visible para materiales de color variable */}
+                            {(() => {
+                              const mp = materiasPrimas.find(mp => mp.id === material.materia_prima_id);
+                              if (!mp || mp.color_fijo) return null;
+                              return (
+                                <div className="flex items-center gap-2 pt-1 pb-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => actualizarMaterial(index, 'color_independiente', !material.color_independiente)}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${material.color_independiente ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                                  >
+                                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${material.color_independiente ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                                  </button>
+                                  <span className="text-xs text-slate-600">Color independiente por combinación</span>
+                                  {material.color_independiente && (
+                                    <span className="text-xs text-indigo-500 font-medium">— columna propia en combinaciones</span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             {/* Fila 2: Campos para remisión individual */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-200">
                               <div>
