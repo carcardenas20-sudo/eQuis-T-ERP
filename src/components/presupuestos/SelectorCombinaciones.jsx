@@ -46,7 +46,8 @@ export default function SelectorCombinaciones({
     const activos = (predef.colores_por_material || []).filter(cm => {
       const mat = producto?.materiales_requeridos?.find(m => m.row_id === cm.row_id);
       const mp = mpMap.get(mat?.materia_prima_id);
-      if (!cm.color_id || mp?.color_fijo) return false;
+      if (!cm.color_id) return false;
+      if (mp?.color_fijo && !mat?.color_independiente) return false;
       if (mat?.seccion === 'color_propio' && !mat?.color_independiente) return false;
       return true;
     });

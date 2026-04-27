@@ -124,7 +124,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
             if (!materia) return;
 
             let colorFinal = 'Sin definir';
-            if (materia.color_fijo) {
+            if (materia.color_fijo && !mat.color_independiente) {
               colorFinal = materia.color_por_defecto || 'Color Fijo';
             } else {
               const colorEntry = (combinacion.colores_por_material || []).find(cm => cm.row_id === mat.row_id);

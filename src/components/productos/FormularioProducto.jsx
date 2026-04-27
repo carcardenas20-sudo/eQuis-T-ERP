@@ -461,10 +461,10 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                 </Button>
                               </div>
                             </div>
-                            {/* Toggle color independiente: visible para materiales de color variable */}
+                            {/* Toggle color independiente: para materiales con color fijo global que en este producto varían por combinación */}
                             {(() => {
                               const mp = materiasPrimas.find(mp => mp.id === material.materia_prima_id);
-                              if (!mp || mp.color_fijo) return null;
+                              if (!mp || !mp.color_fijo) return null;
                               return (
                                 <div className="flex items-center gap-2 pt-1 pb-0.5">
                                   <button
@@ -474,9 +474,9 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                   >
                                     <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${material.color_independiente ? 'translate-x-4' : 'translate-x-0.5'}`} />
                                   </button>
-                                  <span className="text-xs text-slate-600">Color independiente por combinación</span>
+                                  <span className="text-xs text-slate-600">Color variable en este producto</span>
                                   {material.color_independiente && (
-                                    <span className="text-xs text-indigo-500 font-medium">— columna propia en combinaciones</span>
+                                    <span className="text-xs text-indigo-500 font-medium">— aparece como columna en combinaciones</span>
                                   )}
                                 </div>
                               );
