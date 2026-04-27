@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, TruckIcon, PackageCheck, DollarSign, ShoppingBag } from "lucide-react";
+import { Clock, TruckIcon, PackageCheck, DollarSign, ShoppingBag, AlertTriangle, ArrowRightLeft } from "lucide-react";
 import { format } from "date-fns";
 
 export default function EmployeeTimeline({ dispatches, deliveries, payments, purchases = [], getProductName, pendingAmount }) {
@@ -35,26 +35,81 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
   // Agregar despachos
   dispatches.forEach(dispatch => {
     const wasDiscounted = dispatch.status === 'entregado' && dispatch.quantity === 0;
+    const isTraslado = !!(dispatch.observations && dispatch.observations.includes('[TRASLADO]'));
     const displayQty = wasDiscounted ? (purchasedQtyByProduct[dispatch.product_reference] || 0) : dispatch.quantity;
+    const origenMatch = isTraslado ? dispatch.observations.match(/Recibido de ([^—\n]+)/) : null;
+    const origen = origenMatch ? origenMatch[1].trim() : '';
+
     timelineEvents.push({
       type: 'dispatch',
       date: dispatch.dispatch_date,
       data: dispatch,
-      title: `Material Asignado: ${getProductName(dispatch.product_reference)}`,
-      subtitle: `${displayQty} unidades`,
+      title: isTraslado
+        ? `Despacho recibido por traslado: ${getProductName(dispatch.product_reference)}`
+        : `Material Asignado: ${getProductName(dispatch.product_reference)}`,
+      subtitle: `${displayQty} unidades${origen ? ` · de ${origen}` : ''}`,
       wasDiscounted,
-      icon: TruckIcon,
-      color: wasDiscounted ? 'orange' : 'blue'
+      isTraslado,
+      icon: isTraslado ? ArrowRightLeft : TruckIcon,
+      color: wasDiscounted ? 'orange' : isTraslado ? 'indigo' : 'blue'
     });
   });
 
   // Agregar entregas
   deliveries.forEach(delivery => {
+    // Traslados
+    if (delivery.status === 'traslado') {
+      const notes = delivery.notes || '';
+      const destinoMatch = notes.match(/Transferido a ([^—\n]+)/);
+      const destino = destinoMatch ? destinoMatch[1].trim() : '';
+      const detalle = notes.replace(/\[TRASLADO\][^—\n]*/, '').replace(/^[\s—]+/, '').trim();
+      const itemsInfo = delivery.items?.length > 0
+        ? delivery.items.map(i => `${getProductName(i.product_reference)} (${i.quantity} uds)`).join(', ')
+        : '';
+
+      timelineEvents.push({
+        type: 'traslado',
+        date: delivery.delivery_date,
+        data: delivery,
+        title: 'Despacho trasladado',
+        subtitle: itemsInfo,
+        destino,
+        detalle,
+        icon: ArrowRightLeft,
+        color: 'indigo',
+      });
+      return;
+    }
+
+    // Bajas de prenda
+    if (delivery.status === 'baja') {
+      const notes = delivery.notes || '';
+      const motivoMatch = notes.match(/Motivo: ([^—\n]+)/);
+      const motivo = motivoMatch ? motivoMatch[1].trim() : '';
+      const detalle = notes.replace(/\[BAJA\]\s*Motivo:[^—\n]*/, '').replace(/^[\s—]+/, '').trim();
+      const itemsInfo = delivery.items?.length > 0
+        ? delivery.items.map(i => `${getProductName(i.product_reference)} (${i.quantity} uds)`).join(', ')
+        : delivery.product_reference ? `${getProductName(delivery.product_reference)} (${delivery.quantity} uds)` : '';
+
+      timelineEvents.push({
+        type: 'baja',
+        date: delivery.delivery_date,
+        data: delivery,
+        title: 'Prenda dada de baja',
+        subtitle: itemsInfo,
+        motivo,
+        detalle,
+        icon: AlertTriangle,
+        color: 'red',
+      });
+      return;
+    }
+
     const isFromPurchase = !!(delivery.notes && delivery.notes.includes('Compra empleado'));
     const paymentsForDelivery = deliveryPaymentsMap[delivery.id] || [];
     const totalPaid = paymentsForDelivery.reduce((sum, p) => sum + p.amount, 0);
     const isPaid = isFromPurchase || totalPaid >= delivery.total_amount || delivery.status === 'pagado';
-    
+
     let title, subtitle;
     if (delivery.items && delivery.items.length > 0) {
       if (delivery.items.length === 1) {
@@ -72,7 +127,7 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
         : `Producto Entregado: ${getProductName(delivery.product_reference)}`;
       subtitle = `${delivery.quantity} unidades · $${delivery.total_amount.toLocaleString()}`;
     }
-    
+
     timelineEvents.push({
       type: 'delivery',
       date: delivery.delivery_date,
@@ -128,6 +183,8 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
       case 'blue': return 'bg-blue-100 text-blue-600 border-blue-200';
       case 'green': return 'bg-green-100 text-green-600 border-green-200';
       case 'orange': return 'bg-orange-100 text-orange-600 border-orange-200';
+      case 'red': return 'bg-red-100 text-red-600 border-red-200';
+      case 'indigo': return 'bg-indigo-100 text-indigo-600 border-indigo-200';
       default: return 'bg-gray-100 text-gray-600 border-gray-200';
     }
   };
@@ -156,6 +213,26 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
                     </span>
                   </div>
                   <p className="text-sm text-slate-600">{event.subtitle}</p>
+                  {event.type === 'traslado' && (
+                    <div className="mt-1 space-y-1">
+                      <Badge className="bg-indigo-100 text-indigo-800">
+                        ↗ Trasladado{event.destino ? ` a ${event.destino}` : ''}
+                      </Badge>
+                      {event.detalle && (
+                        <p className="text-xs text-slate-500">{event.detalle}</p>
+                      )}
+                    </div>
+                  )}
+                  {event.type === 'baja' && (
+                    <div className="mt-1 space-y-1">
+                      <Badge className="bg-red-100 text-red-800">
+                        ⚠️ Baja — {event.motivo || 'Sin motivo registrado'}
+                      </Badge>
+                      {event.detalle && (
+                        <p className="text-xs text-slate-500">{event.detalle}</p>
+                      )}
+                    </div>
+                  )}
                   {event.type === 'delivery' && (
                     <>
                       <Badge 
@@ -181,6 +258,9 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
                   )}
                   {event.type === 'dispatch' && event.wasDiscounted && (
                     <Badge className="mt-1 bg-orange-100 text-orange-800">🛍️ Descontado por compra interna</Badge>
+                  )}
+                  {event.type === 'dispatch' && event.isTraslado && (
+                    <Badge className="mt-1 bg-indigo-100 text-indigo-800">↙ Recibido por traslado</Badge>
                   )}
                   {event.type === 'payment' && event.data.description && (
                     <p className="text-xs text-slate-500 mt-1">{event.data.description}</p>
