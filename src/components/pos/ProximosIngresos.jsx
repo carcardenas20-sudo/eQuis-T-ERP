@@ -34,17 +34,12 @@ export default function ProximosIngresos({ presupuestos = [], productos = [], di
   };
 
   // ── Presupuestos aprobados ────────────────────────────────────────────
-  const presupuestosAprobados = useMemo(() =>
-    (presupuestos || [])
+  const presupuestosAprobados = useMemo(() => {
+    const aprobados = (presupuestos || [])
       .filter(p => p.estado === 'aprobado')
-      .sort((a, b) => {
-        if (!a.fecha_entrega && !b.fecha_entrega) return 0;
-        if (!a.fecha_entrega) return 1;
-        if (!b.fecha_entrega) return -1;
-        return new Date(a.fecha_entrega) - new Date(b.fecha_entrega);
-      }),
-    [presupuestos]
-  );
+      .sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    return aprobados.slice(0, 2);
+  }, [presupuestos]);
 
   const formatFecha = (f) => {
     if (!f) return 'Sin fecha';
