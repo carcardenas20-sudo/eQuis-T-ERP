@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Product, Sale, SaleItem, Inventory, PriceList, ProductPrice, Credit, Payment, Location, SystemSettings } from "@/entities/all";
+import { Presupuesto, Producto as ProductoFab } from "@/api/entitiesChaquetas";
+import { Dispatch, Delivery } from "@/api/entitiesProduccion";
 import { InventoryMovement } from "@/entities/InventoryMovement";
 import { useSession } from "../components/providers/SessionProvider";
 import { Button } from "@/components/ui/button";
@@ -20,11 +22,13 @@ import {
   ArrowLeftRight,
   FileText,
   Clock,
-  Shield
+  Shield,
+  CalendarClock
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import ProductSearch from "../components/pos/ProductSearch";
+import ProximosIngresos from "../components/pos/ProximosIngresos";
 import Cart from "../components/pos/Cart";
 import PaymentModal from "../components/pos/PaymentModal";
 import CustomerForm from "../components/pos/CustomerForm";
@@ -67,6 +71,12 @@ export default function POS() {
 
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [activeTab, setActiveTab] = useState("products");
+
+  // Próximos ingresos
+  const [ingresosData, setIngresosData] = useState({ presupuestos: [], productos: [], dispatches: [], deliveries: [] });
+  const [ingresosLoaded, setIngresosLoaded] = useState(false);
+  const [ingresosLoading, setIngresosLoading] = useState(false);
+  const [showIngresos, setShowIngresos] = useState(false);
 
   // New feature modals
   const [showExchange, setShowExchange] = useState(false);
@@ -162,10 +172,9 @@ export default function POS() {
   const getPriceForProduct = useCallback((product, quantity) => {
     if (!selectedPriceList || !product) return product?.sale_price || 0;
 
-    const productSku = product.sku || product.id;
-
+    // Match by sku, then by id (familia_id is stored as product_sku in syncPriceLists)
     const matchingRules = priceRules.filter(rule =>
-      (rule.product_sku === productSku || rule.product_sku === product.id) &&
+      (rule.product_sku === product.sku || rule.product_sku === product.id) &&
       rule.price_list_code === selectedPriceList &&
       rule.min_quantity <= quantity
     );
@@ -295,6 +304,20 @@ export default function POS() {
     // After authorization, admin has shared PIN. Now allow global discount for 5 min (use permission already in cart)
     alert("Descuento autorizado. Ahora puedes aplicar el descuento en el carrito.");
   }, []);
+
+  const loadIngresos = async () => {
+    if (ingresosLoaded) return;
+    setIngresosLoading(true);
+    const [presupuestos, productos, dispatches, deliveries] = await Promise.all([
+      Presupuesto.list(),
+      ProductoFab.list(),
+      Dispatch.list(),
+      Delivery.list(),
+    ]);
+    setIngresosData({ presupuestos: presupuestos || [], productos: (productos || []).filter(p => p.reference), dispatches: dispatches || [], deliveries: deliveries || [] });
+    setIngresosLoaded(true);
+    setIngresosLoading(false);
+  };
 
   const handleSetCustomer = useCallback((customerData) => {
     console.log("📝 POS recibiendo customer:", customerData);
@@ -518,7 +541,7 @@ export default function POS() {
         })
       );
     }
-  }, [selectedPriceList, getPriceForProduct]);
+  }, [selectedPriceList]);
 
   if (isSessionLoading || isLoadingData) {
     return (
@@ -703,6 +726,9 @@ export default function POS() {
               <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowDiscountPin(true)}>
                 <Shield className="w-4 h-4 text-purple-600" /> Pin Descuento
               </Button>
+              <Button variant="outline" size="sm" className="gap-2 ml-auto" onClick={() => { setShowIngresos(true); loadIngresos(); }}>
+                <CalendarClock className="w-4 h-4 text-indigo-600" /> Próximos ingresos
+              </Button>
             </div>
             <div className="grid lg:grid-cols-3 gap-6 flex-1 min-h-0">
               <div className="lg:col-span-2 space-y-6 flex flex-col min-h-0">
@@ -752,7 +778,7 @@ export default function POS() {
 
           <div className="lg:hidden flex flex-col min-h-0 overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-2 mx-2 my-2 sm:mx-4 sm:my-4">
+              <TabsList className="grid w-full grid-cols-3 mx-2 my-2 sm:mx-4 sm:my-4">
                 <TabsTrigger value="products" className="flex items-center gap-2 text-sm sm:text-base">
                   <Package className="w-4 h-4" />
                   Productos
@@ -760,6 +786,11 @@ export default function POS() {
                 <TabsTrigger value="customer" className="flex items-center gap-2 text-sm sm:text-base">
                   <Users className="w-4 h-4" />
                   Cliente
+                </TabsTrigger>
+                <TabsTrigger value="ingresos" className="flex items-center gap-2 text-sm sm:text-base"
+                  onClick={() => loadIngresos()}>
+                  <CalendarClock className="w-4 h-4" />
+                  Ingresos
                 </TabsTrigger>
               </TabsList>
 
@@ -791,6 +822,16 @@ export default function POS() {
                   onCustomerChange={handleSetCustomer}
                   isMobile={true}
                 />
+              </TabsContent>
+
+              <TabsContent value="ingresos" className="flex-1 mx-3 sm:mx-4 mt-0 overflow-y-auto pb-24">
+                {ingresosLoading ? (
+                  <div className="flex items-center justify-center py-16 text-slate-400">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" /> Cargando...
+                  </div>
+                ) : (
+                  <ProximosIngresos {...ingresosData} />
+                )}
               </TabsContent>
             </Tabs>
           </div>
@@ -847,6 +888,31 @@ export default function POS() {
           onAuthorized={handleDiscountAuthorized}
           onClose={() => setShowDiscountPin(false)}
         />
+      )}
+
+      {/* Sheet: Próximos ingresos (desktop) */}
+      {showIngresos && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/40" onClick={() => setShowIngresos(false)} />
+          <div className="w-full max-w-md bg-white shadow-2xl flex flex-col h-full">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="w-5 h-5 text-indigo-600" />
+                <h2 className="font-bold text-slate-900">Próximos ingresos</h2>
+              </div>
+              <button onClick={() => setShowIngresos(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {ingresosLoading ? (
+                <div className="flex items-center justify-center py-16 text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" /> Cargando...
+                </div>
+              ) : (
+                <ProximosIngresos {...ingresosData} />
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
