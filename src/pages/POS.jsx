@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Product, Sale, SaleItem, Inventory, PriceList, ProductPrice, Credit, Payment, Location, SystemSettings } from "@/entities/all";
-import { Presupuesto, Producto as ProductoFab } from "@/api/entitiesChaquetas";
+import { Producto as ProductoFab } from "@/api/entitiesChaquetas";
 import { Dispatch, Delivery } from "@/api/entitiesProduccion";
 import { InventoryMovement } from "@/entities/InventoryMovement";
 import { useSession } from "../components/providers/SessionProvider";
@@ -73,7 +73,7 @@ export default function POS() {
   const [activeTab, setActiveTab] = useState("products");
 
   // Próximos ingresos
-  const [ingresosData, setIngresosData] = useState({ presupuestos: [], productos: [], dispatches: [], deliveries: [] });
+  const [ingresosData, setIngresosData] = useState({ productos: [], dispatches: [], deliveries: [] });
   const [ingresosLoaded, setIngresosLoaded] = useState(false);
   const [ingresosLoading, setIngresosLoading] = useState(false);
   const [showIngresos, setShowIngresos] = useState(false);
@@ -308,13 +308,12 @@ export default function POS() {
   const loadIngresos = async () => {
     if (ingresosLoaded) return;
     setIngresosLoading(true);
-    const [presupuestos, productos, dispatches, deliveries] = await Promise.all([
-      Presupuesto.list(),
+    const [productos, dispatches, deliveries] = await Promise.all([
       ProductoFab.list(),
       Dispatch.list(),
       Delivery.list(),
     ]);
-    setIngresosData({ presupuestos: presupuestos || [], productos: (productos || []).filter(p => p.reference), dispatches: dispatches || [], deliveries: deliveries || [] });
+    setIngresosData({ productos: (productos || []).filter(p => p.reference), dispatches: dispatches || [], deliveries: deliveries || [] });
     setIngresosLoaded(true);
     setIngresosLoading(false);
   };
