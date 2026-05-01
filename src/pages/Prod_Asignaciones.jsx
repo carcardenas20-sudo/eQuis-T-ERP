@@ -41,6 +41,9 @@ function calcularMateriales(productoInfo, combinacion, tallasCorte, materiasPrim
 
 function nombreCombo(combo) {
   if (combo.nombre) return combo.nombre;
+  const coloresMat = combo.colores_por_material || [];
+  const unicos = [...new Set(coloresMat.map(cm => cm.color_nombre).filter(Boolean))];
+  if (unicos.length) return unicos.join(" / ");
   const cols = Object.values(combo.colores || {}).filter(Boolean);
   return cols.length ? cols.join(" / ") : `Combo ${combo.predefinida_id || ""}`;
 }
