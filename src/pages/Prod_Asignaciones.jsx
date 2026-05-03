@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Plus, ChevronDown, ChevronUp, RefreshCw,
-  CheckCircle2, AlertCircle, PackageCheck, X, Scissors
+  CheckCircle2, AlertCircle, PackageCheck, X, Scissors, Eye, Printer
 } from "lucide-react";
 
 // Calcula materiales proporcionales para un lote
@@ -65,6 +65,7 @@ export default function Asignaciones() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState({});
+  const [viewingLote, setViewingLote] = useState(null);
 
   // Form
   const [showForm, setShowForm] = useState(false);
@@ -365,14 +366,24 @@ export default function Asignaciones() {
                                         {(lote.tallas_cantidades || []).map(t => `${t.talla}×${t.cantidad}`).join(", ")}
                                       </span>
                                     </div>
-                                    <Badge className={`text-xs shrink-0 ${
-                                      lote.estado === "despachado" ? "bg-blue-100 text-blue-700" :
-                                      lote.estado === "entregado" ? "bg-green-100 text-green-700" :
-                                      "bg-amber-100 text-amber-700"
-                                    }`}>
-                                      {lote.estado === "despachado" ? "Despachado" :
-                                       lote.estado === "entregado" ? "Entregado" : "Pendiente planillador"}
-                                    </Badge>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <Badge className={`text-xs ${
+                                        lote.estado === "despachado" ? "bg-blue-100 text-blue-700" :
+                                        lote.estado === "entregado" ? "bg-green-100 text-green-700" :
+                                        "bg-amber-100 text-amber-700"
+                                      }`}>
+                                        {lote.estado === "despachado" ? "Despachado" :
+                                         lote.estado === "entregado" ? "Entregado" : "Pendiente"}
+                                      </Badge>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 text-slate-400 hover:text-emerald-600"
+                                        onClick={() => setViewingLote({ ...lote, producto_nombre: productoInfo?.nombre || "" })}
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </Button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -457,6 +468,105 @@ export default function Asignaciones() {
               >
                 {saving ? "Guardando..." : "Crear lote"}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal ver remisión */}
+      {viewingLote && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+              <div>
+                <h2 className="font-bold text-slate-900">Remisión</h2>
+                <p className="font-mono text-xs text-slate-400 mt-0.5">{viewingLote.numero_remision}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5 text-xs"
+                  onClick={() => window.print()}
+                >
+                  <Printer className="w-3.5 h-3.5" /> Imprimir
+                </Button>
+                <button onClick={() => setViewingLote(null)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto p-5 space-y-5 print:p-0">
+              {/* Info general */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <p className="text-xs text-slate-400 mb-0.5">Producto</p>
+                  <p className="font-semibold text-slate-800">{viewingLote.producto_nombre}</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <p className="text-xs text-slate-400 mb-0.5">Combinación</p>
+                  <p className="font-semibold text-slate-800">{viewingLote.combinacion_nombre || "—"}</p>
+                </div>
+              </div>
+
+              {/* Tallas */}
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Tallas</p>
+                <div className="flex flex-wrap gap-2">
+                  {(viewingLote.tallas_cantidades || []).map(tc => (
+                    <div key={tc.talla} className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-center min-w-[56px]">
+                      <p className="text-xs text-emerald-600 font-medium">{tc.talla}</p>
+                      <p className="text-xl font-bold text-emerald-800">{tc.cantidad}</p>
+                    </div>
+                  ))}
+                  <div className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-center min-w-[56px]">
+                    <p className="text-xs text-slate-500 font-medium">Total</p>
+                    <p className="text-xl font-bold text-slate-700">
+                      {(viewingLote.tallas_cantidades || []).reduce((s, tc) => s + (Number(tc.cantidad) || 0), 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Materiales */}
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Materiales</p>
+                {(viewingLote.materiales_calculados || []).length === 0 ? (
+                  <p className="text-sm text-slate-400 italic">Sin materiales registrados</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(viewingLote.materiales_calculados || []).map((mat, i) => (
+                      <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-100">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{mat.nombre}</p>
+                          {mat.color && mat.color !== "Sin definir" && (
+                            <p className="text-xs text-slate-400">{mat.color}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-slate-900">{mat.cantidad}</span>
+                          <span className="text-xs text-slate-400 ml-1">{mat.etiqueta}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Estado */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <p className="text-xs text-slate-400">Estado</p>
+                <Badge className={`text-xs ${
+                  viewingLote.estado === "despachado" ? "bg-blue-100 text-blue-700" :
+                  viewingLote.estado === "entregado" ? "bg-green-100 text-green-700" :
+                  "bg-amber-100 text-amber-700"
+                }`}>
+                  {viewingLote.estado === "despachado" ? "Despachado" :
+                   viewingLote.estado === "entregado" ? "Entregado" : "Pendiente planillador"}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
