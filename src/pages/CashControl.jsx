@@ -144,11 +144,13 @@ export default function CashControlPage() {
       for (const [, data] of Object.entries(dataByKey)) {
         const expensesTotal = data.expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
         const hasActivity = data.cash > 0 || data.transfers > 0 || data.card > 0 || expensesTotal > 0;
-        if (!hasActivity) continue;
 
         let control = existingControls.find(
           c => toDateOnly(c.control_date) === data.date && c.location_id === data.location_id
         );
+
+        // Si no hay actividad y no existe un control previo, saltar
+        if (!hasActivity && !control) continue;
 
         const newCash = data.cash;
         const newTransfer = data.transfers;
