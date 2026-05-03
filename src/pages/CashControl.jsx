@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { CashControl, Expense, Location, Sale } from "@/entities/all";
+import { CashControl, Expense, Location, Sale, Payment } from "@/entities/all";
 import { User } from "@/entities/User";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,10 +71,19 @@ export default function CashControlPage() {
         salesFilter.location_id = filters.location;
         expensesFilter.location_id = filters.location;
       }
+      if (applyDateFilter) {
+        salesFilter.sale_date = { $gte: startStr };
+        expensesFilter.expense_date = { $gte: startStr };
+      }
 
-      const [sales, expenses] = await Promise.all([
+      let paymentsFilter = { type: 'credit_payment' };
+      if (filters.location !== "all") paymentsFilter.location_id = filters.location;
+      if (applyDateFilter) paymentsFilter.payment_date = { $gte: startStr };
+
+      const [sales, expenses, creditPayments] = await Promise.all([
         Sale.filter(salesFilter),
-        Expense.filter(expensesFilter)
+        Expense.filter(expensesFilter),
+        Payment.filter(paymentsFilter),
       ]);
 
       const dataByKey = {};
@@ -88,7 +97,7 @@ export default function CashControlPage() {
 
       sales.forEach(sale => {
         const date = toDateOnly(sale.sale_date);
-        if (!date || (applyDateFilter && date < startStr)) return;
+        if (!date) return;
         const locationId = sale.location_id || null;
         const key = ensureKey(date, locationId);
         const methods = Array.isArray(sale.payment_methods) ? sale.payment_methods : [];
@@ -105,9 +114,22 @@ export default function CashControlPage() {
         }
       });
 
+      // Abonos a créditos — se suman al control de efectivo por método de pago
+      creditPayments.forEach(p => {
+        const date = toDateOnly(p.payment_date);
+        if (!date) return;
+        const locationId = p.location_id || null;
+        const key = ensureKey(date, locationId);
+        const amt = Number(p.amount) || 0;
+        if (amt <= 0) return;
+        if (p.method === 'cash') dataByKey[key].cash += amt;
+        else if (p.method === 'transfer' || p.method === 'qr') dataByKey[key].transfers += amt;
+        else if (p.method === 'card') dataByKey[key].card += amt;
+      });
+
       expenses.forEach(expense => {
         const date = toDateOnly(expense.expense_date);
-        if (!date || (applyDateFilter && date < startStr)) return;
+        if (!date) return;
         const locationId = expense.location_id || null;
         const key = ensureKey(date, locationId);
         if (expense.payment_method === 'cash') {
@@ -154,6 +176,15 @@ export default function CashControlPage() {
       }
 
       if (updatePromises.length > 0) await Promise.all(updatePromises);
+
+      // Siempre incluir controles no verificados aunque estén fuera del rango de fechas
+      const controlsInArray = new Set(controlsArray.map(c => c.id));
+      for (const control of existingControls) {
+        if (controlsInArray.has(control.id)) continue;
+        if (control.cash_collected && control.transfers_verified) continue;
+        if (filters.location !== "all" && control.location_id !== filters.location) continue;
+        controlsArray.push({ ...control, expenses: [] });
+      }
 
       controlsArray.sort((a, b) => new Date(b.control_date) - new Date(a.control_date));
       setControls(controlsArray);
