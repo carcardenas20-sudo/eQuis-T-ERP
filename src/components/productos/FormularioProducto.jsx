@@ -527,8 +527,8 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                 <div className="col-span-3 sm:col-span-2">
                                   <Label className="text-xs text-slate-400">Factor (× N prendas)</Label>
                                   <Input type="number" min="0.01" step="0.01"
-                                    value={material.piezas_por_unidad || 1}
-                                    onChange={(e) => actualizarMaterial(index, 'piezas_por_unidad', parseFloat(e.target.value) || 1)}
+                                    value={material.piezas_por_unidad ?? 1}
+                                    onChange={(e) => actualizarMaterial(index, 'piezas_por_unidad', e.target.value)}
                                     className="h-7 text-xs mt-0.5" />
                                 </div>
                               )}

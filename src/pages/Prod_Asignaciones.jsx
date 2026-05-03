@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Presupuesto, Producto, MateriaPrima, Color, Remision } from "@/api/entitiesChaquetas";
 import { Dispatch } from "@/entities/all";
+import { calcularCantidadRemision } from "@/components/utils/remisionUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ function calcularMateriales(productoInfo, combinacion, tallasCorte, materiasPrim
       if (ce?.color_nombre) colorNombre = ce.color_nombre;
       else if (ce?.color_id) colorNombre = colores.find(c => c.id === ce.color_id)?.nombre || "?";
     }
-    const cantidad = Math.ceil((mat.cantidad_por_unidad || 0) * totalUnidades * (mat.piezas_por_unidad || 1) * 100) / 100;
+    const cantidad = calcularCantidadRemision(mat, totalUnidades);
     result.push({
       materia_prima_id: mp.id,
       nombre: mat.descripcion_remision || mat.nombre_seccion_display || mp.nombre,
