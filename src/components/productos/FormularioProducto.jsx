@@ -482,7 +482,18 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                               );
                             })()}
                             {/* Fila 2: Campos para remisión individual */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-200">
+                            <div className="flex items-center gap-2 pt-1 border-t border-slate-200 pb-1">
+                              <button
+                                type="button"
+                                onClick={() => actualizarMaterial(index, 'en_remision', material.en_remision === false ? true : false)}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${material.en_remision === false ? 'bg-slate-300' : 'bg-green-500'}`}
+                              >
+                                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${material.en_remision === false ? 'translate-x-0.5' : 'translate-x-4'}`} />
+                              </button>
+                              <span className="text-xs text-slate-600">Incluir en remisión</span>
+                            </div>
+                            {material.en_remision !== false && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-1">
                               <div>
                                 <Label className="text-xs text-slate-400">Nombre en remisión</Label>
                                 <Input
@@ -577,6 +588,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                 </span>
                               </div>
                             </div>
+                            )}
                           </div>
                         );
                       })

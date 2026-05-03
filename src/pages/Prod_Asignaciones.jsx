@@ -19,6 +19,7 @@ function calcularMateriales(productoInfo, combinacion, tallasCorte, materiasPrim
   if (totalUnidades === 0 || !productoInfo) return [];
   const result = [];
   (productoInfo.materiales_requeridos || []).forEach(mat => {
+    if (mat.en_remision === false) return;
     const mp = materiasPrimas.find(m => m.id === mat.materia_prima_id);
     if (!mp) return;
     let colorNombre = mp.color_por_defecto || "Sin definir";

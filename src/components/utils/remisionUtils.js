@@ -43,7 +43,7 @@ export function calcularCantidadRemision(material, N) {
 export function generarLineasRemision(producto, N, materiasPrimas = []) {
   const materiales = producto?.materiales_requeridos || [];
   return materiales
-    .filter(m => m.materia_prima_id && !m.es_opcional)
+    .filter(m => m.materia_prima_id && !m.es_opcional && m.en_remision !== false)
     .map(m => {
       const mp = materiasPrimas.find(p => p.id === m.materia_prima_id);
       const cantidad = calcularCantidadRemision(m, N);
