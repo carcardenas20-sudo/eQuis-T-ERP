@@ -12,9 +12,11 @@
 export function calcularCantidadRemision(material, N) {
   const formula = material.remision_formula || 'lineal';
 
+  const round2 = (v) => Math.round(v * 100) / 100;
+
   if (formula === 'lineal') {
     const factor = Number(material.piezas_por_unidad) || 1;
-    return N * factor;
+    return round2(N * factor);
   }
 
   if (formula === 'ceil_divide') {

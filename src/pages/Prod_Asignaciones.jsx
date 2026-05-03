@@ -627,7 +627,7 @@ export default function Asignaciones() {
                           )}
                         </div>
                         <div className="text-right">
-                          <span className="text-lg font-bold text-slate-900">{mat.cantidad}</span>
+                          <span className="text-lg font-bold text-slate-900">{Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, '')}</span>
                           <span className="text-xs text-slate-400 ml-1">{mat.etiqueta}</span>
                         </div>
                       </div>
