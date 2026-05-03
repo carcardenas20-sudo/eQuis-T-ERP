@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import MobilePageHeader from "../layout/MobilePageHeader";
 import { Payment } from "@/entities/Payment";
-import { Credit } from "@/entities/all";
+import { Credit, CashControl } from "@/entities/all";
 
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -61,6 +61,25 @@ export default function CreditDetailModal({ credit, onClose, onRefresh }) {
     setDeletingId(payment.id);
     try {
       await Payment.delete(payment.id);
+
+      // Actualizar CashControl del día correspondiente
+      const amt = Number(payment.amount) || 0;
+      if (amt > 0 && payment.payment_date) {
+        const dateStr = String(payment.payment_date).slice(0, 10);
+        const locationId = payment.location_id || null;
+        try {
+          const controls = await CashControl.filter({ control_date: dateStr, location_id: locationId });
+          if (controls.length > 0) {
+            const ctrl = controls[0];
+            const m = payment.method;
+            const newTransfer = (m === 'transfer' || m === 'qr') ? Math.max(0, (Number(ctrl.transfer_amount) || 0) - amt) : (Number(ctrl.transfer_amount) || 0);
+            const newCash = m === 'cash' ? Math.max(0, (Number(ctrl.cash_amount) || 0) - amt) : (Number(ctrl.cash_amount) || 0);
+            const newCard = m === 'card' ? Math.max(0, (Number(ctrl.card_amount) || 0) - amt) : (Number(ctrl.card_amount) || 0);
+            await CashControl.update(ctrl.id, { transfer_amount: newTransfer, cash_amount: newCash, card_amount: newCard });
+          }
+        } catch (_) { /* no bloquear si falla la actualización de caja */ }
+      }
+
       const remaining = paymentHistory.filter(p => p.id !== payment.id);
       const paidAmount = remaining.reduce((s, p) => s + (Number(p.amount) || 0), 0);
       const discounts = remaining.reduce((s, p) => s + (Number(p.discount_amount) || 0), 0);
