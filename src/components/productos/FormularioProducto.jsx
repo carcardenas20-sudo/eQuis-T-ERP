@@ -492,7 +492,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                               </button>
                               <span className="text-xs text-slate-600">Incluir en remisión</span>
                             </div>
-                            {material.en_remision !== false && (
+                            {material.en_remision !== false && (<>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-1">
                               <div>
                                 <Label className="text-xs text-slate-400">Nombre en remisión</Label>
@@ -588,7 +588,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                 </span>
                               </div>
                             </div>
-                            )}
+                            </>)}
                           </div>
                         );
                       })
