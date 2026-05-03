@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Plus, ChevronDown, ChevronUp, RefreshCw,
-  CheckCircle2, AlertCircle, PackageCheck, X, Scissors, Eye, Printer
+  CheckCircle2, AlertCircle, PackageCheck, X, Scissors, Eye, Printer, Trash2
 } from "lucide-react";
 
 // Calcula materiales proporcionales para un lote
@@ -66,6 +66,7 @@ export default function Asignaciones() {
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState({});
   const [viewingLote, setViewingLote] = useState(null);
+  const [deletingLoteId, setDeletingLoteId] = useState(null);
 
   // Form
   const [showForm, setShowForm] = useState(false);
@@ -109,6 +110,24 @@ export default function Asignaciones() {
     Remision.filter({ presupuesto_id: selectedId, tipo_remision: "asignacion_despacho" })
       .then(data => setLotes(data || []))
       .catch(() => setLotes([]));
+
+  const handleDeleteLote = async (lote) => {
+    if (!confirm(`¿Eliminar el lote ${lote.numero_remision}? Esta acción no se puede deshacer.`)) return;
+    setDeletingLoteId(lote.id);
+    try {
+      await Remision.delete(lote.id);
+      // Intentar eliminar el Dispatch asociado
+      try {
+        const dispatches = await Dispatch.filter({ lote_remision: lote.numero_remision });
+        for (const d of dispatches) await Dispatch.delete(d.id);
+      } catch (_) {}
+      setLotes(prev => prev.filter(l => l.id !== lote.id));
+      if (viewingLote?.id === lote.id) setViewingLote(null);
+    } catch (err) {
+      alert("Error al eliminar: " + err.message);
+    }
+    setDeletingLoteId(null);
+  };
 
   // Unidades ya asignadas en lotes para un combo
   const getAsignadoPorTalla = (key, talla) =>
@@ -383,6 +402,15 @@ export default function Asignaciones() {
                                       >
                                         <Eye className="w-4 h-4" />
                                       </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 text-slate-400 hover:text-red-500"
+                                        onClick={() => handleDeleteLote(lote)}
+                                        disabled={deletingLoteId === lote.id}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
                                     </div>
                                   </div>
                                 ))}
@@ -488,7 +516,51 @@ export default function Asignaciones() {
                   size="sm"
                   variant="outline"
                   className="h-8 gap-1.5 text-xs"
-                  onClick={() => window.print()}
+                  onClick={() => {
+                    const win = window.open('', '_blank');
+                    const lote = viewingLote;
+                    const totalUds = (lote.tallas_cantidades || []).reduce((s, tc) => s + (Number(tc.cantidad) || 0), 0);
+                    const tallasHtml = (lote.tallas_cantidades || []).map(tc =>
+                      `<div class="talla-box"><div class="talla-label">${tc.talla}</div><div class="talla-qty">${tc.cantidad}</div></div>`
+                    ).join('') + `<div class="talla-box total-box"><div class="talla-label">Total</div><div class="talla-qty">${totalUds}</div></div>`;
+                    const matsHtml = (lote.materiales_calculados || []).map(m =>
+                      `<div class="mat-row"><span class="mat-nombre">${m.nombre}${m.color && m.color !== 'Sin definir' ? ` <span class="mat-color">${m.color}</span>` : ''}</span><span class="mat-qty">${m.cantidad} <span class="mat-etiqueta">${m.etiqueta}</span></span></div>`
+                    ).join('');
+                    const slip = `
+                      <div class="slip">
+                        <div class="slip-header">
+                          <div class="slip-title">${lote.producto_nombre}</div>
+                          <div class="slip-sub">${lote.combinacion_nombre || ''}</div>
+                          <div class="slip-num">${lote.numero_remision}</div>
+                        </div>
+                        <div class="tallas-row">${tallasHtml}</div>
+                        <div class="mats">${matsHtml}</div>
+                      </div>`;
+                    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remisión</title><style>
+                      @page { size: letter; margin: 8mm; }
+                      * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+                      body { width: 100%; }
+                      .slip { border: 1px dashed #aaa; padding: 8px; height: calc((279mm - 16mm) / 3); display: flex; flex-direction: column; gap: 6px; overflow: hidden; page-break-inside: avoid; }
+                      .slip-header { border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+                      .slip-title { font-size: 13px; font-weight: bold; }
+                      .slip-sub { font-size: 11px; color: #555; }
+                      .slip-num { font-size: 9px; color: #999; font-family: monospace; }
+                      .tallas-row { display: flex; flex-wrap: wrap; gap: 4px; }
+                      .talla-box { border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px; text-align: center; min-width: 36px; }
+                      .total-box { background: #f0f0f0; }
+                      .talla-label { font-size: 9px; color: #666; }
+                      .talla-qty { font-size: 14px; font-weight: bold; }
+                      .mats { flex: 1; overflow: hidden; }
+                      .mat-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dotted #eee; padding: 2px 0; font-size: 11px; }
+                      .mat-nombre { color: #333; }
+                      .mat-color { color: #888; font-size: 9px; }
+                      .mat-qty { font-weight: bold; white-space: nowrap; }
+                      .mat-etiqueta { font-weight: normal; font-size: 9px; color: #888; }
+                    </style></head><body>${slip}${slip}${slip}</body></html>`);
+                    win.document.close();
+                    win.focus();
+                    win.print();
+                  }}
                 >
                   <Printer className="w-3.5 h-3.5" /> Imprimir
                 </Button>
