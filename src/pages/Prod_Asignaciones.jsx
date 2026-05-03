@@ -111,6 +111,64 @@ export default function Asignaciones() {
       .then(data => setLotes(data || []))
       .catch(() => setLotes([]));
 
+  const buildSlipHtml = (lote) => {
+    const totalUds = (lote.tallas_cantidades || []).reduce((s, tc) => s + (Number(tc.cantidad) || 0), 0);
+    const tallasHtml = (lote.tallas_cantidades || []).map(tc =>
+      `<div class="talla-box"><div class="talla-label">${tc.talla}</div><div class="talla-qty">${tc.cantidad}</div></div>`
+    ).join('') + `<div class="talla-box total-box"><div class="talla-label">Total</div><div class="talla-qty">${totalUds}</div></div>`;
+    const matsHtml = (lote.materiales_calculados || []).map(m =>
+      `<div class="mat-row"><span class="mat-nombre">${m.nombre}${m.color && m.color !== 'Sin definir' ? ` <span class="mat-color">${m.color}</span>` : ''}</span><span class="mat-qty">${Number(m.cantidad).toFixed(2).replace(/\.?0+$/, '')} <span class="mat-etiqueta">${m.etiqueta}</span></span></div>`
+    ).join('');
+    return `<div class="slip">
+      <div class="slip-header">
+        <div class="slip-title">${lote.producto_nombre || ''}</div>
+        <div class="slip-sub">${lote.combinacion_nombre || ''}</div>
+        <div class="slip-num">${lote.numero_remision}</div>
+      </div>
+      <div class="tallas-row">${tallasHtml}</div>
+      <div class="mats">${matsHtml}</div>
+    </div>`;
+  };
+
+  const printSlipCss = `
+    @page { size: letter; margin: 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { width: 100%; }
+    .slip { border: 1px dashed #aaa; padding: 8px; height: calc((279mm - 16mm) / 3); display: flex; flex-direction: column; gap: 6px; overflow: hidden; page-break-inside: avoid; }
+    .slip-header { border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+    .slip-title { font-size: 13px; font-weight: bold; }
+    .slip-sub { font-size: 11px; color: #555; }
+    .slip-num { font-size: 9px; color: #999; font-family: monospace; }
+    .tallas-row { display: flex; flex-wrap: wrap; gap: 4px; }
+    .talla-box { border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px; text-align: center; min-width: 36px; }
+    .total-box { background: #f0f0f0; }
+    .talla-label { font-size: 9px; color: #666; }
+    .talla-qty { font-size: 14px; font-weight: bold; }
+    .mats { flex: 1; overflow: hidden; }
+    .mat-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dotted #eee; padding: 2px 0; font-size: 11px; }
+    .mat-nombre { color: #333; }
+    .mat-color { color: #888; font-size: 9px; }
+    .mat-qty { font-weight: bold; white-space: nowrap; }
+    .mat-etiqueta { font-weight: normal; font-size: 9px; color: #888; }
+  `;
+
+  const handlePrintAll = () => {
+    if (lotes.length === 0) { alert("No hay remisiones para imprimir."); return; }
+    // Enriquecer lotes con nombre de producto
+    const lotesConNombre = lotes.map(lote => {
+      const item = (selectedPresupuesto?.productos || []).find(it =>
+        lotes.filter(l => l.combo_key?.startsWith(it.id)).some(l => l.id === lote.id)
+      );
+      const prod = item ? productos.find(p => p.id === item.producto_id) : null;
+      return { ...lote, producto_nombre: lote.producto_nombre || prod?.nombre || '' };
+    });
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remisiones</title><style>${printSlipCss}</style></head><body>${lotesConNombre.map(buildSlipHtml).join('')}</body></html>`);
+    win.document.close();
+    win.focus();
+    win.print();
+  };
+
   const handleDeleteLote = async (lote) => {
     if (!confirm(`¿Eliminar el lote ${lote.numero_remision}? Esta acción no se puede deshacer.`)) return;
     setDeletingLoteId(lote.id);
@@ -252,7 +310,7 @@ export default function Asignaciones() {
         ) : (
           <>
             {/* Selector presupuesto */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Label className="shrink-0 text-slate-600 text-sm">Presupuesto:</Label>
               <Select value={selectedId} onValueChange={setSelectedId}>
                 <SelectTrigger className="max-w-xs">
@@ -266,6 +324,16 @@ export default function Asignaciones() {
                   ))}
                 </SelectContent>
               </Select>
+              {lotes.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  onClick={handlePrintAll}
+                >
+                  <Printer className="w-4 h-4" /> Imprimir todas ({lotes.length})
+                </Button>
+              )}
             </div>
 
             {/* Items del presupuesto */}
@@ -527,45 +595,7 @@ export default function Asignaciones() {
                   className="h-8 gap-1.5 text-xs"
                   onClick={() => {
                     const win = window.open('', '_blank');
-                    const lote = viewingLote;
-                    const totalUds = (lote.tallas_cantidades || []).reduce((s, tc) => s + (Number(tc.cantidad) || 0), 0);
-                    const tallasHtml = (lote.tallas_cantidades || []).map(tc =>
-                      `<div class="talla-box"><div class="talla-label">${tc.talla}</div><div class="talla-qty">${tc.cantidad}</div></div>`
-                    ).join('') + `<div class="talla-box total-box"><div class="talla-label">Total</div><div class="talla-qty">${totalUds}</div></div>`;
-                    const matsHtml = (lote.materiales_calculados || []).map(m =>
-                      `<div class="mat-row"><span class="mat-nombre">${m.nombre}${m.color && m.color !== 'Sin definir' ? ` <span class="mat-color">${m.color}</span>` : ''}</span><span class="mat-qty">${m.cantidad} <span class="mat-etiqueta">${m.etiqueta}</span></span></div>`
-                    ).join('');
-                    const slip = `
-                      <div class="slip">
-                        <div class="slip-header">
-                          <div class="slip-title">${lote.producto_nombre}</div>
-                          <div class="slip-sub">${lote.combinacion_nombre || ''}</div>
-                          <div class="slip-num">${lote.numero_remision}</div>
-                        </div>
-                        <div class="tallas-row">${tallasHtml}</div>
-                        <div class="mats">${matsHtml}</div>
-                      </div>`;
-                    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remisión</title><style>
-                      @page { size: letter; margin: 8mm; }
-                      * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-                      body { width: 100%; }
-                      .slip { border: 1px dashed #aaa; padding: 8px; height: calc((279mm - 16mm) / 3); display: flex; flex-direction: column; gap: 6px; overflow: hidden; page-break-inside: avoid; }
-                      .slip-header { border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-                      .slip-title { font-size: 13px; font-weight: bold; }
-                      .slip-sub { font-size: 11px; color: #555; }
-                      .slip-num { font-size: 9px; color: #999; font-family: monospace; }
-                      .tallas-row { display: flex; flex-wrap: wrap; gap: 4px; }
-                      .talla-box { border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px; text-align: center; min-width: 36px; }
-                      .total-box { background: #f0f0f0; }
-                      .talla-label { font-size: 9px; color: #666; }
-                      .talla-qty { font-size: 14px; font-weight: bold; }
-                      .mats { flex: 1; overflow: hidden; }
-                      .mat-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dotted #eee; padding: 2px 0; font-size: 11px; }
-                      .mat-nombre { color: #333; }
-                      .mat-color { color: #888; font-size: 9px; }
-                      .mat-qty { font-weight: bold; white-space: nowrap; }
-                      .mat-etiqueta { font-weight: normal; font-size: 9px; color: #888; }
-                    </style></head><body>${slip}${slip}${slip}</body></html>`);
+                    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remisión</title><style>${printSlipCss}</style></head><body>${buildSlipHtml(viewingLote)}</body></html>`);
                     win.document.close();
                     win.focus();
                     win.print();
