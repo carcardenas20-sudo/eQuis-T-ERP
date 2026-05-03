@@ -113,7 +113,7 @@ export default function PaymentModal({ credit, onSave, onCancel }) {
   };
 
   return (
-    <Dialog open={true} onOpenChange={onCancel}>
+    <Dialog open={true} onOpenChange={onCancel} modal={false}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
