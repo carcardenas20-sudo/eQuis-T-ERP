@@ -173,7 +173,13 @@ export default function Asignaciones() {
 
     setSaving(true);
     try {
-      const productoInfo = productos.find(p => p.id === formItem.producto_id);
+      // Traer producto fresco para asegurar fórmulas actualizadas
+      let productoInfo;
+      try {
+        productoInfo = await Producto.get(formItem.producto_id);
+      } catch (_) {
+        productoInfo = productos.find(p => p.id === formItem.producto_id);
+      }
       const materiales = calcularMateriales(productoInfo, formCombo, tallasCorte, materiasPrimas, colores);
       const ts = Date.now();
       const numRem = `REM-${(selectedPresupuesto.numero_presupuesto || "").replace(/[^a-zA-Z0-9]/g, "")}-${ts}`.substring(0, 32);
