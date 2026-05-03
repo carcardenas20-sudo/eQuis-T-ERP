@@ -492,18 +492,9 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                   className="h-7 text-xs mt-0.5" />
                               </div>
                               <div>
-                                <Label className="text-xs text-slate-400">Piezas x prenda</Label>
-                                <Input
-                                  type="number" min="1" step="1"
-                                  placeholder="1"
-                                  value={material.piezas_por_unidad || 1}
-                                  onChange={(e) => actualizarMaterial(index, 'piezas_por_unidad', parseFloat(e.target.value) || 1)}
-                                  className="h-7 text-xs mt-0.5" />
-                              </div>
-                              <div>
                                 <Label className="text-xs text-slate-400">Unidad en remisión</Label>
                                 <Input
-                                  placeholder="Ej: tiras, pares, unidades"
+                                  placeholder="Ej: tiras, pares, mts"
                                   value={material.unidad_remision || material.etiqueta_cantidad || ""}
                                   onChange={(e) => actualizarMaterial(index, 'unidad_remision', e.target.value)}
                                   className="h-7 text-xs mt-0.5" />
@@ -515,6 +506,75 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                   value={material.descripcion_remision || ""}
                                   onChange={(e) => actualizarMaterial(index, 'descripcion_remision', e.target.value)}
                                   className="h-7 text-xs mt-0.5" />
+                              </div>
+                              <div>
+                                <Label className="text-xs text-slate-400">Fórmula remisión</Label>
+                                <Select
+                                  value={material.remision_formula || 'lineal'}
+                                  onValueChange={(v) => actualizarMaterial(index, 'remision_formula', v)}>
+                                  <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="lineal">N × factor</SelectItem>
+                                    <SelectItem value="ceil_divide">⌈N ÷ divisor⌉</SelectItem>
+                                    <SelectItem value="paso">Escalonado</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            {/* Fila 3: Parámetros de fórmula de remisión */}
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1 border-t border-dashed border-slate-200">
+                              {(!material.remision_formula || material.remision_formula === 'lineal') && (
+                                <div className="col-span-3 sm:col-span-2">
+                                  <Label className="text-xs text-slate-400">Factor (× N prendas)</Label>
+                                  <Input type="number" min="0.01" step="0.01"
+                                    value={material.piezas_por_unidad || 1}
+                                    onChange={(e) => actualizarMaterial(index, 'piezas_por_unidad', parseFloat(e.target.value) || 1)}
+                                    className="h-7 text-xs mt-0.5" />
+                                </div>
+                              )}
+                              {material.remision_formula === 'ceil_divide' && (
+                                <div className="col-span-3 sm:col-span-2">
+                                  <Label className="text-xs text-slate-400">Divisor (N ÷ ?)</Label>
+                                  <Input type="number" min="1" step="1"
+                                    value={material.remision_divisor || 3}
+                                    onChange={(e) => actualizarMaterial(index, 'remision_divisor', parseFloat(e.target.value) || 3)}
+                                    className="h-7 text-xs mt-0.5" />
+                                </div>
+                              )}
+                              {material.remision_formula === 'paso' && (<>
+                                <div className="col-span-1">
+                                  <Label className="text-xs text-slate-400">Umbral (N ≤)</Label>
+                                  <Input type="number" min="1" step="1"
+                                    value={material.remision_umbral || 15}
+                                    onChange={(e) => actualizarMaterial(index, 'remision_umbral', parseFloat(e.target.value) || 15)}
+                                    className="h-7 text-xs mt-0.5" />
+                                </div>
+                                <div className="col-span-1">
+                                  <Label className="text-xs text-slate-400">Val. bajo</Label>
+                                  <Input type="number" min="0" step="1"
+                                    value={material.remision_val_bajo || 1}
+                                    onChange={(e) => actualizarMaterial(index, 'remision_val_bajo', parseFloat(e.target.value) || 1)}
+                                    className="h-7 text-xs mt-0.5" />
+                                </div>
+                                <div className="col-span-1">
+                                  <Label className="text-xs text-slate-400">Val. alto</Label>
+                                  <Input type="number" min="0" step="1"
+                                    value={material.remision_val_alto || 2}
+                                    onChange={(e) => actualizarMaterial(index, 'remision_val_alto', parseFloat(e.target.value) || 2)}
+                                    className="h-7 text-xs mt-0.5" />
+                                </div>
+                              </>)}
+                              <div className="col-span-3 sm:col-span-4 flex items-end pb-0.5">
+                                <span className="text-xs text-slate-400 italic">
+                                  {(() => {
+                                    const f = material.remision_formula || 'lineal';
+                                    const N = 12;
+                                    if (f === 'lineal') return `Ej: ${N} prendas → ${N * (material.piezas_por_unidad || 1)} ${material.unidad_remision || 'uds'}`;
+                                    if (f === 'ceil_divide') return `Ej: ${N} prendas → ${Math.ceil(N / (material.remision_divisor || 3))} ${material.unidad_remision || 'mts'}`;
+                                    if (f === 'paso') return `Ej: N≤${material.remision_umbral || 15} → ${material.remision_val_bajo || 1}, N>${material.remision_umbral || 15} → ${material.remision_val_alto || 2}`;
+                                    return '';
+                                  })()}
+                                </span>
                               </div>
                             </div>
                           </div>
