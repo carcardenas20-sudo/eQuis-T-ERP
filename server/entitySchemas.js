@@ -400,8 +400,10 @@ export const ENTITY_SCHEMAS = {
       payment_type: 'TEXT',
       amount: 'NUMERIC(14,2)',
       status: 'TEXT',
+      type: 'TEXT',
+      location_id: 'TEXT',
     },
-    indexes: ['employee_id', 'payment_date', 'status'],
+    indexes: ['employee_id', 'payment_date', 'status', 'type', 'location_id'],
   },
 
   PaymentRequest: {
