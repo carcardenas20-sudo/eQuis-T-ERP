@@ -352,7 +352,7 @@ export default function Asignaciones() {
 
               // Total de combinaciones y lotes
               const combosValidas = (item.combinaciones || []).filter(c =>
-                (c.tallas_cantidades || []).some(tc => Number(tc.cantidad) > 0)
+                c.predefinida_id && (c.tallas_cantidades || []).some(tc => Number(tc.cantidad) > 0)
               );
               const totalLotes = combosValidas.reduce((s, combo, ci) => {
                 const k = comboKey(item.id || itemIdx, { ...combo, _idx: ci });
