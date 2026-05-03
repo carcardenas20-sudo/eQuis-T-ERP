@@ -8,11 +8,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, User, Calendar, DollarSign, FileText, X, History, Loader2 } from "lucide-react";
+import { CreditCard, User, Calendar, DollarSign, FileText, X, History, Loader2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import MobilePageHeader from "../layout/MobilePageHeader";
 import { Payment } from "@/entities/Payment";
+import { Credit } from "@/entities/all";
 
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -28,11 +29,13 @@ const statusLabels = {
   overdue: "Vencido"
 };
 
-export default function CreditDetailModal({ credit, onClose }) {
+export default function CreditDetailModal({ credit, onClose, onRefresh }) {
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  
-  const paymentProgress = ((credit.total_amount - credit.pending_amount) / credit.total_amount) * 100;
+  const [deletingId, setDeletingId] = useState(null);
+  const [creditData, setCreditData] = useState(credit);
+
+  const paymentProgress = ((creditData.total_amount - creditData.pending_amount) / creditData.total_amount) * 100;
 
   useEffect(() => {
     loadPaymentHistory();
@@ -42,7 +45,7 @@ export default function CreditDetailModal({ credit, onClose }) {
     setIsLoadingHistory(true);
     try {
       const payments = await Payment.filter({ credit_id: credit.id });
-      const sortedPayments = payments.sort((a, b) => 
+      const sortedPayments = payments.sort((a, b) =>
         new Date(b.payment_date) - new Date(a.payment_date)
       );
       setPaymentHistory(sortedPayments);
@@ -51,6 +54,26 @@ export default function CreditDetailModal({ credit, onClose }) {
       setPaymentHistory([]);
     }
     setIsLoadingHistory(false);
+  };
+
+  const handleDeletePayment = async (payment) => {
+    if (!confirm(`¿Eliminar este abono de $${payment.amount?.toLocaleString()}?`)) return;
+    setDeletingId(payment.id);
+    try {
+      await Payment.delete(payment.id);
+      const remaining = paymentHistory.filter(p => p.id !== payment.id);
+      const paidAmount = remaining.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+      const discounts = remaining.reduce((s, p) => s + (Number(p.discount_amount) || 0), 0);
+      const pendingAmount = creditData.total_amount - paidAmount - discounts;
+      const status = pendingAmount <= 0 ? 'paid' : paidAmount > 0 ? 'partial' : 'pending';
+      await Credit.update(credit.id, { paid_amount: paidAmount, pending_amount: pendingAmount, status });
+      setCreditData(prev => ({ ...prev, paid_amount: paidAmount, pending_amount: pendingAmount, status }));
+      setPaymentHistory(remaining);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      alert("Error al eliminar el abono: " + err.message);
+    }
+    setDeletingId(null);
   };
 
   const getMethodLabel = (method) => {
@@ -233,9 +256,22 @@ export default function CreditDetailModal({ credit, onClose }) {
                           📅 {format(new Date(payment.payment_date), "dd 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
                         </p>
                       </div>
-                      <span className="text-xs text-slate-400 bg-slate-200 px-2 py-1 rounded">
-                        Pago #{paymentHistory.length - idx}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 bg-slate-200 px-2 py-1 rounded">
+                          Pago #{paymentHistory.length - idx}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:bg-red-50 h-7 w-7 p-0"
+                          onClick={() => handleDeletePayment(payment)}
+                          disabled={deletingId === payment.id}
+                        >
+                          {deletingId === payment.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <Trash2 className="w-4 h-4" />}
+                        </Button>
+                      </div>
                     </div>
                     
                     {payment.discount_amount > 0 && (

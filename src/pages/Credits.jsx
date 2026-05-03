@@ -456,6 +456,7 @@ export default function CreditsPage() {
             setShowDetailModal(false);
             setSelectedCredit(null);
           }}
+          onRefresh={loadCredits}
         />
       )}
 
