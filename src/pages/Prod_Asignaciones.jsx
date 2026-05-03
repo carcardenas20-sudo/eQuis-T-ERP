@@ -283,7 +283,10 @@ export default function Asignaciones() {
               const expandKey = item.id || itemIdx;
 
               // Total de combinaciones y lotes
-              const totalLotes = (item.combinaciones || []).reduce((s, combo, ci) => {
+              const combosValidas = (item.combinaciones || []).filter(c =>
+                (c.tallas_cantidades || []).some(tc => Number(tc.cantidad) > 0)
+              );
+              const totalLotes = combosValidas.reduce((s, combo, ci) => {
                 const k = comboKey(item.id || itemIdx, { ...combo, _idx: ci });
                 return s + getLotesDeCombo(k).length;
               }, 0);
@@ -313,7 +316,7 @@ export default function Asignaciones() {
 
                   {isOpen && (
                     <CardContent className="space-y-4 pt-0">
-                      {(item.combinaciones || []).filter(c => c.predefinida_id).map((combo, comboIdx) => {
+                      {combosValidas.map((combo, comboIdx) => {
                         const key = comboKey(item.id || itemIdx, { ...combo, _idx: comboIdx });
                         const lotesCombo = getLotesDeCombo(key);
                         const totalCombo = (combo.tallas_cantidades || []).reduce((s, tc) => s + (Number(tc.cantidad) || 0), 0);
