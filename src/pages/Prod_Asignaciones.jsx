@@ -134,22 +134,23 @@ export default function Asignaciones() {
     @page { size: letter; margin: 8mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
     body { width: 100%; }
-    .slip { border: 1px dashed #aaa; padding: 8px; height: calc((279mm - 16mm) / 3); display: flex; flex-direction: column; gap: 6px; overflow: hidden; page-break-inside: avoid; }
-    .slip-header { border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-    .slip-title { font-size: 13px; font-weight: bold; }
-    .slip-sub { font-size: 11px; color: #555; }
-    .slip-num { font-size: 9px; color: #999; font-family: monospace; }
-    .tallas-row { display: flex; flex-wrap: wrap; gap: 4px; }
-    .talla-box { border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px; text-align: center; min-width: 36px; }
+    .page-group { break-after: page; }
+    .page-group:last-child { break-after: avoid; }
+    .slip { border: 1px dashed #aaa; padding: 8px; margin-bottom: 4px; display: flex; flex-direction: column; gap: 5px; page-break-inside: avoid; }
+    .slip-header { border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+    .slip-title { font-size: 12px; font-weight: bold; }
+    .slip-sub { font-size: 10px; color: #555; }
+    .slip-num { font-size: 8px; color: #999; font-family: monospace; }
+    .tallas-row { display: flex; flex-wrap: wrap; gap: 3px; }
+    .talla-box { border: 1px solid #ccc; border-radius: 4px; padding: 2px 5px; text-align: center; min-width: 34px; }
     .total-box { background: #f0f0f0; }
-    .talla-label { font-size: 9px; color: #666; }
-    .talla-qty { font-size: 14px; font-weight: bold; }
-    .mats { flex: 1; overflow: hidden; }
-    .mat-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dotted #eee; padding: 2px 0; font-size: 11px; }
+    .talla-label { font-size: 8px; color: #666; }
+    .talla-qty { font-size: 13px; font-weight: bold; }
+    .mat-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dotted #eee; padding: 1.5px 0; font-size: 10px; }
     .mat-nombre { color: #333; }
-    .mat-color { color: #888; font-size: 9px; }
+    .mat-color { color: #888; font-size: 8px; }
     .mat-qty { font-weight: bold; white-space: nowrap; }
-    .mat-etiqueta { font-weight: normal; font-size: 9px; color: #888; }
+    .mat-etiqueta { font-weight: normal; font-size: 8px; color: #888; }
   `;
 
   const handlePrintAll = () => {
@@ -162,8 +163,14 @@ export default function Asignaciones() {
       const prod = item ? productos.find(p => p.id === item.producto_id) : null;
       return { ...lote, producto_nombre: lote.producto_nombre || prod?.nombre || '' };
     });
+    const chunks = [];
+    for (let i = 0; i < lotesConNombre.length; i += 3)
+      chunks.push(lotesConNombre.slice(i, i + 3));
+    const bodyHtml = chunks.map(chunk =>
+      `<div class="page-group">${chunk.map(buildSlipHtml).join('')}</div>`
+    ).join('');
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remisiones</title><style>${printSlipCss}</style></head><body>${lotesConNombre.map(buildSlipHtml).join('')}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remisiones</title><style>${printSlipCss}</style></head><body>${bodyHtml}</body></html>`);
     win.document.close();
     win.focus();
     win.print();
