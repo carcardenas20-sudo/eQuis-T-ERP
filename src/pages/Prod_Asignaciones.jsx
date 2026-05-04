@@ -142,35 +142,40 @@ export default function Asignaciones() {
     return `<div class="slip">
       <div class="slip-header">
         <div class="slip-title">${lote.producto_nombre || ''}</div>
-        <div class="slip-sub">${lote.combinacion_nombre || ''}</div>
+        <div class="slip-combo">${lote.combinacion_nombre || ''}</div>
         <div class="slip-num">${lote.numero_remision}</div>
       </div>
       <div class="tallas-row">${tallasHtml}</div>
+      <div class="mats-header">Materiales</div>
       <div class="mats">${matsHtml}</div>
     </div>`;
   };
 
   const printSlipCss = `
-    @page { size: letter; margin: 8mm; }
+    @page { size: letter; margin: 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
     body { width: 100%; }
-    .page-group { break-after: page; }
+    .page-group { height: calc(279mm - 12mm); display: flex; flex-direction: column; break-after: page; }
     .page-group:last-child { break-after: avoid; }
-    .slip { border: 1px dashed #aaa; padding: 8px; margin-bottom: 4px; display: flex; flex-direction: column; gap: 5px; page-break-inside: avoid; }
-    .slip-header { border-bottom: 1px solid #ddd; padding-bottom: 4px; }
-    .slip-title { font-size: 12px; font-weight: bold; }
-    .slip-sub { font-size: 10px; color: #555; }
-    .slip-num { font-size: 8px; color: #999; font-family: monospace; }
-    .tallas-row { display: flex; flex-wrap: wrap; gap: 3px; }
-    .talla-box { border: 1px solid #ccc; border-radius: 4px; padding: 2px 5px; text-align: center; min-width: 34px; }
-    .total-box { background: #f0f0f0; }
-    .talla-label { font-size: 8px; color: #666; }
-    .talla-qty { font-size: 13px; font-weight: bold; }
-    .mat-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dotted #eee; padding: 1.5px 0; font-size: 10px; }
-    .mat-nombre { color: #333; }
-    .mat-color { color: #888; font-size: 8px; }
-    .mat-qty { font-weight: bold; white-space: nowrap; }
-    .mat-etiqueta { font-weight: normal; font-size: 8px; color: #888; }
+    .slip { flex: 1; border: 1px dashed #bbb; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+    .slip + .slip { border-top: none; }
+    .slip-header { border-bottom: 2px solid #333; padding-bottom: 3px; margin-bottom: 2px; }
+    .slip-title { font-size: 13px; font-weight: 900; color: #000; letter-spacing: 0.3px; }
+    .slip-combo { font-size: 10px; font-weight: 600; color: #2563eb; margin-top: 1px; }
+    .slip-num { font-size: 7px; color: #aaa; font-family: monospace; }
+    .tallas-row { display: flex; flex-wrap: wrap; gap: 3px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+    .talla-box { border: 1.5px solid #555; border-radius: 3px; padding: 1px 5px; text-align: center; min-width: 32px; }
+    .total-box { border-color: #000; background: #eee; }
+    .talla-label { font-size: 7px; color: #555; font-weight: 600; text-transform: uppercase; }
+    .talla-qty { font-size: 14px; font-weight: 900; color: #000; }
+    .total-box .talla-qty { font-size: 16px; }
+    .mats-header { font-size: 7px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 1px; }
+    .mats { flex: 1; overflow: hidden; }
+    .mat-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dotted #e5e5e5; padding: 1px 0; }
+    .mat-nombre { font-size: 8.5px; color: #222; }
+    .mat-color { color: #888; font-size: 7.5px; margin-left: 2px; }
+    .mat-qty { font-size: 9px; font-weight: 700; color: #000; white-space: nowrap; }
+    .mat-etiqueta { font-weight: 400; font-size: 7.5px; color: #666; margin-left: 1px; }
   `;
 
   const handlePrintAll = () => {
