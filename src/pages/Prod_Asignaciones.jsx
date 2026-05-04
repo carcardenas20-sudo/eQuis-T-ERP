@@ -87,6 +87,7 @@ export default function Asignaciones() {
   const [expanded, setExpanded] = useState({});
   const [viewingLote, setViewingLote] = useState(null);
   const [deletingLoteId, setDeletingLoteId] = useState(null);
+  const [recalculating, setRecalculating] = useState(false);
 
   // Form
   const [showForm, setShowForm] = useState(false);
@@ -199,6 +200,39 @@ export default function Asignaciones() {
     win.document.close();
     win.focus();
     win.print();
+  };
+
+  const handleRecalcularLote = async (lote) => {
+    setRecalculating(true);
+    try {
+      // Buscar el item del presupuesto para este lote
+      const item = (selectedPresupuesto?.productos || []).find(it =>
+        lotes.filter(l => l.combo_key?.startsWith(String(it.id))).some(l => l.id === lote.id)
+      );
+      if (!item) { alert("No se encontró el producto del presupuesto."); return; }
+
+      // Buscar la combinación correspondiente
+      const combo = (item.combinaciones || []).find(c => {
+        const k = comboKey(String(item.id), c);
+        return k === lote.combo_key || lote.combo_key?.includes(c.predefinida_id || '');
+      }) || {};
+
+      // Traer producto fresco
+      let productoInfo;
+      try { productoInfo = await Producto.get(item.producto_id); }
+      catch (_) { productoInfo = productos.find(p => p.id === item.producto_id); }
+
+      const nuevosMateriales = calcularMateriales(productoInfo, combo, lote.tallas_cantidades || [], materiasPrimas, colores);
+      await Remision.update(lote.id, { materiales_calculados: nuevosMateriales });
+
+      // Actualizar estado local
+      setViewingLote(prev => ({ ...prev, materiales_calculados: nuevosMateriales }));
+      setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, materiales_calculados: nuevosMateriales } : l));
+      alert("Materiales actualizados correctamente.");
+    } catch (err) {
+      alert("Error al recalcular: " + err.message);
+    }
+    setRecalculating(false);
   };
 
   const handleDeleteLote = async (lote) => {
@@ -634,6 +668,16 @@ export default function Asignaciones() {
                   }}
                 >
                   <Printer className="w-3.5 h-3.5" /> Imprimir
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5 text-xs"
+                  onClick={() => handleRecalcularLote(viewingLote)}
+                  disabled={recalculating}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${recalculating ? 'animate-spin' : ''}`} />
+                  {recalculating ? 'Recalculando...' : 'Recalcular'}
                 </Button>
                 <button onClick={() => setViewingLote(null)} className="text-slate-400 hover:text-slate-600">
                   <X className="w-5 h-5" />
