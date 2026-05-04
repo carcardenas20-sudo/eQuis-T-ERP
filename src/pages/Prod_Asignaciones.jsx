@@ -48,18 +48,17 @@ function nombreCombo(combo, productoInfo) {
   const coloresMat = combo.colores_por_material || [];
   const materiales = productoInfo?.materiales_requeridos || [];
 
-  // Filtrar solo colores de secciones principales, ordenados por sección (sin deduplicar)
+  // Un color por sección principal (no por material), ordenados por sección
   const ORDEN_SECCIONES = ['fondo_entero', 'superior', 'central', 'inferior'];
-  const coloresPrincipales = coloresMat
-    .map(cm => {
-      const mat = materiales.find(m => m.row_id === cm.row_id);
-      if (!mat || !SECCIONES_PRINCIPALES.includes(mat.seccion)) return null;
-      return { color: cm.color_nombre, orden: ORDEN_SECCIONES.indexOf(mat.seccion) };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.orden - b.orden)
-    .map(x => x.color)
-    .filter(Boolean);
+  const porSeccion = {};
+  coloresMat.forEach(cm => {
+    const mat = materiales.find(m => m.row_id === cm.row_id);
+    if (!mat || !SECCIONES_PRINCIPALES.includes(mat.seccion)) return;
+    if (!porSeccion[mat.seccion]) porSeccion[mat.seccion] = cm.color_nombre;
+  });
+  const coloresPrincipales = ORDEN_SECCIONES
+    .filter(s => porSeccion[s])
+    .map(s => porSeccion[s]);
 
   if (coloresPrincipales.length) return coloresPrincipales.join(" / ");
 
