@@ -48,17 +48,20 @@ function nombreCombo(combo, productoInfo) {
   const coloresMat = combo.colores_por_material || [];
   const materiales = productoInfo?.materiales_requeridos || [];
 
-  // Filtrar solo colores de secciones principales
+  // Filtrar solo colores de secciones principales, ordenados por sección (sin deduplicar)
+  const ORDEN_SECCIONES = ['fondo_entero', 'superior', 'central', 'inferior'];
   const coloresPrincipales = coloresMat
-    .filter(cm => {
+    .map(cm => {
       const mat = materiales.find(m => m.row_id === cm.row_id);
-      return mat ? SECCIONES_PRINCIPALES.includes(mat.seccion) : false;
+      if (!mat || !SECCIONES_PRINCIPALES.includes(mat.seccion)) return null;
+      return { color: cm.color_nombre, orden: ORDEN_SECCIONES.indexOf(mat.seccion) };
     })
-    .map(cm => cm.color_nombre)
+    .filter(Boolean)
+    .sort((a, b) => a.orden - b.orden)
+    .map(x => x.color)
     .filter(Boolean);
 
-  const unicos = [...new Set(coloresPrincipales)];
-  if (unicos.length) return unicos.join(" / ");
+  if (coloresPrincipales.length) return coloresPrincipales.join(" / ");
 
   // Fallback: todos los colores únicos
   const todos = [...new Set(coloresMat.map(cm => cm.color_nombre).filter(Boolean))];
