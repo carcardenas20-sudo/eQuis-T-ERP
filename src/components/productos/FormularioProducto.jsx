@@ -528,6 +528,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                     <SelectItem value="lineal">N × factor</SelectItem>
                                     <SelectItem value="ceil_divide">⌈N ÷ divisor⌉</SelectItem>
                                     <SelectItem value="paso">Escalonado</SelectItem>
+                                    <SelectItem value="sin_cantidad">Sin cantidad</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -583,6 +584,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                     if (f === 'lineal') return `Ej: ${N} prendas → ${N * (material.piezas_por_unidad || 1)} ${material.unidad_remision || 'uds'}`;
                                     if (f === 'ceil_divide') return `Ej: ${N} prendas → ${Math.ceil(N / (material.remision_divisor || 3))} ${material.unidad_remision || 'mts'}`;
                                     if (f === 'paso') return `Ej: N≤${material.remision_umbral || 15} → ${material.remision_val_bajo || 1}, N>${material.remision_umbral || 15} → ${material.remision_val_alto || 2}`;
+                                    if (f === 'sin_cantidad') return 'Aparece en remisión sin cantidad';
                                     return '';
                                   })()}
                                 </span>

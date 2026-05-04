@@ -12,6 +12,8 @@
 export function calcularCantidadRemision(material, N) {
   const formula = material.remision_formula || 'lineal';
 
+  if (formula === 'sin_cantidad') return null;
+
   const round2 = (v) => Math.round(v * 100) / 100;
 
   if (formula === 'lineal') {

@@ -137,7 +137,7 @@ export default function Asignaciones() {
       `<div class="talla-box"><div class="talla-label">${tc.talla}</div><div class="talla-qty">${tc.cantidad}</div></div>`
     ).join('') + `<div class="talla-box total-box"><div class="talla-label">Total</div><div class="talla-qty">${totalUds}</div></div>`;
     const matsHtml = (lote.materiales_calculados || []).map(m =>
-      `<div class="mat-row"><span class="mat-nombre">${m.nombre}${m.color && m.color !== 'Sin definir' ? ` <span class="mat-color">${m.color}</span>` : ''}</span><span class="mat-qty">${Number(m.cantidad).toFixed(2).replace(/\.?0+$/, '')} <span class="mat-etiqueta">${m.etiqueta}</span></span></div>`
+      `<div class="mat-row"><span class="mat-nombre">${m.nombre}${m.color && m.color !== 'Sin definir' ? ` <span class="mat-color">${m.color}</span>` : ''}</span><span class="mat-qty">${m.cantidad == null ? '—' : `${Number(m.cantidad).toFixed(2).replace(/\.?0+$/, '')} <span class="mat-etiqueta">${m.etiqueta}</span>`}</span></div>`
     ).join('');
     return `<div class="slip">
       <div class="slip-header">
@@ -689,7 +689,7 @@ export default function Asignaciones() {
                           )}
                         </div>
                         <div className="text-right">
-                          <span className="text-lg font-bold text-slate-900">{Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, '')}</span>
+                          <span className="text-lg font-bold text-slate-900">{mat.cantidad == null ? '—' : Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, '')}</span>
                           <span className="text-xs text-slate-400 ml-1">{mat.etiqueta}</span>
                         </div>
                       </div>
