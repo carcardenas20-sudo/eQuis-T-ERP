@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Employee, Producto, Dispatch, Delivery, Inventory, Devolucion, AppConfig } from "@/entities/all";
+import { Employee, Producto, Dispatch, Delivery, Inventory, Devolucion, AppConfig } from "@/api/publicEntities";
 import { Truck, RotateCcw, PackageCheck } from "lucide-react";
 import RouteOperario from "@/components/route/RouteOperario";
 import RouteRegistrosHoy from "@/components/route/RouteRegistrosHoy";
@@ -20,15 +20,28 @@ export default function RoutePortal() {
 
   const loadData = async () => {
     setLoading(true);
-    const [employees, products, dispatches, deliveries, inventory, devoluciones, configs] = await Promise.all([
-      Employee.list(),
-      Producto.list(),
-      Dispatch.list(),
-      Delivery.list(),
-      Inventory.list(),
-      Devolucion.list(),
-      AppConfig.filter({ key: "pending_row_order" }),
-    ]);
+    let employees = [], products = [], dispatches = [], deliveries = [], inventory = [], devoluciones = [], configs = [];
+    try {
+      [employees, products, dispatches, deliveries, inventory, devoluciones, configs] = await Promise.all([
+        Employee.list(),
+        Producto.list(),
+        Dispatch.list(),
+        Delivery.list(),
+        Inventory.list(),
+        Devolucion.list(),
+        AppConfig.filter({ key: "pending_row_order" }),
+      ]);
+    } catch (err) {
+      console.error("Error cargando datos del portal:", err.message);
+      // Intentar cargar individualmente para identificar qué falla
+      try { employees = await Employee.list(); } catch (e) { console.error("Employee:", e.message); }
+      try { products = await Producto.list(); } catch (e) { console.error("Producto:", e.message); }
+      try { dispatches = await Dispatch.list(); } catch (e) { console.error("Dispatch:", e.message); }
+      try { deliveries = await Delivery.list(); } catch (e) { console.error("Delivery:", e.message); }
+      try { inventory = await Inventory.list(); } catch (e) { console.error("Inventory:", e.message); }
+      try { devoluciones = await Devolucion.list(); } catch (e) { console.error("Devolucion:", e.message); }
+      try { configs = await AppConfig.filter({ key: "pending_row_order" }); } catch (e) { console.error("AppConfig:", e.message); }
+    }
 
     // Aplicar orden guardado de la planilla de pendientes
     const activeEmps = employees.filter(e => e.is_active);
@@ -74,14 +87,14 @@ export default function RoutePortal() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-2 px-1 rounded-lg text-xs font-semibold transition-all leading-tight ${
                 tab === t.id
                   ? "bg-blue-600 text-white shadow"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              <t.icon className="w-3.5 h-3.5" />
-              {t.label}
+              <t.icon className="w-4 h-4 shrink-0" />
+              <span className="truncate">{t.label}</span>
             </button>
           ))}
         </div>
@@ -119,7 +132,16 @@ export default function RoutePortal() {
               });
               const totalDispatched = Object.values(dispatchesByRef).reduce((s, q) => s + q, 0);
 
-              if (todayDeliveries.length === 0 && totalDispatched === 0) return null;
+              // Devoluciones reparadas retornadas hoy (por date_returned)
+              const reparadasByRef = {};
+              data.devoluciones
+                .filter(d => d.date_returned && d.date_returned.slice(0, 10) === todayCol && d.quantity_returned > 0)
+                .forEach(d => {
+                  reparadasByRef[d.product_reference] = (reparadasByRef[d.product_reference] || 0) + (d.quantity_returned || 0);
+                });
+              const totalReparadas = Object.values(reparadasByRef).reduce((s, q) => s + q, 0);
+
+              if (todayDeliveries.length === 0 && totalDispatched === 0 && totalReparadas === 0) return null;
 
               const totalOperariosHoy = new Set(todayDeliveries.map(d => d.employee_id)).size;
               const totalActivos = data.employees.filter(e => e.is_active !== false).length;
@@ -135,7 +157,7 @@ export default function RoutePortal() {
                           <p className="text-xs text-green-200">operarios activos entregaron</p>
                         </div>
                       </div>
-                      <div className="flex gap-3 flex-wrap items-start mb-3">
+                      <div className="grid grid-cols-2 gap-2 mb-3">
                         <div className="bg-green-800 rounded-lg px-3 py-1.5 border border-green-500">
                           <p className="text-xs text-green-200 leading-tight">Total entregas</p>
                           <p className="text-lg font-bold">{Object.values(unitsByRef).reduce((s, q) => s + q, 0).toLocaleString("es-CO")} uds</p>
@@ -144,7 +166,29 @@ export default function RoutePortal() {
                           const prod = data.products.find(p => p.reference === ref);
                           return (
                             <div key={ref} className="bg-green-600 rounded-lg px-3 py-1.5">
-                              <p className="text-xs text-green-200 leading-tight">{prod?.name || `Ref. ${ref}`}</p>
+                              <p className="text-xs text-green-200 leading-tight truncate">{prod?.name || `Ref. ${ref}`}</p>
+                              <p className="text-lg font-bold">{qty.toLocaleString("es-CO")} uds</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Devoluciones reparadas retornadas hoy */}
+                  {totalReparadas > 0 && (
+                    <>
+                      <p className="text-xs font-semibold text-green-200 mt-3 mb-2 uppercase tracking-wide">🔧 Reparadas retornadas hoy</p>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="bg-orange-800 rounded-lg px-3 py-1.5 border border-orange-500">
+                          <p className="text-xs text-orange-200 leading-tight">Total reparadas</p>
+                          <p className="text-lg font-bold">{totalReparadas.toLocaleString("es-CO")} uds</p>
+                        </div>
+                        {Object.entries(reparadasByRef).map(([ref, qty]) => {
+                          const prod = data.products.find(p => p.reference === ref);
+                          return (
+                            <div key={ref} className="bg-orange-700 rounded-lg px-3 py-1.5">
+                              <p className="text-xs text-orange-200 leading-tight truncate">{prod?.name || `Ref. ${ref}`}</p>
                               <p className="text-lg font-bold">{qty.toLocaleString("es-CO")} uds</p>
                             </div>
                           );
@@ -157,7 +201,7 @@ export default function RoutePortal() {
                   {totalDispatched > 0 && (
                     <>
                       <p className="text-xs font-semibold text-green-200 mt-3 mb-2 uppercase tracking-wide">🚧 Despachos de hoy</p>
-                      <div className="flex gap-3 flex-wrap items-start">
+                      <div className="grid grid-cols-2 gap-2">
                         <div className="bg-blue-800 rounded-lg px-3 py-1.5 border border-blue-500">
                           <p className="text-xs text-blue-200 leading-tight">Total despachado</p>
                           <p className="text-lg font-bold">{totalDispatched.toLocaleString("es-CO")} uds</p>
@@ -166,7 +210,7 @@ export default function RoutePortal() {
                           const prod = data.products.find(p => p.reference === ref);
                           return (
                             <div key={ref} className="bg-blue-700 rounded-lg px-3 py-1.5">
-                              <p className="text-xs text-blue-200 leading-tight">{prod?.name || `Ref. ${ref}`}</p>
+                              <p className="text-xs text-blue-200 leading-tight truncate">{prod?.name || `Ref. ${ref}`}</p>
                               <p className="text-lg font-bold">{qty.toLocaleString("es-CO")} uds</p>
                             </div>
                           );
