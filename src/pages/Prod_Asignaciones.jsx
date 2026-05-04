@@ -41,11 +41,29 @@ function calcularMateriales(productoInfo, combinacion, tallasCorte, materiasPrim
   return result;
 }
 
-function nombreCombo(combo) {
+const SECCIONES_PRINCIPALES = ['superior', 'central', 'inferior', 'fondo_entero'];
+
+function nombreCombo(combo, productoInfo) {
   if (combo.nombre) return combo.nombre;
   const coloresMat = combo.colores_por_material || [];
-  const unicos = [...new Set(coloresMat.map(cm => cm.color_nombre).filter(Boolean))];
+  const materiales = productoInfo?.materiales_requeridos || [];
+
+  // Filtrar solo colores de secciones principales
+  const coloresPrincipales = coloresMat
+    .filter(cm => {
+      const mat = materiales.find(m => m.row_id === cm.row_id);
+      return mat ? SECCIONES_PRINCIPALES.includes(mat.seccion) : false;
+    })
+    .map(cm => cm.color_nombre)
+    .filter(Boolean);
+
+  const unicos = [...new Set(coloresPrincipales)];
   if (unicos.length) return unicos.join(" / ");
+
+  // Fallback: todos los colores únicos
+  const todos = [...new Set(coloresMat.map(cm => cm.color_nombre).filter(Boolean))];
+  if (todos.length) return todos.join(" / ");
+
   const cols = Object.values(combo.colores || {}).filter(Boolean);
   return cols.length ? cols.join(" / ") : `Combo ${combo.predefinida_id || ""}`;
 }
@@ -256,7 +274,7 @@ export default function Asignaciones() {
         tipo_remision: "asignacion_despacho",
         presupuesto_id: selectedId,
         combo_key: key,
-        combinacion_nombre: nombreCombo(formCombo),
+        combinacion_nombre: nombreCombo(formCombo, productoInfo),
         tallas_cantidades: tallasCorte,
         materiales_calculados: materiales,
         estado: "pendiente",
@@ -270,7 +288,7 @@ export default function Asignaciones() {
         quantity: totalForm,
         employee_id: "",                // sin asignar — planillador completa
         dispatch_date: new Date().toISOString().split("T")[0],
-        observations: `LOTE · ${selectedPresupuesto.numero_presupuesto} · ${productoInfo?.nombre || ""} · ${nombreCombo(formCombo)} · ${tallaResumen}`,
+        observations: `LOTE · ${selectedPresupuesto.numero_presupuesto} · ${productoInfo?.nombre || ""} · ${nombreCombo(formCombo, productoInfo)} · ${tallaResumen}`,
         lote_remision: numRem,
         estado_lote: "pendiente",
       });
@@ -408,7 +426,7 @@ export default function Asignaciones() {
                                 {completo
                                   ? <CheckCircle2 className="w-4 h-4 text-green-600" />
                                   : <Scissors className="w-4 h-4 text-slate-400" />}
-                                <span className="text-sm font-semibold text-slate-800">{nombreCombo(combo)}</span>
+                                <span className="text-sm font-semibold text-slate-800">{nombreCombo(combo, productoInfo)}</span>
                               </div>
                               <div className="flex items-center gap-3 text-xs text-slate-500">
                                 <span>{totalAsignado}/{totalCombo} uds · {pct}%</span>
@@ -520,7 +538,7 @@ export default function Asignaciones() {
               <div>
                 <h2 className="font-bold text-slate-900">Nuevo lote de despacho</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {productos.find(p => p.id === formItem.producto_id)?.nombre} · {nombreCombo(formCombo)}
+                  {productos.find(p => p.id === formItem.producto_id)?.nombre} · {nombreCombo(formCombo, productos.find(p => p.id === formItem.producto_id))}
                 </p>
               </div>
               <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
