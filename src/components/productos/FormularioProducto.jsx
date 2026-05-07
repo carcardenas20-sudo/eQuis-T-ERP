@@ -84,6 +84,11 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
     }, 0);
   }, [formData.materiales_requeridos, materiasPrimas]);
 
+  const costoManoObra = Number(formData.costo_mano_obra) || 0;
+  const precioSugerido = ((costoTotalMateriales + costoManoObra) / 2) * 3;
+  const precioActual = Number(formData.precio_venta) || 0;
+  const diferenciaPrecio = precioActual - precioSugerido;
+
   const agregarTalla = () => {
     if (tallaInput.trim() && !formData.tallas.includes(tallaInput.trim())) {
       setFormData({ ...formData, tallas: [...formData.tallas, tallaInput.trim()] });
@@ -385,9 +390,25 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                       <div className="flex justify-between"><span className="text-slate-500">Costo Materiales:</span><span className="font-semibold">${costoTotalMateriales.toFixed(2)}</span></div>
                       <div className="flex justify-between"><span className="text-slate-500">Mano de Obra:</span><span className="font-semibold">${(formData.costo_mano_obra || 0).toFixed(2)}</span></div>
                       <div className="flex justify-between font-bold text-indigo-600 border-t pt-2">
-                        <span>Total:</span><span>${(costoTotalMateriales + (formData.costo_mano_obra || 0)).toFixed(2)}</span>
+                        <span>Total:</span><span>${(costoTotalMateriales + costoManoObra).toFixed(2)}</span>
                       </div>
                     </div>
+
+                    {precioSugerido > 0 && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-emerald-700 font-semibold">Precio sugerido mayorista</span>
+                          <span className="text-xl font-bold text-emerald-800">${Math.round(precioSugerido).toLocaleString()}</span>
+                        </div>
+                        <p className="text-xs text-emerald-600">(materiales + mano de obra) ÷ 2 × 3</p>
+                        {precioActual > 0 && (
+                          <div className={`flex justify-between items-center pt-1 border-t border-emerald-200 text-xs font-medium ${diferenciaPrecio >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                            <span>Precio actual vs sugerido</span>
+                            <span>{diferenciaPrecio >= 0 ? '+' : ''}{Math.round(diferenciaPrecio).toLocaleString()} ({((precioActual / precioSugerido - 1) * 100).toFixed(1)}%)</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 
