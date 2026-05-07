@@ -185,27 +185,9 @@ function TarjetaProducto({ producto, materiasPrimas, familias = [], onEdit, onDe
             </div>
           )}
           
-          {producto.materiales_requeridos && producto.materiales_requeridos.length > 0 && (
-            <div className="border-t border-slate-100 pt-3">
-              <div className="text-sm font-medium text-slate-700 mb-2">
-                Materiales ({producto.materiales_requeridos.length})
-              </div>
-              <div className="space-y-1">
-                {producto.materiales_requeridos.slice(0, 3).map((material, index) => {
-                  const materiaInfo = getMaterialInfo(material.materia_prima_id);
-                  return (
-                    <div key={index} className="text-xs text-slate-600 flex justify-between">
-                      <span>{materiaInfo?.nombre || 'Material'}</span>
-                      <span>{material.cantidad_por_unidad} {materiaInfo?.unidad_medida}</span>
-                    </div>
-                  );
-                })}
-                {producto.materiales_requeridos.length > 3 && (
-                  <div className="text-xs text-slate-400">
-                    +{producto.materiales_requeridos.length - 3} más...
-                  </div>
-                )}
-              </div>
+          {producto.materiales_requeridos?.length > 0 && (
+            <div className="text-xs text-slate-400 border-t border-slate-100 pt-2">
+              {producto.materiales_requeridos.length} materiales configurados
             </div>
           )}
         </CardContent>
