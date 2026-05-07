@@ -185,8 +185,31 @@ function TarjetaProducto({ producto, materiasPrimas, familias = [], onEdit, onDe
             </div>
           )}
           
+          {costoProduccion > 0 && producto.precio_empleado > 0 && (() => {
+            const margen = ((producto.precio_empleado - costoProduccion) / producto.precio_empleado) * 100;
+            const ganancia = producto.precio_empleado - costoProduccion;
+            const color = margen >= 40 ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+              : margen >= 25 ? 'text-amber-700 bg-amber-50 border-amber-200'
+              : 'text-red-700 bg-red-50 border-red-200';
+            const barColor = margen >= 40 ? 'bg-emerald-500' : margen >= 25 ? 'bg-amber-400' : 'bg-red-500';
+            return (
+              <div className={`border rounded-lg px-3 py-2 space-y-1.5 ${color}`}>
+                <div className="flex justify-between items-center text-xs font-semibold">
+                  <span>Margen bruto (mayorista)</span>
+                  <span>{margen.toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-white/60 rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${Math.min(margen, 100)}%` }} />
+                </div>
+                <div className="flex justify-between text-xs opacity-80">
+                  <span>Costo: ${costoProduccion.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</span>
+                  <span>+${ganancia.toLocaleString('es-CO', { maximumFractionDigits: 0 })} ganancia</span>
+                </div>
+              </div>
+            );
+          })()}
           {producto.materiales_requeridos?.length > 0 && (
-            <div className="text-xs text-slate-400 border-t border-slate-100 pt-2">
+            <div className="text-xs text-slate-400">
               {producto.materiales_requeridos.length} materiales configurados
             </div>
           )}
