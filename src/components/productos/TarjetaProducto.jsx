@@ -133,7 +133,7 @@ function TarjetaProducto({ producto, materiasPrimas, familias = [], onEdit, onDe
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            {producto.tiempo_fabricacion_horas && (
+            {Number(producto.tiempo_fabricacion_horas) > 0 && (
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-slate-400" />
                 <div>
