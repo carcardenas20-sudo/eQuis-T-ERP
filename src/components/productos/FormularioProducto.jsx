@@ -387,11 +387,23 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                     </div>
 
                     <div className="space-y-2 p-3 bg-slate-50 rounded-lg text-sm">
-                      <div className="flex justify-between"><span className="text-slate-500">Costo Materiales:</span><span className="font-semibold">${costoTotalMateriales.toFixed(2)}</span></div>
-                      <div className="flex justify-between"><span className="text-slate-500">Mano de Obra:</span><span className="font-semibold">${(formData.costo_mano_obra || 0).toFixed(2)}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Costo Materiales:</span><span className="font-semibold">${costoTotalMateriales.toLocaleString('es-CO', {maximumFractionDigits:0})}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Mano de Obra:</span><span className="font-semibold">${costoManoObra.toLocaleString('es-CO', {maximumFractionDigits:0})}</span></div>
                       <div className="flex justify-between font-bold text-indigo-600 border-t pt-2">
-                        <span>Total:</span><span>${(costoTotalMateriales + costoManoObra).toFixed(2)}</span>
+                        <span>Costo total:</span><span>${(costoTotalMateriales + costoManoObra).toLocaleString('es-CO', {maximumFractionDigits:0})}</span>
                       </div>
+                      {precioActual > 0 && (() => {
+                        const costoTotal = costoTotalMateriales + costoManoObra;
+                        const margen = ((precioActual - costoTotal) / precioActual) * 100;
+                        const ganancia = precioActual - costoTotal;
+                        const color = margen >= 40 ? 'text-emerald-700' : margen >= 25 ? 'text-amber-600' : 'text-red-600';
+                        return (
+                          <div className={`flex justify-between font-bold border-t pt-2 ${color}`}>
+                            <span>Margen bruto (vs mayorista):</span>
+                            <span>{margen.toFixed(1)}% <span className="font-normal text-xs">(+${ganancia.toLocaleString('es-CO', {maximumFractionDigits:0})})</span></span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {precioSugerido > 0 && (
