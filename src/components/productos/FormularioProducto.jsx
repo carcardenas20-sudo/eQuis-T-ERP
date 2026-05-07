@@ -86,7 +86,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
 
   const costoManoObra = Number(formData.costo_mano_obra) || 0;
   const precioSugerido = ((costoTotalMateriales + costoManoObra) / 2) * 3;
-  const precioActual = Number(formData.precio_venta) || 0;
+  const precioActual = Number(formData.precio_empleado) || 0;
   const diferenciaPrecio = precioActual - precioSugerido;
 
   const agregarTalla = () => {
