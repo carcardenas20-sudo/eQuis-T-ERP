@@ -5,7 +5,7 @@ import { Inventory, StockMovement } from "@/entities/all";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Calculator } from "lucide-react";
+import { Plus, Search, Calculator, Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
 import _ from 'lodash';
 
 import FormularioPresupuesto from "../components/presupuestos/FormularioPresupuesto";
@@ -23,8 +23,9 @@ export default function Presupuestos() {
   const [showForm, setShowForm] = useState(false);
   const [editingPresupuesto, setEditingPresupuesto] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showAsignaciones, setShowAsignaciones] = useState(false); // Estado para form Asignaciones
-  const [presupuestoParaAsignar, setPresupuestoParaAsignar] = useState(null); // Presupuesto para las asignaciones
+  const [showAsignaciones, setShowAsignaciones] = useState(false);
+  const [presupuestoParaAsignar, setPresupuestoParaAsignar] = useState(null);
+  const [showSugerencias, setShowSugerencias] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -252,6 +253,116 @@ export default function Presupuestos() {
             </div>
           </div>
         )}
+
+        {/* Sugerencias basadas en historial */}
+        {(() => {
+          // Construir mapa: producto_id → { combo_key → count }
+          const historial = {}; // { producto_id: { combo_label: count } }
+          presupuestos.forEach(p => {
+            (p.productos || []).forEach(item => {
+              if (!item.producto_id) return;
+              if (!historial[item.producto_id]) historial[item.producto_id] = {};
+              (item.combinaciones || []).filter(c => c.predefinida_id).forEach(combo => {
+                const prod = productos.find(pr => pr.id === item.producto_id);
+                // Nombre de combo usando secciones principales
+                const MAIN = ['fondo_entero', 'superior', 'central', 'inferior'];
+                const mats = prod?.materiales_requeridos || [];
+                const porSeccion = {};
+                (combo.colores_por_material || []).forEach(cm => {
+                  const mat = mats.find(m => m.row_id === cm.row_id);
+                  if (mat && MAIN.includes(mat.seccion) && !porSeccion[mat.seccion]) porSeccion[mat.seccion] = cm.color_nombre;
+                });
+                const label = MAIN.filter(s => porSeccion[s]).map(s => porSeccion[s]).join(' / ') || combo.predefinida_id;
+                // Tallas con cantidad
+                (combo.tallas_cantidades || []).filter(tc => Number(tc.cantidad) > 0).forEach(tc => {
+                  const key = `${label} · T${tc.talla}`;
+                  historial[item.producto_id][key] = (historial[item.producto_id][key] || 0) + 1;
+                });
+              });
+            });
+          });
+
+          // Generar sugerencias por producto
+          const sugerencias = [];
+          productos.forEach(prod => {
+            const h = historial[prod.id];
+            if (!h || Object.keys(h).length === 0) return;
+            const total = Object.values(h).reduce((s, v) => s + v, 0);
+            const avg = total / Object.keys(h).length;
+            // Combos poco frecuentes (menos del 50% del promedio)
+            const pocos = Object.entries(h)
+              .filter(([, v]) => v < avg * 0.5)
+              .sort((a, b) => a[1] - b[1])
+              .slice(0, 3)
+              .map(([k, v]) => ({ label: k, veces: v }));
+            // Combos predefinidos del producto nunca usados
+            const usados = new Set(Object.keys(h).map(k => k.split(' · T')[0]));
+            const MAIN = ['fondo_entero', 'superior', 'central', 'inferior'];
+            const mats = prod.materiales_requeridos || [];
+            const nunca = (prod.combinaciones_predefinidas || [])
+              .map(c => {
+                const porSeccion = {};
+                (c.colores_por_material || []).forEach(cm => {
+                  const mat = mats.find(m => m.row_id === cm.row_id);
+                  if (mat && MAIN.includes(mat.seccion) && !porSeccion[mat.seccion]) porSeccion[mat.seccion] = cm.color_nombre;
+                });
+                return MAIN.filter(s => porSeccion[s]).map(s => porSeccion[s]).join(' / ') || c.id;
+              })
+              .filter(label => !usados.has(label))
+              .slice(0, 3);
+
+            if (pocos.length > 0 || nunca.length > 0) {
+              sugerencias.push({ prod, pocos, nunca });
+            }
+          });
+
+          if (sugerencias.length === 0) return null;
+
+          return (
+            <Card className="bg-white border-amber-200 mb-6">
+              <div
+                className="flex items-center justify-between px-5 py-3 cursor-pointer select-none"
+                onClick={() => setShowSugerencias(v => !v)}
+              >
+                <div className="flex items-center gap-2 text-amber-700 font-semibold">
+                  <Lightbulb className="w-4 h-4" />
+                  Sugerencias para próximos presupuestos
+                  <span className="text-xs font-normal text-amber-500">basado en {presupuestos.length} presupuestos anteriores</span>
+                </div>
+                {showSugerencias ? <ChevronUp className="w-4 h-4 text-amber-500" /> : <ChevronDown className="w-4 h-4 text-amber-500" />}
+              </div>
+              {showSugerencias && (
+                <CardContent className="pt-0 pb-4 space-y-4">
+                  {sugerencias.map(({ prod, pocos, nunca }) => (
+                    <div key={prod.id} className="border border-amber-100 rounded-lg p-3 space-y-2">
+                      <p className="text-sm font-bold text-slate-800">{prod.nombre} <span className="font-normal text-slate-400 text-xs">Ref. {prod.reference}</span></p>
+                      {nunca.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-red-600 mb-1">Nunca producidas:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {nunca.map(label => (
+                              <span key={label} className="text-xs bg-red-50 border border-red-200 text-red-700 px-2 py-0.5 rounded-full">{label}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {pocos.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-amber-600 mb-1">Poco frecuentes:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {pocos.map(({ label, veces }) => (
+                              <span key={label} className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2 py-0.5 rounded-full">{label} <span className="opacity-60">({veces}×)</span></span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              )}
+            </Card>
+          );
+        })()}
 
         {/* Presupuestos Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
