@@ -609,11 +609,25 @@ async function seedExportsData(client) {
   console.log('');
 }
 
-initDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ API server running on port ${PORT}`);
-  });
-}).catch(err => {
-  console.error('❌ DB init failed:', err.message);
-  process.exit(1);
-});
+async function startWithRetry(maxAttempts = 10, delayMs = 5000) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await initDB();
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`✅ API server running on port ${PORT}`);
+      });
+      return;
+    } catch (err) {
+      console.error(`❌ DB init failed (attempt ${attempt}/${maxAttempts}): ${err.message}`);
+      if (attempt < maxAttempts) {
+        console.log(`⏳ Retrying in ${delayMs / 1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        console.error('❌ Max retry attempts reached. Exiting.');
+        process.exit(1);
+      }
+    }
+  }
+}
+
+startWithRetry();
