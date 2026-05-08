@@ -262,7 +262,7 @@ export default function Presupuestos() {
             (p.productos || []).forEach(item => {
               if (!item.producto_id) return;
               if (!historial[item.producto_id]) {
-                historial[item.producto_id] = { tallas: new Set(), ultimoPresupuesto: p.numero_presupuesto };
+                historial[item.producto_id] = { tallas: new Set(), ultimoPresupuesto: p.numero_presupuesto, ultimaFecha: p.created_date };
               }
               (item.combinaciones || []).forEach(combo => {
                 (combo.tallas_cantidades || []).filter(tc => Number(tc.cantidad) > 0).forEach(tc => {
@@ -289,7 +289,8 @@ export default function Presupuestos() {
               const prod = productos.find(pr => pr.id === prodId);
               const data = historial[prodId];
               if (!prod || !data) return null;
-              return { prod, tallas: [...data.tallas].sort(), ultimoPresupuesto: data.ultimoPresupuesto };
+              const fecha = data.ultimaFecha ? new Date(data.ultimaFecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+              return { prod, tallas: [...data.tallas].sort(), ultimoPresupuesto: data.ultimoPresupuesto, fecha };
             })
             .filter(Boolean);
 
@@ -317,6 +318,7 @@ export default function Presupuestos() {
                           <span className="text-sm font-semibold text-slate-800">{prod.nombre}</span>
                           {prod.reference && <span className="ml-2 text-xs font-mono text-slate-400">Ref. {prod.reference}</span>}
                           <span className="ml-2 text-xs text-slate-400">· {ultimoPresupuesto}</span>
+                          {fecha && <span className="ml-1 text-xs text-slate-400">({fecha})</span>}
                         </div>
                         <div className="flex flex-wrap gap-1 justify-end">
                           {tallas.map(t => (
