@@ -312,7 +312,7 @@ export default function Presupuestos() {
               {showSugerencias && (
                 <CardContent className="pt-0 pb-3">
                   <div className="divide-y divide-slate-100">
-                    {lista.map(({ prod, tallas, ultimoPresupuesto }) => (
+                    {lista.map(({ prod, tallas, ultimoPresupuesto, fecha }) => (
                       <div key={prod.id} className="py-2.5 flex items-center gap-3">
                         <div className="min-w-0 flex-1">
                           <span className="text-sm font-semibold text-slate-800">{prod.nombre}</span>
