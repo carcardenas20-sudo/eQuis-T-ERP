@@ -116,7 +116,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 app.get('/api/functions/reportePendientes', requireAuth, async (req, res) => {
   try {
     const { rows: dispatches } = await query(`SELECT id, data, employee_id, quantity, product_reference, status FROM entity_dispatch`);
-    const { rows: deliveries } = await query(`SELECT id, employee_id, total_units, data FROM entity_delivery`);
+    const { rows: deliveries } = await query(`SELECT id, employee_id, quantity, data FROM entity_delivery`);
     const { rows: employees } = await query(`SELECT id, name, data FROM entity_employee WHERE is_active = true`);
 
     const getName = id => {
@@ -142,7 +142,7 @@ app.get('/api/functions/reportePendientes', requireAuth, async (req, res) => {
     deliveries.forEach(d => {
       const id = String(d.employee_id || '').trim();
       if (!id || !porEmp[id]) return;
-      const qty = Number(d.total_units || d.data?.total_units || 0);
+      const qty = Number(d.quantity || d.data?.quantity || 0);
       porEmp[id].entregado += qty;
     });
 
