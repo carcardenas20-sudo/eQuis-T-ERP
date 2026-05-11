@@ -112,6 +112,64 @@ app.use('/api/entities', requireAuth, entityRoutes);
 app.use('/api/upload', requireAuth, uploadRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 
+// ─── Reporte: pendientes de despacho y entrega por operario ──────────────────
+app.get('/api/functions/reportePendientes', requireAuth, async (req, res) => {
+  try {
+    const { rows: dispatches } = await query(`SELECT id, data, employee_id, quantity, product_reference, status FROM entity_dispatch`);
+    const { rows: deliveries } = await query(`SELECT id, employee_id, total_units, data FROM entity_delivery`);
+    const { rows: employees } = await query(`SELECT id, name, data FROM entity_employee WHERE is_active = true`);
+
+    const getName = id => {
+      const e = employees.find(e => e.id === id || String(e.data?.employee_id || '') === id);
+      return e ? (e.name || id) : id;
+    };
+
+    // Sin operario
+    const sinOp = dispatches.filter(d => !d.employee_id || !String(d.employee_id).trim());
+    const sinOpResumen = {};
+    sinOp.forEach(d => {
+      const r = d.product_reference || '?';
+      sinOpResumen[r] = (sinOpResumen[r] || 0) + Number(d.quantity || 0);
+    });
+
+    // Por operario: despachado vs entregado
+    const porEmp = {};
+    dispatches.filter(d => d.employee_id && String(d.employee_id).trim()).forEach(d => {
+      const id = String(d.employee_id).trim();
+      if (!porEmp[id]) porEmp[id] = { despachado: 0, entregado: 0 };
+      porEmp[id].despachado += Number(d.quantity || 0);
+    });
+    deliveries.forEach(d => {
+      const id = String(d.employee_id || '').trim();
+      if (!id || !porEmp[id]) return;
+      const qty = Number(d.total_units || d.data?.total_units || 0);
+      porEmp[id].entregado += qty;
+    });
+
+    const pendientesPorOperario = Object.entries(porEmp)
+      .map(([id, v]) => ({
+        operario: getName(id),
+        employee_id: id,
+        despachado: v.despachado,
+        entregado: v.entregado,
+        pendiente: v.despachado - v.entregado,
+      }))
+      .sort((a, b) => b.pendiente - a.pendiente);
+
+    res.json({
+      sin_operario: {
+        registros: sinOp.length,
+        unidades: sinOp.reduce((s, d) => s + Number(d.quantity || 0), 0),
+        por_referencia: sinOpResumen,
+      },
+      por_operario: pendientesPorOperario,
+    });
+  } catch (e) {
+    console.error('reportePendientes error', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Limpieza: borrar Dispatch huérfanos de lotes auto-creados ────────────────
 app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) => {
   try {
