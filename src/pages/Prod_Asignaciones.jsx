@@ -323,17 +323,6 @@ export default function Asignaciones() {
         producto_reference: productoInfo?.reference || "",
       });
 
-      // 2. Crear Despacho sin operario → planillador lo asigna
-      await Dispatch.create({
-        product_reference: productoInfo?.reference || formItem.producto_id,
-        quantity: totalForm,
-        employee_id: "",                // sin asignar — planillador completa
-        dispatch_date: new Date().toISOString().split("T")[0],
-        observations: `LOTE · ${selectedPresupuesto.numero_presupuesto} · ${productoInfo?.nombre || ""} · ${nombreCombo(formCombo, productoInfo)} · ${tallaResumen}`,
-        lote_remision: numRem,
-        estado_lote: "pendiente",
-      });
-
       setShowForm(false);
       await refreshLotes();
     } catch (err) {
