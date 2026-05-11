@@ -112,6 +112,25 @@ app.use('/api/entities', requireAuth, entityRoutes);
 app.use('/api/upload', requireAuth, uploadRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 
+// ─── Limpieza: borrar Dispatch huérfanos de lotes auto-creados ────────────────
+app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id FROM entity_dispatch
+       WHERE (data->>'lote_remision') IS NOT NULL
+         AND (data->>'lote_remision') != ''
+         AND (data->>'employee_id' IS NULL OR data->>'employee_id' = '')`
+    );
+    const ids = rows.map(r => r.id);
+    if (ids.length === 0) return res.json({ deleted: 0, message: 'Nada que limpiar' });
+    await query(`DELETE FROM entity_dispatch WHERE id = ANY($1)`, [ids]);
+    res.json({ deleted: ids.length, message: `${ids.length} despachos huérfanos eliminados` });
+  } catch (e) {
+    console.error('cleanOrphanDispatches error', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Function: simulateOperariosSalary ───────────────────────────────────────
 // Reads pending operario deliveries and creates AccountPayable records for each
 // employee that has unpaid balance.
