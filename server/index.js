@@ -170,6 +170,29 @@ app.get('/api/functions/reportePendientes', requireAuth, async (req, res) => {
   }
 });
 
+// ─── Buscar y revertir bajas de Delivery ─────────────────────────────────────
+app.get('/api/functions/buscarBajas/:employee_id', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, employee_id, delivery_date, quantity, data FROM entity_delivery
+       WHERE employee_id = $1 AND status = 'baja'
+       ORDER BY delivery_date DESC`,
+      [req.params.employee_id]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/functions/revertirBaja/:id', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await query(`SELECT id, status FROM entity_delivery WHERE id = $1`, [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'No encontrado' });
+    if (rows[0].status !== 'baja') return res.status(400).json({ error: 'El registro no es una baja' });
+    await query(`DELETE FROM entity_delivery WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true, deleted: req.params.id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Limpieza: borrar Dispatch huérfanos de lotes auto-creados ────────────────
 app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) => {
   try {
