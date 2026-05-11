@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Plus, Trash2, Calculator, Copy, Package, Eye, EyeOff } from "lucide-react";
+import { X, Plus, Trash2, Calculator, Copy, Package, Eye, EyeOff, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import _ from 'lodash';
 import SelectorCombinaciones from './SelectorCombinaciones';
@@ -220,6 +220,24 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
       return { ...prev, materiales_calculados: nuevosMateriales };
     });
     setRegistrandoCompra(null);
+  };
+
+  const handleMarcarTodoComprado = () => {
+    const hoy = new Date().toISOString().split('T')[0];
+    setFormData(prev => ({
+      ...prev,
+      materiales_calculados: prev.materiales_calculados.map(m => {
+        if (m.comprado) return m;
+        const faltante = (m.cantidad_total || 0) - (m.cantidad_comprada || 0);
+        if (faltante <= 0) return { ...m, comprado: true };
+        return {
+          ...m,
+          cantidad_comprada: m.cantidad_total,
+          comprado: true,
+          compras_historico: [...(m.compras_historico || []), { fecha: hoy, cantidad: faltante, nota: 'Marcado como comprado' }],
+        };
+      }),
+    }));
   };
 
   const handleToggleComprado = (index) => {
@@ -521,10 +539,16 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                   <div className="space-y-4 mt-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                       <h4 className="font-semibold text-slate-800">Lista de Materiales y Compras</h4>
-                      <Button type="button" onClick={calcularTodo} className="bg-blue-600 hover:bg-blue-700 text-sm w-full sm:w-auto">
-                        <Calculator className="w-4 h-4 mr-2" />
-                        Recalcular
-                      </Button>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Button type="button" onClick={handleMarcarTodoComprado} variant="outline" className="text-sm flex-1 sm:flex-none border-green-300 text-green-700 hover:bg-green-50">
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          Marcar todo comprado
+                        </Button>
+                        <Button type="button" onClick={calcularTodo} className="bg-blue-600 hover:bg-blue-700 text-sm flex-1 sm:flex-none">
+                          <Calculator className="w-4 h-4 mr-2" />
+                          Recalcular
+                        </Button>
+                      </div>
                     </div>
 
                     {(formData.materiales_calculados?.length || 0) === 0 ? (
