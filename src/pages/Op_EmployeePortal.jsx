@@ -153,14 +153,15 @@ export default function EmployeePortal() {
       if (remaining > 0) pendingAmount += remaining;
     });
 
-    // Restar avances antiguos sin entregas asociadas (compatibilidad)
-    const advancePayments = payments.filter(p => 
-      p.payment_type === 'avance' && 
-      (!p.delivery_ids || p.delivery_ids.length === 0) && 
+    // Restar TODOS los pagos sin entregas asociadas (avances, solicitudes aprobadas, etc.)
+    // Los pagos con delivery_payments ya están descontados entrega a entrega arriba.
+    // Los pagos con delivery_ids (pago_completo) ya marcaron las entregas como skip arriba.
+    const unlinkedPayments = payments.filter(p =>
+      (!p.delivery_ids || p.delivery_ids.length === 0) &&
       (!p.delivery_payments || p.delivery_payments.length === 0)
     ).reduce((sum, p) => sum + p.amount, 0);
 
-    pendingAmount -= advancePayments;
+    pendingAmount -= unlinkedPayments;
 
     // Descontar compras con descuento_saldo
     const purchaseDiscounts = purchases
