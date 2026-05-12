@@ -6,7 +6,7 @@ import {
 } from "@/entities/all";
 import {
   DollarSign, Wallet, Package, TrendingUp, CreditCard, AlertTriangle, Building2,
-  Truck, Clock, CheckCircle, Factory, BarChart3, ArrowRightLeft, ShoppingCart
+  Truck, Clock, CheckCircle, Factory, BarChart3, ArrowRightLeft, ShoppingCart, ChevronDown, ChevronRight
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -57,6 +57,98 @@ function SectionHeader({ title, subtitle, color }) {
     <div className={`border-l-4 pl-3 mb-4 ${cls}`}>
       <h2 className="text-lg font-bold">{title}</h2>
       {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+    </div>
+  );
+}
+
+function ListaComprasPorTipo({ pendingList, totalCostoPendiente, fmtCOP, TIPO_COLORS, createPageUrl }) {
+  const [openTipos, setOpenTipos] = React.useState({});
+
+  if (pendingList.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">
+        <CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-400" />
+        <p className="font-medium text-emerald-700">Todo comprado</p>
+        <p className="text-sm mt-1">No hay materias primas pendientes en presupuestos aprobados.</p>
+      </div>
+    );
+  }
+
+  // Agrupar por tipo
+  const grupos = {};
+  pendingList.forEach(mat => {
+    const tipo = mat.tipo_material || 'Otros';
+    if (!grupos[tipo]) grupos[tipo] = { items: [], costo: 0 };
+    grupos[tipo].items.push(mat);
+    grupos[tipo].costo += mat.costo_total;
+  });
+
+  const toggle = (tipo) => setOpenTipos(prev => ({ ...prev, [tipo]: !prev[tipo] }));
+
+  const fmtCant = (mat) => `${mat.cantidad_total % 1 === 0 ? mat.cantidad_total : mat.cantidad_total.toFixed(2)} ${mat.unidad_medida}`;
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ShoppingCart className="w-4 h-4 text-emerald-600" />
+          <span className="text-sm font-semibold text-slate-700">
+            Lista de compras — {pendingList.length} ítems · {Object.keys(grupos).length} tipos
+          </span>
+        </div>
+        <Link to={createPageUrl("Prod_Presupuestos")} className="text-xs text-emerald-600 hover:underline">
+          Ver presupuestos →
+        </Link>
+      </div>
+
+      <div className="divide-y divide-slate-100">
+        {Object.entries(grupos).sort((a, b) => b[1].costo - a[1].costo).map(([tipo, grupo]) => {
+          const isOpen = openTipos[tipo];
+          return (
+            <div key={tipo}>
+              {/* Cabecera del grupo — clickeable */}
+              <button
+                onClick={() => toggle(tipo)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  {isOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TIPO_COLORS[tipo] || 'bg-slate-100 text-slate-600'}`}>
+                    {tipo}
+                  </span>
+                  <span className="text-xs text-slate-500">{grupo.items.length} ítem{grupo.items.length !== 1 ? 's' : ''}</span>
+                </div>
+                <span className="text-sm font-semibold text-emerald-700 tabular-nums">{fmtCOP(grupo.costo)}</span>
+              </button>
+
+              {/* Filas del grupo */}
+              {isOpen && (
+                <div className="divide-y divide-slate-50 bg-slate-50/50">
+                  {grupo.items.map((mat, idx) => (
+                    <div key={idx} className="px-4 py-2.5 pl-10 flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-medium text-slate-800">{mat.nombre}</span>
+                        {mat.color && mat.color !== '—' && (
+                          <span className="ml-2 text-xs text-slate-400">{mat.color}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 shrink-0 text-right">
+                        <span className="text-xs text-slate-500 tabular-nums">{fmtCant(mat)}</span>
+                        <span className="text-sm font-semibold text-emerald-700 tabular-nums w-24">{fmtCOP(mat.costo_total)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="px-4 py-3 bg-emerald-50 border-t border-emerald-100 flex justify-between items-center">
+        <span className="text-sm font-semibold text-emerald-800">Total estimado a comprar</span>
+        <span className="text-lg font-bold text-emerald-900 tabular-nums">{fmtCOP(totalCostoPendiente)}</span>
+      </div>
     </div>
   );
 }
@@ -385,81 +477,14 @@ export default function Dashboard() {
                   />
                 </div>
 
-                {/* Materials table */}
-                {pipelineStats.pendingList.length === 0 ? (
-                  <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">
-                    <CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-400" />
-                    <p className="font-medium text-emerald-700">Todo comprado</p>
-                    <p className="text-sm mt-1">No hay materias primas pendientes en presupuestos aprobados.</p>
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ShoppingCart className="w-4 h-4 text-emerald-600" />
-                        <span className="text-sm font-semibold text-slate-700">
-                          Lista de compras — {pipelineStats.totalItems} ítems
-                        </span>
-                      </div>
-                      <Link to={createPageUrl("Prod_Presupuestos")} className="text-xs text-emerald-600 hover:underline">
-                        Ver presupuestos →
-                      </Link>
-                    </div>
-
-                    {/* Table header */}
-                    <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-2 px-4 py-2 bg-slate-50 text-xs font-medium text-slate-500 border-b border-slate-100">
-                      <span>Material</span>
-                      <span>Tipo</span>
-                      <span>Color</span>
-                      <span className="text-right">Cantidad</span>
-                      <span className="text-right">Precio unit.</span>
-                      <span className="text-right">Costo total</span>
-                    </div>
-
-                    {/* Table rows */}
-                    <div className="divide-y divide-slate-100">
-                      {pipelineStats.pendingList.map((mat, idx) => (
-                        <div key={idx} className="hover:bg-slate-50 transition-colors">
-                          {/* Mobile layout */}
-                          <div className="sm:hidden px-4 py-3 space-y-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium text-slate-900 text-sm truncate">{mat.nombre}</span>
-                              <span className="text-sm font-bold text-emerald-700 tabular-nums shrink-0">{fmtCOP(mat.costo_total)}</span>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TIPO_COLORS[mat.tipo_material] || 'bg-slate-100 text-slate-600'}`}>
-                                {mat.tipo_material}
-                              </span>
-                              <span className="text-xs text-slate-500">{mat.color}</span>
-                              <span className="text-xs text-slate-600 tabular-nums ml-auto">
-                                {mat.cantidad_total % 1 === 0 ? mat.cantidad_total : mat.cantidad_total.toFixed(2)} {mat.unidad_medida}
-                              </span>
-                            </div>
-                          </div>
-                          {/* Desktop layout */}
-                          <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-2 px-4 py-3 items-center">
-                            <span className="font-medium text-slate-900 text-sm">{mat.nombre}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full w-fit font-medium ${TIPO_COLORS[mat.tipo_material] || 'bg-slate-100 text-slate-600'}`}>
-                              {mat.tipo_material}
-                            </span>
-                            <span className="text-sm text-slate-600">{mat.color}</span>
-                            <span className="text-sm text-slate-800 text-right tabular-nums">
-                              {mat.cantidad_total % 1 === 0 ? mat.cantidad_total : mat.cantidad_total.toFixed(2)} {mat.unidad_medida}
-                            </span>
-                            <span className="text-sm text-slate-600 text-right tabular-nums">{fmtCOP(mat.precio_unitario)}</span>
-                            <span className="text-sm font-semibold text-emerald-700 text-right tabular-nums">{fmtCOP(mat.costo_total)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Footer total */}
-                    <div className="px-4 py-3 bg-emerald-50 border-t border-emerald-100 flex justify-between items-center">
-                      <span className="text-sm font-semibold text-emerald-800">Total estimado a comprar</span>
-                      <span className="text-lg font-bold text-emerald-900 tabular-nums">{fmtCOP(pipelineStats.totalCostoPendiente)}</span>
-                    </div>
-                  </div>
-                )}
+                {/* Materials table — agrupada por tipo */}
+                <ListaComprasPorTipo
+                  pendingList={pipelineStats.pendingList}
+                  totalCostoPendiente={pipelineStats.totalCostoPendiente}
+                  fmtCOP={fmtCOP}
+                  TIPO_COLORS={TIPO_COLORS}
+                  createPageUrl={createPageUrl}
+                />
               </>
             ) : null}
           </section>
