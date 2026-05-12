@@ -1,6 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { portalClient } from "@/api/portalClient";
+const { Delivery, Dispatch, Payment, PaymentRequest, Producto: ProductoEntity, AppConfig, EmployeePurchase } = {
+  Delivery: portalClient.entities.Delivery,
+  Dispatch: portalClient.entities.Dispatch,
+  Payment: portalClient.entities.Payment,
+  PaymentRequest: portalClient.entities.PaymentRequest,
+  Producto: portalClient.entities.Producto,
+  AppConfig: portalClient.entities.AppConfig,
+  EmployeePurchase: portalClient.entities.EmployeePurchase,
+};
+
+// Carga empleado verificando PIN en el servidor
+async function portalLogin(employeeId, pin) {
+  const res = await fetch('/api/portal-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ employee_id: employeeId, pin }),
+  });
+  if (res.status === 401) throw new Error('PIN_INCORRECTO');
+  if (res.status === 404) throw new Error('NO_ENCONTRADO');
+  if (!res.ok) throw new Error('ERROR_SERVIDOR');
+  return res.json();
+}
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,25 +37,46 @@ export default function EmployeePortal() {
   const [employee, setEmployee] = useState(null);
   const [data, setData] = useState({ deliveries: [], dispatches: [], payments: [], products: [], purchases: [] });
   const [stats, setStats] = useState({ totalEarned: 0, pendingAmount: 0, totalDelivered: 0, pendingUnits: {} });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isPaymentWindowOpen, setIsPaymentWindowOpen] = useState(false);
+  const [paymentWindowClosesAt, setPaymentWindowClosesAt] = useState(null);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [calculationSteps, setCalculationSteps] = useState([]);
 
-  const location = useLocation();
+  // PIN state
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinVerified, setPinVerified] = useState(false);
+  const [employeeDbId, setEmployeeDbId] = useState(null); // UUID del empleado
 
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const employeeId = params.get('employee_id');  // employee_id lógico (EMP001, etc.)
+  const employeeDbIdParam = params.get('id');     // UUID de BD (alternativa)
+
+  // Efecto: verificar PIN y cargar datos una vez verificado
   useEffect(() => {
+    if (!pinVerified || !employeeDbId) return;
+
     const checkPaymentWindow = async () => {
       try {
-        const configs = await portalClient.entities.AppConfig.filter({ key: "payment_window_opened_at" });
+        const configs = await AppConfig.filter({ key: "payment_window_opened_at" });
         if (configs.length > 0 && configs[0].value) {
           const openedAt = new Date(configs[0].value);
           const now = new Date();
           const diffHours = (now - openedAt) / (1000 * 60 * 60);
-          setIsPaymentWindowOpen(diffHours >= 0 && diffHours < 5);
+          const isOpen = diffHours >= 0 && diffHours < 5;
+          setIsPaymentWindowOpen(isOpen);
+          if (isOpen) {
+            const closesAt = new Date(openedAt.getTime() + 5 * 60 * 60 * 1000);
+            setPaymentWindowClosesAt(closesAt.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' }));
+          } else {
+            setPaymentWindowClosesAt(null);
+          }
         } else {
           setIsPaymentWindowOpen(false);
+          setPaymentWindowClosesAt(null);
         }
       } catch(e) {
         setIsPaymentWindowOpen(false);
@@ -43,38 +86,21 @@ export default function EmployeePortal() {
     checkPaymentWindow();
     const interval = setInterval(checkPaymentWindow, 60000);
 
-    const params = new URLSearchParams(location.search);
-    const employeeId = params.get('employee_id');
-
-    if (!employeeId) {
-      setError("No se ha proporcionado un ID de empleado.");
-      setLoading(false);
-      clearInterval(interval);
-      return;
-    }
-
     const loadAllData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const [employeeData] = await portalClient.entities.Employee.filter({ employee_id: employeeId });
-        if (!employeeData) {
-          setError("Empleado no encontrado.");
-          setLoading(false);
-          clearInterval(interval);
-          return;
-        }
-        setEmployee(employeeData);
+        const empId = employee?.employee_id || employeeId;
 
         const [deliveries, dispatches, payments, products, existingRequests, purchases] = await Promise.all([
-          portalClient.entities.Delivery.filter({ employee_id: employeeId }),
-          portalClient.entities.Dispatch.filter({ employee_id: employeeId }),
-          portalClient.entities.Payment.filter({ employee_id: employeeId }, '-payment_date'),
-          portalClient.entities.Producto.list(),
-          portalClient.entities.PaymentRequest.filter({ employee_id: employeeId, status: 'pending' }),
-          portalClient.entities.EmployeePurchase.filter({ employee_id: employeeId })
+          Delivery.filter({ employee_id: empId }),
+          Dispatch.filter({ employee_id: empId }),
+          Payment.filter({ employee_id: empId }, '-payment_date'),
+          ProductoEntity.list(),
+          PaymentRequest.filter({ employee_id: empId, status: 'pending' }),
+          EmployeePurchase.filter({ employee_id: empId })
         ]);
-        
+
         const normProducts = (products || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra }));
         setData({ deliveries, dispatches, payments, products: normProducts, purchases: purchases || [] });
         setHasPendingRequest(existingRequests.length > 0);
@@ -90,9 +116,8 @@ export default function EmployeePortal() {
 
     loadAllData();
 
-    // Limpiar interval al desmontar
     return () => clearInterval(interval);
-  }, [location.search]);
+  }, [pinVerified, employeeDbId]);
 
   const calculateStats = (deliveries, dispatches, payments, purchases = []) => {
     const totalEarned = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -153,27 +178,7 @@ export default function EmployeePortal() {
       return sum + (d.quantity || 0);
     }, 0);
 
-    // Calcular unidades pendientes por referencia (despachado - entregado)
-    const dispatchedByRef = {};
-    dispatches.forEach(d => {
-      const ref = d.product_reference;
-      if (ref) dispatchedByRef[ref] = (dispatchedByRef[ref] || 0) + (d.quantity || 0);
-    });
-    const deliveredByRef = {};
-    deliveries.forEach(d => {
-      if (d.items && d.items.length > 0) {
-        d.items.forEach(item => {
-          if (item.product_reference) deliveredByRef[item.product_reference] = (deliveredByRef[item.product_reference] || 0) + (item.quantity || 0);
-        });
-      } else if (d.product_reference) {
-        deliveredByRef[d.product_reference] = (deliveredByRef[d.product_reference] || 0) + (d.quantity || 0);
-      }
-    });
     const pendingUnits = {};
-    for (const ref of Object.keys(dispatchedByRef)) {
-      const pending = (dispatchedByRef[ref] || 0) - (deliveredByRef[ref] || 0);
-      if (pending > 0) pendingUnits[ref] = pending;
-    }
 
     setStats({ totalEarned, pendingAmount, totalDelivered, pendingUnits });
   };
@@ -383,7 +388,7 @@ export default function EmployeePortal() {
           request_time: colombiaTime.toTimeString().split(' ')[0],
           status: 'pending'
         };
-        await portalClient.entities.PaymentRequest.create(requestData);
+        await PaymentRequest.create(requestData);
         setHasPendingRequest(true);
         alert("Tu solicitud de pago ha sido enviada con éxito.");
       } catch (error) {
@@ -392,6 +397,62 @@ export default function EmployeePortal() {
       }
     }
   };
+
+  // ── Pantalla de PIN ────────────────────────────────────────────────────────
+  const handleVerifyPin = async () => {
+    if (!employeeId) {
+      setPinError('URL inválida: falta el ID del empleado.');
+      return;
+    }
+    setPinError('');
+    try {
+      const empData = await portalLogin(employeeId, pinInput);
+      setEmployee(empData);
+      setEmployeeDbId(empData.id);
+      setPinVerified(true);
+    } catch (e) {
+      if (e.message === 'PIN_INCORRECTO') setPinError('PIN incorrecto. Intenta de nuevo.');
+      else if (e.message === 'NO_ENCONTRADO') setPinError('Empleado no encontrado.');
+      else setPinError('Error de conexión. Intenta de nuevo.');
+    }
+  };
+
+  if (!pinVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm text-center space-y-6">
+          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Factory className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">Portal de Empleado</h1>
+            <p className="text-slate-500 text-sm mt-1">Ingresa tu PIN para continuar</p>
+          </div>
+          <div className="space-y-3">
+            <input
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              placeholder="PIN"
+              value={pinInput}
+              onChange={e => { setPinInput(e.target.value); setPinError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handleVerifyPin()}
+              className="w-full border-2 border-slate-200 rounded-xl px-4 py-4 text-center text-3xl font-bold tracking-[0.5em] focus:outline-none focus:border-blue-500"
+              autoFocus
+            />
+            {pinError && <p className="text-red-600 text-sm font-medium">{pinError}</p>}
+            <button
+              onClick={handleVerifyPin}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors"
+            >
+              Entrar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -493,9 +554,9 @@ export default function EmployeePortal() {
                     <div>
                         <h3 className="font-bold text-blue-900">Solicitud de Pago</h3>
                         {isPaymentWindowOpen ? (
-                             <p className="text-sm text-blue-700">✅ La ventana para solicitar pagos está abierta. ¡Puedes solicitar tu saldo ahora!</p>
+                             <p className="text-sm text-blue-700">✅ La ventana para solicitar pagos está abierta. ¡Puedes solicitar tu saldo ahora!{paymentWindowClosesAt && <span className="ml-1 font-semibold">Cierra a las {paymentWindowClosesAt}.</span>}</p>
                         ) : (
-                             <p className="text-sm text-blue-700">⏰ La ventana de pagos está cerrada. Espera a que el administrador la abra.</p>
+                             <p className="text-sm text-blue-700">⏰ La ventana de pagos está cerrada. Espera a que el planillador registre las entregas.</p>
                         )}
                         <p className="text-xs text-slate-500 mt-1">
                             Hora actual Colombia: {new Date().toLocaleString("es-CO", {timeZone: "America/Bogota"})}
