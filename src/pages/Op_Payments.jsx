@@ -237,7 +237,23 @@ export default function Payments() {
       const colombiaTime = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
       const todayStr = colombiaTime.toISOString().split('T')[0];
 
-      // Crear el pago (status: 'registrado' → aparece en Transferencias y CxP)
+      // Distribuir el monto aprobado entre las entregas pendientes más antiguas
+      const empPending = pendingPayments[request.employee_id];
+      const sortedDeliveries = [...(empPending?.deliveries || [])]
+        .sort((a, b) => new Date(a.delivery_date) - new Date(b.delivery_date));
+
+      let remaining = request.requested_amount;
+      const deliveryPayments = [];
+      for (const delivery of sortedDeliveries) {
+        if (remaining <= 0) break;
+        const toApply = Math.min(remaining, delivery.pending_amount);
+        if (toApply > 0) {
+          deliveryPayments.push({ delivery_id: delivery.id, amount: toApply });
+          remaining -= toApply;
+        }
+      }
+
+      // Crear el pago vinculado a las entregas que cubre
       await base44.entities.Payment.create({
         employee_id: request.employee_id,
         employee_name: request.employee_name,
@@ -246,6 +262,7 @@ export default function Payments() {
         payment_type: 'solicitud_aprobada',
         status: 'registrado',
         description: `Solicitud aprobada — ${request.employee_name}`,
+        delivery_payments: deliveryPayments,
       });
 
       // Marcar la solicitud como aprobada
