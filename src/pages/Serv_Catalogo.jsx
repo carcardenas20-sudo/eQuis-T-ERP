@@ -5,19 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, X, Package, DollarSign, Wrench } from "lucide-react";
+import { Plus, Edit, Trash2, X, Package, User } from "lucide-react";
 
 function fmtCOP(n) {
   return "$" + (Number(n) || 0).toLocaleString("es-CO");
 }
+
+const UNIDADES = ["unidad", "cm", "metro", "hora", "par", "docena", "kg", "ml"];
 
 const EMPTY_FORM = {
   nombre: "",
   descripcion: "",
   precio_venta: "",
   costo_manufactura: "",
+  unidad_cobro: "unidad",
   activo: true,
-  materiales: [], // [{ materia_prima_id, nombre, cantidad_por_unidad, unidad_medida }]
+  materiales: [],       // [{ materia_prima_id, nombre, cantidad_por_unidad, unidad_medida }]
+  precios_clientes: [], // [{ cliente, precio }]
 };
 
 export default function Serv_Catalogo() {
@@ -29,9 +33,7 @@ export default function Serv_Catalogo() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -54,8 +56,10 @@ export default function Serv_Catalogo() {
       descripcion: svc.descripcion || "",
       precio_venta: svc.precio_venta || "",
       costo_manufactura: svc.costo_manufactura || "",
+      unidad_cobro: svc.unidad_cobro || "unidad",
       activo: svc.activo !== false,
       materiales: svc.materiales || [],
+      precios_clientes: svc.precios_clientes || [],
     });
     setShowForm(true);
   };
@@ -66,28 +70,35 @@ export default function Serv_Catalogo() {
     setServicios(prev => prev.filter(s => s.id !== svc.id));
   };
 
+  // ── Materiales ──────────────────────────────────────────────────
   const addMaterial = () => {
     setForm(f => ({ ...f, materiales: [...f.materiales, { materia_prima_id: "", nombre: "", cantidad_por_unidad: 1, unidad_medida: "" }] }));
   };
-
   const updateMaterial = (idx, field, value) => {
     setForm(f => {
       const mats = [...f.materiales];
       mats[idx] = { ...mats[idx], [field]: value };
       if (field === "materia_prima_id") {
         const mp = materiasPrimas.find(m => m.id === value);
-        if (mp) {
-          mats[idx].nombre = mp.nombre;
-          mats[idx].unidad_medida = mp.unidad_medida || "";
-        }
+        if (mp) { mats[idx].nombre = mp.nombre; mats[idx].unidad_medida = mp.unidad_medida || ""; }
       }
       return { ...f, materiales: mats };
     });
   };
+  const removeMaterial = (idx) => setForm(f => ({ ...f, materiales: f.materiales.filter((_, i) => i !== idx) }));
 
-  const removeMaterial = (idx) => {
-    setForm(f => ({ ...f, materiales: f.materiales.filter((_, i) => i !== idx) }));
+  // ── Precios por cliente ─────────────────────────────────────────
+  const addPrecioCliente = () => {
+    setForm(f => ({ ...f, precios_clientes: [...f.precios_clientes, { cliente: "", precio: "" }] }));
   };
+  const updatePrecioCliente = (idx, field, value) => {
+    setForm(f => {
+      const pcs = [...f.precios_clientes];
+      pcs[idx] = { ...pcs[idx], [field]: value };
+      return { ...f, precios_clientes: pcs };
+    });
+  };
+  const removePrecioCliente = (idx) => setForm(f => ({ ...f, precios_clientes: f.precios_clientes.filter((_, i) => i !== idx) }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -98,8 +109,11 @@ export default function Serv_Catalogo() {
       descripcion: form.descripcion.trim(),
       precio_venta: parseFloat(form.precio_venta) || 0,
       costo_manufactura: parseFloat(form.costo_manufactura) || 0,
+      unidad_cobro: form.unidad_cobro || "unidad",
       activo: form.activo,
       materiales: form.materiales.filter(m => m.materia_prima_id),
+      precios_clientes: form.precios_clientes.filter(pc => pc.cliente.trim() && parseFloat(pc.precio) > 0)
+        .map(pc => ({ cliente: pc.cliente.trim(), precio: parseFloat(pc.precio) })),
     };
     if (editingId) {
       const updated = await Servicio.update(editingId, data);
@@ -153,19 +167,68 @@ export default function Serv_Catalogo() {
                     <Input value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Descripción opcional" className="mt-1" />
                   </div>
                   <div>
-                    <Label>Precio de venta (por unidad)</Label>
+                    <Label>Unidad de cobro</Label>
+                    <select
+                      value={UNIDADES.includes(form.unidad_cobro) ? form.unidad_cobro : "otro"}
+                      onChange={e => setForm(f => ({ ...f, unidad_cobro: e.target.value === "otro" ? "" : e.target.value }))}
+                      className="mt-1 w-full h-9 px-3 border border-slate-200 rounded text-sm"
+                    >
+                      {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                      <option value="otro">Otro...</option>
+                    </select>
+                    {!UNIDADES.includes(form.unidad_cobro) && (
+                      <Input value={form.unidad_cobro} onChange={e => setForm(f => ({ ...f, unidad_cobro: e.target.value }))} placeholder="ej. prenda, rollo..." className="mt-1" />
+                    )}
+                  </div>
+                  <div>
+                    <Label>Precio base (por {form.unidad_cobro || "unidad"})</Label>
                     <Input type="number" min="0" step="any" value={form.precio_venta} onChange={e => setForm(f => ({ ...f, precio_venta: e.target.value }))} placeholder="0" className="mt-1" />
                   </div>
                   <div>
-                    <Label>Costo manufactura (por unidad)</Label>
+                    <Label>Costo manufactura (por {form.unidad_cobro || "unidad"})</Label>
                     <Input type="number" min="0" step="any" value={form.costo_manufactura} onChange={e => setForm(f => ({ ...f, costo_manufactura: e.target.value }))} placeholder="0" className="mt-1" />
+                  </div>
+                </div>
+
+                {/* Precios por cliente */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Precios especiales por cliente</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addPrecioCliente}>
+                      <Plus className="w-3 h-3 mr-1" /> Agregar
+                    </Button>
+                  </div>
+                  {form.precios_clientes.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-3 border border-dashed rounded-lg">Sin precios especiales — se usará el precio base</p>
+                  )}
+                  <div className="space-y-2">
+                    {form.precios_clientes.map((pc, idx) => (
+                      <div key={idx} className="flex gap-2 items-center bg-blue-50 rounded-lg p-2">
+                        <Input
+                          value={pc.cliente}
+                          onChange={e => updatePrecioCliente(idx, "cliente", e.target.value)}
+                          placeholder="Nombre del cliente"
+                          className="flex-1 h-8 text-xs"
+                        />
+                        <Input
+                          type="number" min="0" step="any"
+                          value={pc.precio}
+                          onChange={e => updatePrecioCliente(idx, "precio", e.target.value)}
+                          placeholder={`Precio/${form.unidad_cobro || "unidad"}`}
+                          className="w-28 h-8 text-xs"
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => removePrecioCliente(idx)}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 {/* Materiales */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <Label>Materias primas consumidas (por unidad)</Label>
+                    <Label>Materias primas consumidas (por {form.unidad_cobro || "unidad"})</Label>
                     <Button type="button" variant="outline" size="sm" onClick={addMaterial}>
                       <Plus className="w-3 h-3 mr-1" /> Agregar
                     </Button>
@@ -182,9 +245,7 @@ export default function Serv_Catalogo() {
                           className="flex-1 h-8 text-xs px-2 border border-slate-200 rounded"
                         >
                           <option value="">Seleccionar materia prima</option>
-                          {materiasPrimas.map(mp => (
-                            <option key={mp.id} value={mp.id}>{mp.nombre}</option>
-                          ))}
+                          {materiasPrimas.map(mp => <option key={mp.id} value={mp.id}>{mp.nombre}</option>)}
                         </select>
                         <Input
                           type="number" min="0" step="any"
@@ -230,6 +291,7 @@ export default function Serv_Catalogo() {
               const cMat = costoMateriales(svc);
               const cTotal = cMat + Number(svc.costo_manufactura || 0);
               const margen = svc.precio_venta > 0 ? ((svc.precio_venta - cTotal) / svc.precio_venta) * 100 : null;
+              const unidad = svc.unidad_cobro || "unidad";
               return (
                 <Card key={svc.id} className="bg-white border-slate-200 hover:border-indigo-300 transition-all">
                   <CardHeader className="pb-2">
@@ -237,7 +299,8 @@ export default function Serv_Catalogo() {
                       <div>
                         <CardTitle className="text-base font-bold text-slate-900">{svc.nombre}</CardTitle>
                         {svc.descripcion && <p className="text-xs text-slate-500 mt-0.5">{svc.descripcion}</p>}
-                        {!svc.activo && <Badge className="mt-1 text-xs bg-slate-100 text-slate-500">Inactivo</Badge>}
+                        <Badge className="mt-1 text-xs bg-slate-100 text-slate-600">por {unidad}</Badge>
+                        {!svc.activo && <Badge className="mt-1 ml-1 text-xs bg-slate-100 text-slate-500">Inactivo</Badge>}
                       </div>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-indigo-600" onClick={() => openEdit(svc)}><Edit className="w-3.5 h-3.5" /></Button>
@@ -249,14 +312,14 @@ export default function Serv_Catalogo() {
                     <div className="grid grid-cols-2 gap-2">
                       {svc.precio_venta > 0 && (
                         <div className="bg-green-50 rounded-lg px-3 py-2">
-                          <p className="text-xs text-green-600">Precio venta</p>
-                          <p className="text-sm font-bold text-green-800">{fmtCOP(svc.precio_venta)}</p>
+                          <p className="text-xs text-green-600">Precio base</p>
+                          <p className="text-sm font-bold text-green-800">{fmtCOP(svc.precio_venta)}<span className="text-xs font-normal text-green-600">/{unidad}</span></p>
                         </div>
                       )}
                       {cTotal > 0 && (
                         <div className="bg-slate-50 rounded-lg px-3 py-2">
                           <p className="text-xs text-slate-500">Costo total</p>
-                          <p className="text-sm font-bold text-slate-700">{fmtCOP(cTotal)}</p>
+                          <p className="text-sm font-bold text-slate-700">{fmtCOP(cTotal)}<span className="text-xs font-normal text-slate-400">/{unidad}</span></p>
                         </div>
                       )}
                     </div>
@@ -264,6 +327,17 @@ export default function Serv_Catalogo() {
                       <div className={`rounded-lg px-3 py-2 text-xs font-semibold flex justify-between ${margen >= 40 ? 'bg-emerald-50 text-emerald-700' : margen >= 20 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
                         <span>Margen</span>
                         <span>{margen.toFixed(1)}%</span>
+                      </div>
+                    )}
+                    {(svc.precios_clientes || []).length > 0 && (
+                      <div className="border-t pt-2 space-y-1">
+                        <p className="text-xs text-slate-400 flex items-center gap-1"><User className="w-3 h-3" /> Precios especiales</p>
+                        {svc.precios_clientes.map((pc, i) => (
+                          <div key={i} className="flex justify-between text-xs">
+                            <span className="text-slate-600 truncate">{pc.cliente}</span>
+                            <span className="font-semibold text-blue-700">{fmtCOP(pc.precio)}/{unidad}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                     {(svc.materiales || []).length > 0 && (

@@ -85,7 +85,15 @@ export default function Serv_Ordenes() {
   };
 
   const addItem = () => {
-    setForm(f => ({ ...f, items: [...f.items, { servicio_id: "", nombre: "", cantidad: 1, precio_unitario: 0, subtotal: 0 }] }));
+    setForm(f => ({ ...f, items: [...f.items, { servicio_id: "", nombre: "", cantidad: 1, unidad: "unidad", precio_unitario: 0, subtotal: 0 }] }));
+  };
+
+  // Busca precio especial para el cliente actual (comparación case-insensitive)
+  const getPrecioParaCliente = (svc, clienteNombre) => {
+    if (!clienteNombre || !(svc.precios_clientes || []).length) return svc.precio_venta || 0;
+    const nombre = clienteNombre.trim().toLowerCase();
+    const match = svc.precios_clientes.find(pc => pc.cliente.toLowerCase().includes(nombre) || nombre.includes(pc.cliente.toLowerCase()));
+    return match ? match.precio : (svc.precio_venta || 0);
   };
 
   const updateItem = (idx, field, value) => {
@@ -96,7 +104,8 @@ export default function Serv_Ordenes() {
         const svc = servicios.find(s => s.id === value);
         if (svc) {
           items[idx].nombre = svc.nombre;
-          items[idx].precio_unitario = svc.precio_venta || 0;
+          items[idx].unidad = svc.unidad_cobro || "unidad";
+          items[idx].precio_unitario = getPrecioParaCliente(svc, f.cliente_nombre);
         }
       }
       const cant = Number(items[idx].cantidad) || 0;
@@ -227,15 +236,25 @@ export default function Serv_Ordenes() {
                   {form.items.length === 0 && <p className="text-xs text-slate-400 text-center py-3 border border-dashed rounded-lg">Sin servicios agregados</p>}
                   <div className="space-y-2">
                     {form.items.map((item, idx) => (
-                      <div key={idx} className="flex gap-2 items-center bg-slate-50 rounded-lg p-2">
-                        <select value={item.servicio_id} onChange={e => updateItem(idx, "servicio_id", e.target.value)} className="flex-1 h-8 text-xs px-2 border border-slate-200 rounded">
-                          <option value="">Seleccionar servicio</option>
-                          {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                        </select>
-                        <Input type="number" min="1" value={item.cantidad} onChange={e => updateItem(idx, "cantidad", e.target.value)} className="w-16 h-8 text-xs" placeholder="Cant." />
-                        <Input type="number" min="0" step="any" value={item.precio_unitario} onChange={e => updateItem(idx, "precio_unitario", e.target.value)} className="w-24 h-8 text-xs" placeholder="Precio" />
-                        <span className="text-xs text-emerald-700 font-semibold w-20 text-right">{fmtCOP(item.subtotal)}</span>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => removeItem(idx)}><X className="w-3.5 h-3.5" /></Button>
+                      <div key={idx} className="bg-slate-50 rounded-lg p-2 space-y-1.5">
+                        <div className="flex gap-2 items-center">
+                          <select value={item.servicio_id} onChange={e => updateItem(idx, "servicio_id", e.target.value)} className="flex-1 h-8 text-xs px-2 border border-slate-200 rounded">
+                            <option value="">Seleccionar servicio</option>
+                            {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                          </select>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => removeItem(idx)}><X className="w-3.5 h-3.5" /></Button>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <div className="flex items-center gap-1 flex-1">
+                            <Input type="number" min="0" step="any" value={item.cantidad} onChange={e => updateItem(idx, "cantidad", e.target.value)} className="w-24 h-8 text-xs" placeholder="Cantidad" />
+                            <span className="text-xs text-slate-500 shrink-0">{item.unidad || "unidad"}</span>
+                          </div>
+                          <div className="flex items-center gap-1 flex-1">
+                            <span className="text-xs text-slate-400 shrink-0">$</span>
+                            <Input type="number" min="0" step="any" value={item.precio_unitario} onChange={e => updateItem(idx, "precio_unitario", e.target.value)} className="flex-1 h-8 text-xs" placeholder={`Precio/${item.unidad || "unidad"}`} />
+                          </div>
+                          <span className="text-xs text-emerald-700 font-bold w-20 text-right shrink-0">{fmtCOP(item.subtotal)}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -343,7 +362,10 @@ export default function Serv_Ordenes() {
                         <div className="divide-y divide-slate-100">
                           {(ord.items || []).map((item, i) => (
                             <div key={i} className="flex justify-between py-1.5 text-sm">
-                              <span className="text-slate-700">{item.nombre} <span className="text-slate-400">× {item.cantidad}</span></span>
+                              <span className="text-slate-700">
+                                {item.nombre}
+                                <span className="text-slate-400"> · {Number(item.cantidad).toLocaleString("es-CO")} {item.unidad || "unid"} × {fmtCOP(item.precio_unitario)}</span>
+                              </span>
                               <span className="font-medium">{fmtCOP(item.subtotal)}</span>
                             </div>
                           ))}
