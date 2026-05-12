@@ -558,6 +558,36 @@ export const ENTITY_SCHEMAS = {
     },
     indexes: ['key'],
   },
+
+  // ============================================================
+  // SERVICIOS A TERCEROS
+  // ============================================================
+
+  Servicio: {
+    table: 'entity_servicio',
+    typed: {
+      nombre: 'TEXT',
+      activo: 'BOOLEAN DEFAULT true',
+      precio_venta: 'NUMERIC(14,2)',
+      costo_manufactura: 'NUMERIC(14,2)',
+    },
+    indexes: ['activo'],
+  },
+
+  OrdenServicio: {
+    table: 'entity_orden_servicio',
+    typed: {
+      numero_orden: 'TEXT',
+      cliente_nombre: 'TEXT',
+      cliente_contacto: 'TEXT',
+      estado: 'TEXT',           // borrador | confirmada | en_proceso | lista | pagada | credito
+      fecha_orden: 'TEXT',
+      fecha_estimada: 'TEXT',
+      total: 'NUMERIC(14,2)',
+      saldo_pendiente: 'NUMERIC(14,2)',
+    },
+    indexes: ['estado', 'cliente_nombre', 'fecha_orden'],
+  },
 };
 
 /**

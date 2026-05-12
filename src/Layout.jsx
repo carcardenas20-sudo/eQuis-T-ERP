@@ -13,7 +13,7 @@ import {
   FileText, Settings, Building2, UserCheck, CreditCard, Receipt, ShoppingBag,
   BookOpen, ArrowRightLeft, ArrowLeftRight, Sparkles, Wallet, BarChart3,
   ListChecks, Factory, Shirt, Palette, Wrench, Truck, Calculator,
-  PackageCheck, TruckIcon, Clock, Warehouse, Eye
+  PackageCheck, TruckIcon, Clock, Warehouse, Eye, Scissors
 } from "lucide-react";
 
 const comercialGroups = [
@@ -77,6 +77,15 @@ const produccionGroups = [
       { title: "Proveedores", url: createPageUrl("Prod_Proveedores"), icon: Building2, permissions: ["produccion_view"] },
       { title: "Compras Prod.", url: createPageUrl("Prod_Compras"), icon: ShoppingBag, permissions: ["produccion_view"] },
       { title: "Presupuestos", url: createPageUrl("Prod_Presupuestos"), icon: Calculator, permissions: ["produccion_view", "produccion_pipeline_view"] },
+    ]
+  },
+];
+
+const serviciosGroups = [
+  {
+    title: "Servicios a Terceros", items: [
+      { title: "Catálogo de Servicios", url: createPageUrl("Serv_Catalogo"), icon: Scissors, permissions: ["produccion_view"] },
+      { title: "Órdenes de Servicio", url: createPageUrl("Serv_Ordenes"), icon: FileText, permissions: ["produccion_view"] },
     ]
   },
 ];
@@ -164,6 +173,7 @@ function LayoutContent({ children }) {
   const allGroups = [
     ...comercialGroups.map(g => ({ ...g, mk: "comercial" })),
     ...produccionGroups.map(g => ({ ...g, mk: "produccion" })),
+    ...serviciosGroups.map(g => ({ ...g, mk: "produccion" })),
     ...operariosGroups.map(g => ({ ...g, mk: "operarios" })),
   ];
 

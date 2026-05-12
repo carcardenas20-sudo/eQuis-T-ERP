@@ -39,6 +39,10 @@ import Prod_Presupuestos from './pages/Prod_Presupuestos';
 import Prod_Asignaciones from './pages/Prod_Asignaciones';
 import Prod_EstadoCuentaPublico from './pages/Prod_EstadoCuentaPublico';
 
+// ── MÓDULO SERVICIOS A TERCEROS ───────────────────────────────
+import Serv_Catalogo from './pages/Serv_Catalogo';
+import Serv_Ordenes from './pages/Serv_Ordenes';
+
 // ── MÓDULO OPERARIOS (produccionequist) ───────────────────────
 import Op_Dashboard from './pages/Op_Dashboard';
 import Op_DailyOperations from './pages/Op_DailyOperations';
@@ -94,6 +98,10 @@ export const PAGES = {
   "Prod_Presupuestos": Prod_Presupuestos,
   "Prod_Asignaciones": Prod_Asignaciones,
   "Prod_EstadoCuentaPublico": Prod_EstadoCuentaPublico,
+
+  // Servicios a terceros
+  "Serv_Catalogo": Serv_Catalogo,
+  "Serv_Ordenes": Serv_Ordenes,
 
   // Operarios
   "Op_Dashboard": Op_Dashboard,
