@@ -32,7 +32,7 @@ export default function SalesPage() {
   // Sesión centralizada
   const { currentUser, permissions, userRole, userLocation: sessionLocation, isLoading: isSessionLoading } = useSession();
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 
   const [filters, setFilters] = useState({
     search: "",
@@ -69,7 +69,7 @@ export default function SalesPage() {
 
       // ✅ SIMPLIFICADO: Filtro de fecha más directo
       if (filters.dateRange === 'today') {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
         salesFilter.sale_date = { $gte: `${todayStr}T00:00:00`, $lte: `${todayStr}T23:59:59` };
       }
 
@@ -281,7 +281,7 @@ export default function SalesPage() {
               quantity: item.quantity, // Positive quantity
               reference_id: saleToDelete.id,
               reason: `Anulación de factura #${saleToDelete.invoice_number || saleToDelete.id}`,
-              movement_date: new Date().toISOString().split('T')[0]
+              movement_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
             });
           }
           // Delete the sale item record
@@ -360,7 +360,7 @@ export default function SalesPage() {
             { label: "Ticket Promedio", value: `$${averageTicket.toLocaleString()}`, Icon: Calendar, cls: "text-purple-600", iconCls: "text-purple-500" },
             {
               label: "Ventas Hoy",
-              value: sales.filter(s => s.sale_date === new Date().toISOString().split('T')[0]).length,
+              value: sales.filter(s => s.sale_date === new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })).length,
               Icon: Package, cls: "text-orange-600", iconCls: "text-orange-500"
             },
           ].map(({ label, value, sub, Icon, cls, iconCls }) => (

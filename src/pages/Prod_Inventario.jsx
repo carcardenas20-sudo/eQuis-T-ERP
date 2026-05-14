@@ -45,7 +45,7 @@ export default function Inventario() {
     const cantidad = parseFloat(nuevoItem.cantidad) || 0;
     const entrada = {
       id: `mov_${Date.now()}`,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
       tipo: 'entrada',
       cantidad,
       referencia: '',
@@ -83,7 +83,7 @@ export default function Inventario() {
       : Math.max(0, (item.cantidad_disponible || 0) - cant);
     const entrada = {
       id: `mov_${Date.now()}`,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
       tipo: movimientoForm.tipo,
       cantidad: cant,
       referencia: movimientoForm.referencia || '',

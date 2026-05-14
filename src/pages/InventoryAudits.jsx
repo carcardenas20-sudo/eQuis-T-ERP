@@ -64,7 +64,7 @@ export default function InventoryAuditsPage() {
       const newAudit = await InventoryAudit.create({
         audit_number: auditNumber,
         location_id: selectedLocation,
-        audit_date: new Date().toISOString().split('T')[0],
+        audit_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
         status: "in_progress",
         notes: auditNotes
       });

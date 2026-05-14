@@ -15,7 +15,7 @@ export default function FormularioFactura({ factura, compras, proveedores, onSub
     compra_id: "",
     proveedor_id: "",
     proveedor_nombre: "",
-    fecha_factura: new Date().toISOString().split('T')[0],
+    fecha_factura: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
     fecha_vencimiento: "",
     subtotal: 0,
     impuestos: 0,

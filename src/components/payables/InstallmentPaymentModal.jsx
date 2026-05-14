@@ -81,7 +81,7 @@ export default function InstallmentPaymentModal({ payable, onClose, onSaved }) {
           description: `Pago cuota #${inst.sequence_number} a ${payable.supplier_name} - ${payable.description}`,
           amount: v,
           category: payable.category || "otros",
-          expense_date: new Date().toISOString().split('T')[0],
+          expense_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
           location_id: locationId,
           payment_method: 'cash',
           receipt_number: reference || "",

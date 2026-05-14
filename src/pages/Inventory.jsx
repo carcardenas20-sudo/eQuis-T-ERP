@@ -140,7 +140,7 @@ export default function InventoryPage() {
     try {
       await Inventory.update(selectedItem.id, {
         current_stock: adjustmentData.newStock,
-        last_movement_date: new Date().toISOString().split('T')[0]
+        last_movement_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
       });
       setShowAdjustmentModal(false);
       setSelectedItem(null);

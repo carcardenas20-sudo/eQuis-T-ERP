@@ -116,7 +116,7 @@ export default function SettingsPage() {
       for (const inv of allInventory) {
         await Inventory.update(inv.id, {
           current_stock: 0, reserved_stock: 0, available_stock: 0,
-          last_movement_date: new Date().toISOString().split('T')[0]
+          last_movement_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
         });
       }
 
