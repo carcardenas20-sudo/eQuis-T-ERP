@@ -4,7 +4,7 @@ import { Producto as ProductoFab } from "@/api/entitiesChaquetas";
 import { Dispatch, Delivery } from "@/api/entitiesProduccion";
 import { InventoryMovement } from "@/entities/InventoryMovement";
 import { sendInvoiceWhatsApp } from '@/utils/whatsappInvoice';
-import { generatePrintableHTML, buildInvoicePdfBlob } from '@/utils/invoicePdf';
+import { generatePrintableHTML } from '@/utils/invoicePdf';
 import { useSession } from "../components/providers/SessionProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -354,14 +354,10 @@ export default function POS() {
     pw.print();
   }, [postSaleInfo]);
 
-  const handlePostSaleWhatsApp = useCallback(async () => {
+  const handlePostSaleWhatsApp = useCallback(() => {
     if (!postSaleInfo) return;
-    const { sale, items, companyInfo, pdfBlobPromise } = postSaleInfo;
-    try {
-      await sendInvoiceWhatsApp({ sale, items, companyInfo, printFormat: '80mm', defaultPhone: sale.customer_phone, pdfBlobPromise });
-    } catch (err) {
-      console.error('WhatsApp share error:', err);
-    }
+    const { sale, items, companyInfo } = postSaleInfo;
+    sendInvoiceWhatsApp({ sale, items, companyInfo, defaultPhone: sale.customer_phone });
   }, [postSaleInfo]);
 
   const processSale = useCallback(async (paymentData) => {
@@ -537,9 +533,7 @@ export default function POS() {
         receiptHeader: systemSettings.receipt_header || '',
         receiptFooter: systemSettings.receipt_footer || '¡Gracias por su compra!'
       } : {};
-      // Inicia generación del PDF en segundo plano para que esté listo cuando el usuario toque WhatsApp
-      const pdfBlobPromise = buildInvoicePdfBlob(sale, enrichedItems, companyInfo, '80mm');
-      setPostSaleInfo({ sale, items: enrichedItems, companyInfo, pdfBlobPromise });
+      setPostSaleInfo({ sale, items: enrichedItems, companyInfo });
 
     } catch (error) {
       console.error("Error processing sale:", error);
