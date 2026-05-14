@@ -216,10 +216,10 @@ export default function SaleDetailModal({ sale, onClose }) {
 
     if (isThermal) {
       const is58 = printFormat === '58mm';
-      const fs      = is58 ? '10pt' : '11pt';   // base
-      const fsSm    = is58 ? '9pt'  : '10pt';   // info empresa
-      const fsLg    = is58 ? '13pt' : '15pt';   // TOTAL y nombre empresa
-      const fsMed   = is58 ? '10.5pt': '12pt';  // nombre producto
+      const fs      = is58 ? '14pt' : '15pt';   // base
+      const fsSm    = is58 ? '12pt' : '13pt';   // info empresa
+      const fsLg    = is58 ? '18pt' : '20pt';   // TOTAL y nombre empresa
+      const fsMed   = is58 ? '15pt' : '16pt';   // nombre producto
       const pad     = is58 ? '3mm'  : '4mm';
       const lh      = '1.55';
       const rowPad  = is58 ? '2pt 0' : '3pt 0';

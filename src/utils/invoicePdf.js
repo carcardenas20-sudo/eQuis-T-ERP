@@ -8,10 +8,10 @@ export function generatePrintableHTML(sale, enrichedItems, companyInfo, paymentM
 
   if (isThermal) {
     const is58 = printFormat === '58mm';
-    const fs      = is58 ? '10pt' : '11pt';
-    const fsSm    = is58 ? '9pt'  : '10pt';
-    const fsLg    = is58 ? '13pt' : '15pt';
-    const fsMed   = is58 ? '10.5pt': '12pt';
+    const fs      = is58 ? '14pt' : '15pt';
+    const fsSm    = is58 ? '12pt' : '13pt';
+    const fsLg    = is58 ? '18pt' : '20pt';
+    const fsMed   = is58 ? '15pt' : '16pt';
     const pad     = is58 ? '3mm'  : '4mm';
     const lh      = '1.55';
     const rowPad  = is58 ? '2pt 0' : '3pt 0';
