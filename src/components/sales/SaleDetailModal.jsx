@@ -216,21 +216,22 @@ export default function SaleDetailModal({ sale, onClose }) {
 
     if (isThermal) {
       const is58 = printFormat === '58mm';
-      const fs      = is58 ? '9pt'  : '10pt';   // base — ningún texto baja de aquí
-      const fsSm    = is58 ? '8pt'  : '9pt';    // info secundaria (encabezado empresa)
-      const fsLg    = is58 ? '12pt' : '14pt';   // TOTAL y empresa
-      const fsMed   = is58 ? '9.5pt': '11pt';   // nombre producto
+      const fs      = is58 ? '10pt' : '11pt';   // base
+      const fsSm    = is58 ? '9pt'  : '10pt';   // info empresa
+      const fsLg    = is58 ? '13pt' : '15pt';   // TOTAL y nombre empresa
+      const fsMed   = is58 ? '10.5pt': '12pt';  // nombre producto
       const pad     = is58 ? '3mm'  : '4mm';
-      const lh      = '1.5';
+      const lh      = '1.55';
       const rowPad  = is58 ? '2pt 0' : '3pt 0';
 
-      const sepSolid  = `<tr><td colspan="2" style="padding:3pt 0 2pt;"><div style="border-top:1.5px solid #000;"></div></td></tr>`;
-      const sepDashed = `<tr><td colspan="2" style="padding:2pt 0 1pt;"><div style="border-top:1px dashed #555;"></div></td></tr>`;
+      const sepSolid  = `<tr><td colspan="2" style="padding:3pt 0 2pt;"><div style="border-top:2px solid #000;"></div></td></tr>`;
+      const sepDashed = `<tr><td colspan="2" style="padding:2pt 0 1pt;"><div style="border-top:1px dashed #000;"></div></td></tr>`;
 
-      const row = (left, right, bold = false, size = fs) =>
+      // Todo en negrita por defecto para mejor reproducción térmica
+      const row = (left, right, size = fs) =>
         `<tr>
-          <td style="padding:${rowPad};font-size:${size};font-weight:${bold?'bold':'normal'};vertical-align:top;">${left}</td>
-          <td style="padding:${rowPad};font-size:${size};font-weight:${bold?'bold':'normal'};text-align:right;white-space:nowrap;vertical-align:top;">${right}</td>
+          <td style="padding:${rowPad};font-size:${size};font-weight:bold;vertical-align:top;">${left}</td>
+          <td style="padding:${rowPad};font-size:${size};font-weight:bold;text-align:right;white-space:nowrap;vertical-align:top;">${right}</td>
         </tr>`;
 
       // Producto: nombre bold en su línea, luego qty × precio | total en la misma fila (misma fuente)
@@ -258,7 +259,7 @@ export default function SaleDetailModal({ sale, onClose }) {
         <div style="width:100%;font-family:Arial,Helvetica,sans-serif;font-size:${fs};line-height:${lh};padding:${pad};box-sizing:border-box;">
           <table style="width:100%;border-collapse:collapse;">
 
-            <tr><td colspan="2" style="text-align:center;padding-bottom:5pt;">
+            <tr><td colspan="2" style="text-align:center;padding-bottom:5pt;font-weight:bold;">
               <div style="font-size:${fsLg};font-weight:900;letter-spacing:0.5pt;">${companyInfo.name}</div>
               ${companyInfo.receiptHeader ? `<div style="font-size:${fsSm};font-style:italic;margin-top:1pt;">${companyInfo.receiptHeader}</div>` : ''}
               <div style="font-size:${fsSm};margin-top:2pt;">${companyInfo.address}</div>
@@ -267,9 +268,9 @@ export default function SaleDetailModal({ sale, onClose }) {
 
             ${sepSolid}
 
-            ${row('<b>Factura #' + (sale.invoice_number || (sale.id || '').slice(-8)) + '</b>', fecha)}
-            <tr><td colspan="2" style="padding:${rowPad};font-size:${fs};">
-              Cliente: <b>${sale.customer_name || 'General'}</b>
+            ${row('Factura #' + (sale.invoice_number || (sale.id || '').slice(-8)), fecha)}
+            <tr><td colspan="2" style="padding:${rowPad};font-size:${fs};font-weight:bold;">
+              Cliente: ${sale.customer_name || 'General'}
               ${sale.customer_document ? `&nbsp; Doc: ${sale.customer_document}` : ''}
             </td></tr>
 
@@ -281,8 +282,8 @@ export default function SaleDetailModal({ sale, onClose }) {
 
             ${totalsRows}
             <tr>
-              <td style="padding:3pt 0;font-size:${fsLg};font-weight:900;border-top:1.5px solid #000;">TOTAL</td>
-              <td style="padding:3pt 0;font-size:${fsLg};font-weight:900;text-align:right;border-top:1.5px solid #000;">$${(sale.total_amount || 0).toLocaleString()}</td>
+              <td style="padding:3pt 0;font-size:${fsLg};font-weight:900;border-top:2px solid #000;">TOTAL</td>
+              <td style="padding:3pt 0;font-size:${fsLg};font-weight:900;text-align:right;border-top:2px solid #000;">$${(sale.total_amount || 0).toLocaleString()}</td>
             </tr>
 
             ${sepDashed}
@@ -291,7 +292,7 @@ export default function SaleDetailModal({ sale, onClose }) {
 
             ${sepSolid}
 
-            <tr><td colspan="2" style="text-align:center;padding-top:5pt;font-size:${fs};">
+            <tr><td colspan="2" style="text-align:center;padding-top:5pt;font-size:${fs};font-weight:bold;">
               ${companyInfo.receiptFooter || '¡Gracias por su compra!'}
             </td></tr>
 
