@@ -38,7 +38,7 @@ const statusLabels = {
 export default function SaleDetailModal({ sale, onClose }) {
   const [products, setProducts] = useState([]);
   const [systemSettings, setSystemSettings] = useState(null); // Added state for system settings
-  const [printFormat, setPrintFormat] = useState('80mm');
+  const [printFormat, setPrintFormat] = useState('58mm');
   const [isExporting, setIsExporting] = useState(false);
   
   useEffect(() => {
@@ -113,7 +113,7 @@ export default function SaleDetailModal({ sale, onClose }) {
     const widthMM = printFormat === '58mm' ? 58 : (printFormat === '80mm' ? 80 : (printFormat === 'half-letter' ? 140 : 216));
     const margin = isThermal ? '0' : '10mm';
     const pageStyle = isThermal
-      ? `@media print { .print-container { width: ${widthMM}mm; margin: 0 auto; } table { page-break-inside: auto; } tr, td, th { page-break-inside: avoid; } }`
+      ? `@page { size: ${widthMM}mm auto; margin: 0; } body { margin: 0; width: ${widthMM}mm; } @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`
       : `@page { size: ${printFormat === 'half-letter' ? '140mm 216mm' : '216mm 279mm'}; margin: ${margin}; } @media print { .print-container { width: 100%; max-width: ${widthMM}mm; margin: 0 auto; } }`;
 
     const fullHtml = `<!DOCTYPE html>
@@ -233,129 +233,127 @@ export default function SaleDetailModal({ sale, onClose }) {
     }
   };
 
-  // Function to generate HTML content without React rendering
   const generatePrintableHTML = (sale, enrichedItems, companyInfo, paymentMethodLabels, printFormat = '80mm') => {
+    const isThermal = printFormat === '58mm' || printFormat === '80mm';
+    const fecha = new Date(sale.created_date || Date.now()).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+
+    if (isThermal) {
+      const fs = printFormat === '58mm' ? '8px' : '10px';
+      const fsH = printFormat === '58mm' ? '11px' : '13px';
+      const pad = printFormat === '58mm' ? '2mm' : '3mm';
+      const sep = `<div style="border-top:1px dashed #000;margin:4px 0;"></div>`;
+
+      const itemsHTML = enrichedItems.map(item => `
+        <div style="margin-bottom:3px;">
+          <div style="font-weight:bold;">${item.product?.name || item.product_id}</div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>${item.quantity} × $${(item.unit_price || 0).toLocaleString()}</span>
+            <span style="font-weight:bold;">$${(item.line_total || 0).toLocaleString()}</span>
+          </div>
+        </div>`).join('');
+
+      const paymentsHTML = (sale.payment_methods || []).map(p => `
+        <div style="display:flex;justify-content:space-between;">
+          <span>${paymentMethodLabels[p.method] || p.method}</span>
+          <span>$${(p.amount || 0).toLocaleString()}</span>
+        </div>`).join('');
+
+      return `
+        <div style="width:100%;font-family:'Courier New',Courier,monospace;font-size:${fs};padding:${pad};box-sizing:border-box;">
+          <div style="text-align:center;margin-bottom:4px;">
+            <div style="font-size:${fsH};font-weight:bold;">${companyInfo.name}</div>
+            ${companyInfo.receiptHeader ? `<div style="font-style:italic;">${companyInfo.receiptHeader}</div>` : ''}
+            <div>${companyInfo.address}</div>
+            <div>NIT: ${companyInfo.document}</div>
+            <div>Tel: ${companyInfo.phone}</div>
+          </div>
+          ${sep}
+          <div style="margin-bottom:3px;">
+            <div><b>Fact. #${sale.invoice_number || (sale.id || '').slice(-8)}</b></div>
+            <div>${fecha}</div>
+            <div>Cliente: ${sale.customer_name || 'General'}</div>
+            ${sale.customer_document ? `<div>Doc: ${sale.customer_document}</div>` : ''}
+          </div>
+          ${sep}
+          ${itemsHTML}
+          ${sep}
+          ${sale.discount_amount > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Descuento</span><span>-$${(sale.discount_amount || 0).toLocaleString()}</span></div>` : ''}
+          ${sale.tax_amount > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Impuestos</span><span>$${(sale.tax_amount || 0).toLocaleString()}</span></div>` : ''}
+          <div style="display:flex;justify-content:space-between;font-size:${fsH};font-weight:bold;margin-top:2px;">
+            <span>TOTAL</span>
+            <span>$${(sale.total_amount || 0).toLocaleString()}</span>
+          </div>
+          ${sep}
+          ${paymentsHTML}
+          ${sep}
+          <div style="text-align:center;margin-top:6px;">${companyInfo.receiptFooter || '¡Gracias por su compra!'}</div>
+        </div>`;
+    }
+
+    // ─── Formato A4 / media carta ─────────────────────────────────────────────
     const itemsHTML = enrichedItems.map(item => `
       <tr>
-        <td>
-          ${item.product?.name || 'Producto desconocido'}
-          <br><small>SKU: ${item.product_id}</small>
-        </td>
-        <td style="text-align: center;">${item.quantity}</td>
-        <td style="text-align: right;">$${(item.unit_price || 0).toLocaleString()}</td>
-        <td style="text-align: right;">$${(item.line_total || 0).toLocaleString()}</td>
-      </tr>
-    `).join('');
+        <td>${item.product?.name || item.product_id}<br><small style="color:#888;">SKU: ${item.product_id}</small></td>
+        <td style="text-align:center;">${item.quantity}</td>
+        <td style="text-align:right;">$${(item.unit_price || 0).toLocaleString()}</td>
+        <td style="text-align:right;">$${(item.line_total || 0).toLocaleString()}</td>
+      </tr>`).join('');
 
-    const paymentsHTML = sale.payment_methods?.map(p => `
+    const paymentsHTML = (sale.payment_methods || []).map(p => `
       <tr>
-        <td style="padding: 5px 8px; border: 0;">${paymentMethodLabels[p.method] || p.method}:</td>
-        <td style="padding: 5px 8px; border: 0; text-align: right;">$${p.amount.toLocaleString()}</td>
-      </tr>
-    `).join('') || `
-      <tr>
-        <td colspan="2" style="padding: 5px 8px; border: 0; text-align: center; color: #777;">No se registraron pagos</td>
-      </tr>
-    `;
-
-    const isThermal = printFormat === '58mm' || printFormat === '80mm';
-    const containerMax = isThermal ? '100%' : '800px';
-    const padding = isThermal ? '6mm' : '30px';
-    const border = isThermal ? '0' : '1px solid #eee';
-    const fontSize = isThermal ? '12px' : '16px';
-    const headerSize = isThermal ? '16px' : '24px';
+        <td style="padding:5px 8px;border:0;">${paymentMethodLabels[p.method] || p.method}:</td>
+        <td style="padding:5px 8px;border:0;text-align:right;">$${(p.amount || 0).toLocaleString()}</td>
+      </tr>`).join('') || `<tr><td colspan="2" style="padding:5px 8px;border:0;text-align:center;color:#777;">Sin pagos</td></tr>`;
 
     return `
-      <div style="max-width: ${containerMax}; margin: auto; padding: ${padding}; border: ${border}; font-size: ${fontSize}; font-family: Arial, sans-serif;">
-        <!-- Header -->
-        <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="margin: 0; font-size: ${headerSize}; color: #1f2937;">${companyInfo.name}</h1>
-          ${companyInfo.receiptHeader ? `<p style="margin: 4px 0; font-size: 14px; font-style: italic; color: #666;">${companyInfo.receiptHeader}</p>` : ''}
+      <div style="max-width:800px;margin:auto;padding:30px;font-size:16px;font-family:Arial,sans-serif;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <h1 style="margin:0;font-size:24px;">${companyInfo.name}</h1>
+          ${companyInfo.receiptHeader ? `<p style="margin:4px 0;font-style:italic;color:#666;">${companyInfo.receiptHeader}</p>` : ''}
+          <p style="margin:2px 0;">${companyInfo.address}</p>
+          <p style="margin:2px 0;">NIT: ${companyInfo.document} · Tel: ${companyInfo.phone}</p>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:14px;">
           <div>
-            <p style="margin: 2px 0; font-size: 14px;">${companyInfo.address}</p>
-            <p style="margin: 2px 0; font-size: 14px;">NIT: ${companyInfo.document}</p>
-            <p style="margin: 2px 0; font-size: 14px;">Tel: ${companyInfo.phone}</p>
-            ${companyInfo.email ? `<p style="margin: 2px 0; font-size: 14px;">Email: ${companyInfo.email}</p>` : ''}
+            <strong>Cliente:</strong>
+            <p style="margin:2px 0;">${sale.customer_name || 'General'}</p>
+            ${sale.customer_document ? `<p style="margin:2px 0;">${sale.customer_document}</p>` : ''}
+          </div>
+          <div style="text-align:right;">
+            <p style="margin:2px 0;"><strong>Factura #:</strong> ${sale.invoice_number || (sale.id || '').slice(-8)}</p>
+            <p style="margin:2px 0;"><strong>Fecha:</strong> ${fecha}</p>
+            <p style="margin:2px 0;"><strong>Estado:</strong> ${statusLabels[sale.status] || sale.status}</p>
           </div>
         </div>
-
-        <!-- Invoice Details -->
-        <div style="display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 14px;">
-          <div>
-            <strong>Facturar a:</strong>
-            <p style="margin: 2px 0;">${sale.customer_name || 'Cliente General'}</p>
-            <p style="margin: 2px 0;">${sale.customer_document || ''}</p>
-            <p style="margin: 2px 0;">${sale.customer_phone || ''}</p>
-          </div>
-          <div style="text-align: right;">
-            <p style="margin: 2px 0;"><strong>Factura #:</strong> ${sale.invoice_number || sale.id.slice(-8)}</p>
-            <p style="margin: 2px 0;"><strong>Fecha:</strong> ${new Date(sale.created_date).toLocaleString('es-CO')}</p>
-            <p style="margin: 2px 0;"><strong>Estado:</strong> ${statusLabels[sale.status] || sale.status}</p>
-          </div>
-        </div>
-
-        <!-- Items Table -->
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
           <thead>
-            <tr style="background: #f8f8f8;">
-              <th style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">Producto</th>
-              <th style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; text-align: center;">Cant.</th>
-              <th style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">Precio Unit.</th>
-              <th style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; text-align: right;">Total</th>
+            <tr style="background:#f8f8f8;">
+              <th style="padding:8px;border-bottom:1px solid #eee;">Producto</th>
+              <th style="padding:8px;border-bottom:1px solid #eee;text-align:center;">Cant.</th>
+              <th style="padding:8px;border-bottom:1px solid #eee;text-align:right;">Precio Unit.</th>
+              <th style="padding:8px;border-bottom:1px solid #eee;text-align:right;">Total</th>
             </tr>
           </thead>
-          <tbody>
-            ${itemsHTML}
-          </tbody>
+          <tbody>${itemsHTML}</tbody>
         </table>
-
-        <!-- Totals & Payments Section -->
-        <div style="margin-top: 20px; display: flex; justify-content: space-between; flex-wrap: wrap;">
-          <!-- Payment Methods -->
-          <div style="width: 55%;">
-            <h4 style="margin-bottom: 10px; font-size: 16px; font-weight: bold;">Métodos de Pago</h4>
-            <table style="width: 100%;">
-              <tbody>
-                ${paymentsHTML}
-              </tbody>
-            </table>
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;margin-top:20px;">
+          <div style="min-width:45%;">
+            <h4 style="margin-bottom:8px;">Métodos de Pago</h4>
+            <table style="width:100%;"><tbody>${paymentsHTML}</tbody></table>
           </div>
-
-          <!-- Totals Section -->
-          <div style="width: 40%;">
-            <table style="width: 100%;">
-              <tbody>
-                <tr>
-                  <td style="padding: 5px 8px; border: 0;">Subtotal:</td>
-                  <td style="padding: 5px 8px; border: 0; text-align: right;">$${(sale.subtotal || 0).toLocaleString()}</td>
-                </tr>
-                ${sale.discount_amount > 0 ? `
-                  <tr>
-                    <td style="padding: 5px 8px; border: 0;">Descuento:</td>
-                    <td style="padding: 5px 8px; border: 0; text-align: right;">-$${(sale.discount_amount || 0).toLocaleString()}</td>
-                  </tr>
-                ` : ''}
-                <tr>
-                  <td style="padding: 5px 8px; border: 0;">Impuestos:</td>
-                  <td style="padding: 5px 8px; border: 0; text-align: right;">$${(sale.tax_amount || 0).toLocaleString()}</td>
-                </tr>
-                <tr style="font-weight: bold; font-size: 1.1em; border-top: 2px solid #333;">
-                  <td style="padding: 5px 8px;">Total:</td>
-                  <td style="padding: 5px 8px; text-align: right;">$${(sale.total_amount || 0).toLocaleString()}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div style="min-width:40%;">
+            <table style="width:100%;"><tbody>
+              <tr><td style="padding:5px 8px;border:0;">Subtotal:</td><td style="padding:5px 8px;border:0;text-align:right;">$${(sale.subtotal || 0).toLocaleString()}</td></tr>
+              ${sale.discount_amount > 0 ? `<tr><td style="padding:5px 8px;border:0;">Descuento:</td><td style="padding:5px 8px;border:0;text-align:right;">-$${(sale.discount_amount || 0).toLocaleString()}</td></tr>` : ''}
+              ${sale.tax_amount > 0 ? `<tr><td style="padding:5px 8px;border:0;">Impuestos:</td><td style="padding:5px 8px;border:0;text-align:right;">$${(sale.tax_amount || 0).toLocaleString()}</td></tr>` : ''}
+              <tr style="font-weight:bold;border-top:2px solid #333;"><td style="padding:5px 8px;">Total:</td><td style="padding:5px 8px;text-align:right;">$${(sale.total_amount || 0).toLocaleString()}</td></tr>
+            </tbody></table>
           </div>
         </div>
-
-        <div style="clear: both;"></div>
-
-        <!-- Footer -->
-        <div style="margin-top: 80px; text-align: center; font-size: 12px; color: #777;">
-          <p>${companyInfo.receiptFooter}</p>
+        <div style="margin-top:30px;text-align:center;font-size:12px;color:#777;">
+          <p>${companyInfo.receiptFooter || '¡Gracias por su compra!'}</p>
         </div>
-      </div>
-    `;
+      </div>`;
   };
 
   // Enrich sale items with product details for display in the modal
