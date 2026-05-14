@@ -105,6 +105,14 @@ export default function SaleDetailModal({ sale, onClose }) {
       ? `@page { size: ${widthMM}mm auto; margin: 0; }`
       : `@page { size: ${printFormat === 'half-letter' ? '140mm 216mm' : '216mm 279mm'}; margin: 10mm; }`;
 
+    const bodyScreenStyle = isThermal
+      ? `width: 100%; max-width: 100%;`
+      : `max-width: 800px; margin: 0 auto;`;
+
+    const bodyPrintStyle = isThermal
+      ? `width: ${widthMM}mm; margin: 0;`
+      : `margin: 0;`;
+
     const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -114,9 +122,9 @@ export default function SaleDetailModal({ sale, onClose }) {
 <style>
   ${pageStyle}
   * { box-sizing: border-box; }
-  body { margin: 0; padding: 0; background: #fff; }
+  body { margin: 0; padding: 0; background: #fff; ${bodyScreenStyle} }
   @media print {
-    body { margin: 0; }
+    body { ${bodyPrintStyle} }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
