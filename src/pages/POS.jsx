@@ -3,6 +3,8 @@ import { Product, Sale, SaleItem, Inventory, PriceList, ProductPrice, Credit, Pa
 import { Producto as ProductoFab } from "@/api/entitiesChaquetas";
 import { Dispatch, Delivery } from "@/api/entitiesProduccion";
 import { InventoryMovement } from "@/entities/InventoryMovement";
+import { sendInvoiceWhatsApp } from '@/utils/whatsappInvoice';
+import { generatePrintableHTML } from '@/utils/invoicePdf';
 import { useSession } from "../components/providers/SessionProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -335,27 +337,24 @@ export default function POS() {
   const handlePostSalePrint = useCallback(() => {
     if (!postSaleInfo) return;
     const { sale, items, companyInfo } = postSaleInfo;
-    import('@/utils/invoicePdf').then(({ generatePrintableHTML }) => {
-      const widthMM = 58;
-      const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', credit: 'Crédito', courtesy: 'Cortesía' };
-      const html = generatePrintableHTML(sale, items, companyInfo, labels, '58mm');
-      const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;}@page{size:${widthMM}mm auto;margin:0;}@media print{body{margin:0;padding:0;}}</style></head><body>${html}</body></html>`;
-      const pw = window.open('', '_blank');
-      if (!pw) { alert('Permite ventanas emergentes para imprimir.'); return; }
-      pw.document.open();
-      pw.document.write(fullHtml);
-      pw.document.close();
-      pw.onload = () => { pw.focus(); pw.print(); };
-      pw.focus();
-      pw.print();
-    });
+    const widthMM = 58;
+    const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', credit: 'Crédito', courtesy: 'Cortesía' };
+    const html = generatePrintableHTML(sale, items, companyInfo, labels, '58mm');
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;width:${widthMM}mm;margin:0 auto;}@page{size:${widthMM}mm auto;margin:0;}@media print{body{margin:0;width:${widthMM}mm;}}</style></head><body>${html}</body></html>`;
+    const pw = window.open('', '_blank');
+    if (!pw) { alert('Permite ventanas emergentes para imprimir.'); return; }
+    pw.document.open();
+    pw.document.write(fullHtml);
+    pw.document.close();
+    pw.onload = () => { pw.focus(); pw.print(); };
+    pw.focus();
+    pw.print();
   }, [postSaleInfo]);
 
   const handlePostSaleWhatsApp = useCallback(async () => {
     if (!postSaleInfo) return;
     const { sale, items, companyInfo } = postSaleInfo;
     try {
-      const { sendInvoiceWhatsApp } = await import('@/utils/whatsappInvoice');
       await sendInvoiceWhatsApp({ sale, items, companyInfo, printFormat: '80mm', defaultPhone: sale.customer_phone });
     } catch (err) {
       console.error('WhatsApp share error:', err);
