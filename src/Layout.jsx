@@ -61,7 +61,8 @@ const produccionGroups = [
   {
     title: "Producción", items: [
       { title: "Asignaciones", url: createPageUrl("Prod_Asignaciones"), icon: UserCheck, permissions: ["produccion_view"] },
-      { title: "Operaciones", url: createPageUrl("Prod_Operaciones"), icon: Wrench, permissions: ["produccion_view"] },
+      { title: "Portal Planta", url: "/portal-planta", icon: Factory, permissions: ["produccion_view"], isPortal: true },
+      { title: "Tipos de Operación", url: createPageUrl("Prod_Operaciones"), icon: Wrench, permissions: ["produccion_view"] },
     ]
   },
   {

@@ -19,3 +19,5 @@ export const Inventory      = p.Inventory;
 export const StockMovement  = p.StockMovement;
 export const Devolucion     = p.Devolucion;
 export const ActivityLog    = p.ActivityLog;
+export const Remision       = p.Remision;
+export const OrdenServicio  = p.OrdenServicio;
