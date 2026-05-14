@@ -95,8 +95,7 @@ const operariosGroups = [
     title: "Operarios", items: [
       { title: "Operaciones Diarias", url: createPageUrl("Op_DailyOperations"), icon: Factory, permissions: ["operarios_view"] },
       { title: "Empleados", url: createPageUrl("Op_Employees"), icon: Users, permissions: ["operarios_admin"] },
-      { title: "Inventario Op.", url: createPageUrl("Op_Inventory"), icon: Warehouse, permissions: ["operarios_admin"] },
-      { title: "Portal Planillador", url: "/portal-planillador", icon: Truck, permissions: ["operarios_admin"], isPortal: true },
+{ title: "Portal Planillador", url: "/portal-planillador", icon: Truck, permissions: ["operarios_admin"], isPortal: true },
     ]
   },
   {
