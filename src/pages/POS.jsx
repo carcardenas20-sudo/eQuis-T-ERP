@@ -23,7 +23,10 @@ import {
   FileText,
   Clock,
   Shield,
-  CalendarClock
+  CalendarClock,
+  Check,
+  Printer,
+  MessageCircle
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -83,6 +86,7 @@ export default function POS() {
   const [showQuote, setShowQuote] = useState(false);
   const [showHoldCart, setShowHoldCart] = useState(false);
   const [showDiscountPin, setShowDiscountPin] = useState(false);
+  const [postSaleInfo, setPostSaleInfo] = useState(null);
 
   useEffect(() => {
     if (isSessionLoading) return;
@@ -328,6 +332,36 @@ export default function POS() {
     console.log("📝 Customer actualizado");
   }, []);
 
+  const handlePostSalePrint = useCallback(() => {
+    if (!postSaleInfo) return;
+    const { sale, items, companyInfo } = postSaleInfo;
+    import('@/utils/invoicePdf').then(({ generatePrintableHTML }) => {
+      const widthMM = 58;
+      const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', credit: 'Crédito', courtesy: 'Cortesía' };
+      const html = generatePrintableHTML(sale, items, companyInfo, labels, '58mm');
+      const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;}@page{size:${widthMM}mm auto;margin:0;}@media print{body{margin:0;padding:0;}}</style></head><body>${html}</body></html>`;
+      const pw = window.open('', '_blank');
+      if (!pw) { alert('Permite ventanas emergentes para imprimir.'); return; }
+      pw.document.open();
+      pw.document.write(fullHtml);
+      pw.document.close();
+      pw.onload = () => { pw.focus(); pw.print(); };
+      pw.focus();
+      pw.print();
+    });
+  }, [postSaleInfo]);
+
+  const handlePostSaleWhatsApp = useCallback(async () => {
+    if (!postSaleInfo) return;
+    const { sale, items, companyInfo } = postSaleInfo;
+    try {
+      const { sendInvoiceWhatsApp } = await import('@/utils/whatsappInvoice');
+      await sendInvoiceWhatsApp({ sale, items, companyInfo, printFormat: '80mm', defaultPhone: sale.customer_phone });
+    } catch (err) {
+      console.error('WhatsApp share error:', err);
+    }
+  }, [postSaleInfo]);
+
   const processSale = useCallback(async (paymentData) => {
     if (!selectedLocationId) {
       alert("Por favor, selecciona una sucursal para procesar la venta.");
@@ -483,34 +517,25 @@ export default function POS() {
       const updatedInventory = await Inventory.filter({ location_id: selectedLocationId });
       setInventory(updatedInventory || []);
 
+      const cartSnapshot = [...cart];
       setShowPayment(false);
       clearCart();
 
-      const currentLocation = locations.find(l => l.id === selectedLocationId);
-      const message = `¡Venta procesada en ${currentLocation?.name || 'Sucursal'}! Factura #${sale.invoice_number || sale.id}.`;
-      alert(message);
-
-      // Ofrecer enviar por WhatsApp
-      const wantWa = window.confirm('¿Quieres enviar la factura por WhatsApp ahora?');
-      if (wantWa) {
-        try {
-          // Cargar items para esta venta recién creada
-          const saleItems = await SaleItem.filter({ sale_id: sale.id });
-          const companyInfo = systemSettings ? {
-            name: systemSettings.company_name || 'JacketMaster POS',
-            address: systemSettings.company_address || 'Dirección no configurada',
-            document: systemSettings.company_document || 'NIT no configurado',
-            phone: systemSettings.company_phone || 'Teléfono no configurado',
-            email: systemSettings.company_email || '',
-            receiptHeader: systemSettings.receipt_header || '',
-            receiptFooter: systemSettings.receipt_footer || '¡Gracias por su compra!'
-          } : {};
-          const { sendInvoiceWhatsApp } = await import('@/utils/whatsappInvoice');
-          await sendInvoiceWhatsApp({ sale, items: saleItems, companyInfo, printFormat: '80mm', defaultPhone: customer?.phone });
-        } catch (err) {
-          console.error('WhatsApp share error:', err);
-        }
-      }
+      const saleItems = await SaleItem.filter({ sale_id: sale.id });
+      const enrichedItems = saleItems.map(si => {
+        const cartItem = cartSnapshot.find(ci => ci.product.sku === si.product_id);
+        return { ...si, product: cartItem?.product || null };
+      });
+      const companyInfo = systemSettings ? {
+        name: systemSettings.company_name || 'JacketMaster POS',
+        address: systemSettings.company_address || 'Dirección no configurada',
+        document: systemSettings.company_document || 'NIT no configurado',
+        phone: systemSettings.company_phone || 'Teléfono no configurado',
+        email: systemSettings.company_email || '',
+        receiptHeader: systemSettings.receipt_header || '',
+        receiptFooter: systemSettings.receipt_footer || '¡Gracias por su compra!'
+      } : {};
+      setPostSaleInfo({ sale, items: enrichedItems, companyInfo });
 
     } catch (error) {
       console.error("Error processing sale:", error);
@@ -887,6 +912,35 @@ export default function POS() {
           onAuthorized={handleDiscountAuthorized}
           onClose={() => setShowDiscountPin(false)}
         />
+      )}
+
+      {postSaleInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-5">
+            <div className="text-center">
+              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Check className="w-7 h-7 text-green-600" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">¡Venta completada!</h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Factura #{postSaleInfo.sale.invoice_number || postSaleInfo.sale.id?.slice(-8)}
+                {' · '}${(postSaleInfo.sale.total_amount || 0).toLocaleString()}
+              </p>
+            </div>
+            <p className="text-center text-slate-600 text-sm">¿Qué deseas hacer con la factura?</p>
+            <div className="space-y-2">
+              <Button className="w-full gap-2 bg-slate-800 hover:bg-slate-900" onClick={handlePostSalePrint}>
+                <Printer className="w-4 h-4" /> Imprimir
+              </Button>
+              <Button variant="outline" className="w-full gap-2 border-green-500 text-green-700 hover:bg-green-50" onClick={handlePostSaleWhatsApp}>
+                <MessageCircle className="w-4 h-4" /> Enviar por WhatsApp
+              </Button>
+              <Button variant="ghost" className="w-full text-slate-500" onClick={() => setPostSaleInfo(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Sheet: Próximos ingresos (desktop) */}
