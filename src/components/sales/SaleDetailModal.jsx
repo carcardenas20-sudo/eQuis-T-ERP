@@ -210,60 +210,99 @@ export default function SaleDetailModal({ sale, onClose }) {
     }
   };
 
-  const generatePrintableHTML = (sale, enrichedItems, companyInfo, paymentMethodLabels, printFormat = '80mm') => {
+  const generatePrintableHTML = (sale, enrichedItems, companyInfo, paymentMethodLabels, printFormat = '58mm') => {
     const isThermal = printFormat === '58mm' || printFormat === '80mm';
     const fecha = new Date(sale.created_date || Date.now()).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
 
     if (isThermal) {
-      const fs = printFormat === '58mm' ? '7pt' : '9pt';
-      const fsH = printFormat === '58mm' ? '9pt' : '11pt';
-      const pad = printFormat === '58mm' ? '2mm' : '3mm';
-      const sep = `<div style="border-top:1px dashed #000;margin:3pt 0;"></div>`;
+      const is58 = printFormat === '58mm';
+      // Escala visual: 58mm usa todo más compacto
+      const fs      = is58 ? '7.5pt' : '9pt';
+      const fsSm    = is58 ? '6.5pt' : '7.5pt';
+      const fsLg    = is58 ? '10pt'  : '12pt';
+      const fsMed   = is58 ? '8pt'   : '10pt';
+      const pad     = is58 ? '3mm'   : '4mm';
+      const lh      = '1.45';
+      const rowPad  = is58 ? '1.5pt 0' : '2pt 0';
 
-      const itemsHTML = enrichedItems.map(item => `
-        <div style="margin-bottom:3px;">
-          <div style="font-weight:bold;">${item.product?.name || item.product_id}</div>
-          <div style="display:flex;justify-content:space-between;">
-            <span>${item.quantity} × $${(item.unit_price || 0).toLocaleString()}</span>
-            <span style="font-weight:bold;">$${(item.line_total || 0).toLocaleString()}</span>
-          </div>
-        </div>`).join('');
+      // Separadores: sólido para secciones principales, punteado para menores
+      const sepSolid  = `<tr><td colspan="2" style="padding:3pt 0 2pt;"><div style="border-top:1.5px solid #000;"></div></td></tr>`;
+      const sepDashed = `<tr><td colspan="2" style="padding:2pt 0 1pt;"><div style="border-top:1px dashed #555;"></div></td></tr>`;
 
-      const paymentsHTML = (sale.payment_methods || []).map(p => `
-        <div style="display:flex;justify-content:space-between;">
-          <span>${paymentMethodLabels[p.method] || p.method}</span>
-          <span>$${(p.amount || 0).toLocaleString()}</span>
-        </div>`).join('');
+      // Función auxiliar: fila izq / der en tabla
+      const row = (left, right, bold = false, size = fs) =>
+        `<tr>
+          <td style="padding:${rowPad};font-size:${size};font-weight:${bold ? 'bold' : 'normal'};vertical-align:top;">${left}</td>
+          <td style="padding:${rowPad};font-size:${size};font-weight:${bold ? 'bold' : 'normal'};text-align:right;white-space:nowrap;vertical-align:top;">${right}</td>
+        </tr>`;
+
+      const itemsRows = enrichedItems.map(item => `
+        <tr>
+          <td style="padding:2pt 0 0;font-size:${fsMed};font-weight:bold;" colspan="2">${item.product?.name || item.product_id}</td>
+        </tr>
+        <tr>
+          <td style="padding:0 0 3pt;font-size:${fsSm};color:#333;">${item.quantity} ud${item.quantity !== 1 ? 's' : ''} × $${(item.unit_price || 0).toLocaleString()}</td>
+          <td style="padding:0 0 3pt;font-size:${fsMed};font-weight:bold;text-align:right;">$${(item.line_total || 0).toLocaleString()}</td>
+        </tr>`).join('');
+
+      const paymentRows = (sale.payment_methods || []).map(p =>
+        row(paymentMethodLabels[p.method] || p.method, `$${(p.amount || 0).toLocaleString()}`)
+      ).join('');
+
+      const totalsRows = [
+        sale.discount_amount > 0 ? row('Descuento:', `-$${(sale.discount_amount || 0).toLocaleString()}`) : '',
+        sale.tax_amount > 0 ? row('Impuestos:', `$${(sale.tax_amount || 0).toLocaleString()}`) : '',
+      ].join('');
 
       return `
-        <div style="width:100%;font-family:'Courier New',Courier,monospace;font-size:${fs};padding:${pad};box-sizing:border-box;">
-          <div style="text-align:center;margin-bottom:4px;">
-            <div style="font-size:${fsH};font-weight:bold;">${companyInfo.name}</div>
-            ${companyInfo.receiptHeader ? `<div style="font-style:italic;">${companyInfo.receiptHeader}</div>` : ''}
-            <div>${companyInfo.address}</div>
-            <div>NIT: ${companyInfo.document}</div>
-            <div>Tel: ${companyInfo.phone}</div>
-          </div>
-          ${sep}
-          <div style="margin-bottom:3px;">
-            <div><b>Fact. #${sale.invoice_number || (sale.id || '').slice(-8)}</b></div>
-            <div>${fecha}</div>
-            <div>Cliente: ${sale.customer_name || 'General'}</div>
-            ${sale.customer_document ? `<div>Doc: ${sale.customer_document}</div>` : ''}
-          </div>
-          ${sep}
-          ${itemsHTML}
-          ${sep}
-          ${sale.discount_amount > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Descuento</span><span>-$${(sale.discount_amount || 0).toLocaleString()}</span></div>` : ''}
-          ${sale.tax_amount > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Impuestos</span><span>$${(sale.tax_amount || 0).toLocaleString()}</span></div>` : ''}
-          <div style="display:flex;justify-content:space-between;font-size:${fsH};font-weight:bold;margin-top:2px;">
-            <span>TOTAL</span>
-            <span>$${(sale.total_amount || 0).toLocaleString()}</span>
-          </div>
-          ${sep}
-          ${paymentsHTML}
-          ${sep}
-          <div style="text-align:center;margin-top:6px;">${companyInfo.receiptFooter || '¡Gracias por su compra!'}</div>
+        <div style="width:100%;font-family:Arial,Helvetica,sans-serif;font-size:${fs};line-height:${lh};padding:${pad};box-sizing:border-box;">
+          <table style="width:100%;border-collapse:collapse;">
+
+            <!-- ── ENCABEZADO ── -->
+            <tr><td colspan="2" style="text-align:center;padding-bottom:4pt;">
+              <div style="font-size:${fsLg};font-weight:900;letter-spacing:0.5pt;">${companyInfo.name}</div>
+              ${companyInfo.receiptHeader ? `<div style="font-size:${fsSm};font-style:italic;margin-top:1pt;">${companyInfo.receiptHeader}</div>` : ''}
+              <div style="font-size:${fsSm};margin-top:2pt;">${companyInfo.address}</div>
+              <div style="font-size:${fsSm};">NIT: ${companyInfo.document}</div>
+              <div style="font-size:${fsSm};">Tel: ${companyInfo.phone}</div>
+            </td></tr>
+
+            ${sepSolid}
+
+            <!-- ── INFO FACTURA ── -->
+            ${row('<b>Factura #' + (sale.invoice_number || (sale.id || '').slice(-8)) + '</b>', fecha, false, fsSm)}
+            <tr><td colspan="2" style="padding:${rowPad};font-size:${fs};">
+              Cliente: <b>${sale.customer_name || 'General'}</b>
+              ${sale.customer_document ? `<br><span style="font-size:${fsSm};">Doc: ${sale.customer_document}</span>` : ''}
+            </td></tr>
+
+            ${sepDashed}
+
+            <!-- ── PRODUCTOS ── -->
+            ${itemsRows}
+
+            ${sepSolid}
+
+            <!-- ── TOTALES ── -->
+            ${totalsRows}
+            <tr>
+              <td style="padding:2pt 0;font-size:${fsLg};font-weight:900;border-top:1px solid #000;">TOTAL</td>
+              <td style="padding:2pt 0;font-size:${fsLg};font-weight:900;text-align:right;border-top:1px solid #000;">$${(sale.total_amount || 0).toLocaleString()}</td>
+            </tr>
+
+            ${sepDashed}
+
+            <!-- ── PAGOS ── -->
+            ${paymentRows}
+
+            ${sepSolid}
+
+            <!-- ── PIE ── -->
+            <tr><td colspan="2" style="text-align:center;padding-top:5pt;font-size:${fsSm};">
+              ${companyInfo.receiptFooter || '¡Gracias por su compra!'}
+            </td></tr>
+
+          </table>
         </div>`;
     }
 
