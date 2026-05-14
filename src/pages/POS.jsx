@@ -340,7 +340,7 @@ export default function POS() {
     const widthMM = 58;
     const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', credit: 'Crédito', courtesy: 'Cortesía' };
     const html = generatePrintableHTML(sale, items, companyInfo, labels, '58mm');
-    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;width:${widthMM}mm;margin:0 auto;}@page{size:${widthMM}mm auto;margin:0;}@media print{body{margin:0;width:${widthMM}mm;}}</style></head><body>${html}</body></html>`;
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;width:100%;max-width:100%;}@page{size:${widthMM}mm auto;margin:0;}@media print{body{width:${widthMM}mm;margin:0;}}</style></head><body>${html}</body></html>`;
     const pw = window.open('', '_blank');
     if (!pw) { alert('Permite ventanas emergentes para imprimir.'); return; }
     pw.document.open();
