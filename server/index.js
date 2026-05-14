@@ -62,12 +62,15 @@ const PORTAL_PUBLIC_ENTITIES = new Set([
   'Employee', 'Payment', 'PaymentRequest', 'EmployeePurchase', 'Producto', 'AppConfig',
   // Planillador (lectura + escritura)
   'Delivery', 'Dispatch', 'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog',
+  // Portal planta (lectura + escritura estado)
+  'Remision', 'OrdenServicio',
 ]);
 // Entidades en las que el portal puede escribir
 const PORTAL_WRITE_ENTITIES = new Set([
   'PaymentRequest',           // operario solicita pago
   'Delivery', 'Dispatch',     // planillador registra entregas/despachos
   'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog', 'AppConfig',
+  'Remision', 'OrdenServicio', // portal planta actualiza estados
 ]);
 // POST /api/portal-login  → recibe employee_id lógico + pin, devuelve datos del empleado
 app.post('/api/portal-login', async (req, res) => {
