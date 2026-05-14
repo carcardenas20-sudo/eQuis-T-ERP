@@ -216,33 +216,33 @@ export default function SaleDetailModal({ sale, onClose }) {
 
     if (isThermal) {
       const is58 = printFormat === '58mm';
-      // Escala visual: 58mm usa todo más compacto
-      const fs      = is58 ? '7.5pt' : '9pt';
-      const fsSm    = is58 ? '6.5pt' : '7.5pt';
-      const fsLg    = is58 ? '10pt'  : '12pt';
-      const fsMed   = is58 ? '8pt'   : '10pt';
-      const pad     = is58 ? '3mm'   : '4mm';
-      const lh      = '1.45';
-      const rowPad  = is58 ? '1.5pt 0' : '2pt 0';
+      const fs      = is58 ? '9pt'  : '10pt';   // base — ningún texto baja de aquí
+      const fsSm    = is58 ? '8pt'  : '9pt';    // info secundaria (encabezado empresa)
+      const fsLg    = is58 ? '12pt' : '14pt';   // TOTAL y empresa
+      const fsMed   = is58 ? '9.5pt': '11pt';   // nombre producto
+      const pad     = is58 ? '3mm'  : '4mm';
+      const lh      = '1.5';
+      const rowPad  = is58 ? '2pt 0' : '3pt 0';
 
-      // Separadores: sólido para secciones principales, punteado para menores
       const sepSolid  = `<tr><td colspan="2" style="padding:3pt 0 2pt;"><div style="border-top:1.5px solid #000;"></div></td></tr>`;
       const sepDashed = `<tr><td colspan="2" style="padding:2pt 0 1pt;"><div style="border-top:1px dashed #555;"></div></td></tr>`;
 
-      // Función auxiliar: fila izq / der en tabla
       const row = (left, right, bold = false, size = fs) =>
         `<tr>
-          <td style="padding:${rowPad};font-size:${size};font-weight:${bold ? 'bold' : 'normal'};vertical-align:top;">${left}</td>
-          <td style="padding:${rowPad};font-size:${size};font-weight:${bold ? 'bold' : 'normal'};text-align:right;white-space:nowrap;vertical-align:top;">${right}</td>
+          <td style="padding:${rowPad};font-size:${size};font-weight:${bold?'bold':'normal'};vertical-align:top;">${left}</td>
+          <td style="padding:${rowPad};font-size:${size};font-weight:${bold?'bold':'normal'};text-align:right;white-space:nowrap;vertical-align:top;">${right}</td>
         </tr>`;
 
+      // Producto: nombre bold en su línea, luego qty × precio | total en la misma fila (misma fuente)
       const itemsRows = enrichedItems.map(item => `
         <tr>
-          <td style="padding:2pt 0 0;font-size:${fsMed};font-weight:bold;" colspan="2">${item.product?.name || item.product_id}</td>
+          <td colspan="2" style="padding:3pt 0 0;font-size:${fsMed};font-weight:bold;">
+            ${item.product?.name || item.product_id}
+          </td>
         </tr>
         <tr>
-          <td style="padding:0 0 3pt;font-size:${fsSm};color:#333;">${item.quantity} ud${item.quantity !== 1 ? 's' : ''} × $${(item.unit_price || 0).toLocaleString()}</td>
-          <td style="padding:0 0 3pt;font-size:${fsMed};font-weight:bold;text-align:right;">$${(item.line_total || 0).toLocaleString()}</td>
+          <td style="padding:0 0 4pt;font-size:${fs};">${item.quantity} × $${(item.unit_price || 0).toLocaleString()}</td>
+          <td style="padding:0 0 4pt;font-size:${fs};font-weight:bold;text-align:right;">$${(item.line_total || 0).toLocaleString()}</td>
         </tr>`).join('');
 
       const paymentRows = (sale.payment_methods || []).map(p =>
@@ -251,54 +251,47 @@ export default function SaleDetailModal({ sale, onClose }) {
 
       const totalsRows = [
         sale.discount_amount > 0 ? row('Descuento:', `-$${(sale.discount_amount || 0).toLocaleString()}`) : '',
-        sale.tax_amount > 0 ? row('Impuestos:', `$${(sale.tax_amount || 0).toLocaleString()}`) : '',
+        sale.tax_amount > 0     ? row('Impuestos:', `$${(sale.tax_amount || 0).toLocaleString()}`) : '',
       ].join('');
 
       return `
         <div style="width:100%;font-family:Arial,Helvetica,sans-serif;font-size:${fs};line-height:${lh};padding:${pad};box-sizing:border-box;">
           <table style="width:100%;border-collapse:collapse;">
 
-            <!-- ── ENCABEZADO ── -->
-            <tr><td colspan="2" style="text-align:center;padding-bottom:4pt;">
+            <tr><td colspan="2" style="text-align:center;padding-bottom:5pt;">
               <div style="font-size:${fsLg};font-weight:900;letter-spacing:0.5pt;">${companyInfo.name}</div>
               ${companyInfo.receiptHeader ? `<div style="font-size:${fsSm};font-style:italic;margin-top:1pt;">${companyInfo.receiptHeader}</div>` : ''}
               <div style="font-size:${fsSm};margin-top:2pt;">${companyInfo.address}</div>
-              <div style="font-size:${fsSm};">NIT: ${companyInfo.document}</div>
-              <div style="font-size:${fsSm};">Tel: ${companyInfo.phone}</div>
+              <div style="font-size:${fsSm};">NIT: ${companyInfo.document} &nbsp; Tel: ${companyInfo.phone}</div>
             </td></tr>
 
             ${sepSolid}
 
-            <!-- ── INFO FACTURA ── -->
-            ${row('<b>Factura #' + (sale.invoice_number || (sale.id || '').slice(-8)) + '</b>', fecha, false, fsSm)}
+            ${row('<b>Factura #' + (sale.invoice_number || (sale.id || '').slice(-8)) + '</b>', fecha)}
             <tr><td colspan="2" style="padding:${rowPad};font-size:${fs};">
               Cliente: <b>${sale.customer_name || 'General'}</b>
-              ${sale.customer_document ? `<br><span style="font-size:${fsSm};">Doc: ${sale.customer_document}</span>` : ''}
+              ${sale.customer_document ? `&nbsp; Doc: ${sale.customer_document}` : ''}
             </td></tr>
 
             ${sepDashed}
 
-            <!-- ── PRODUCTOS ── -->
             ${itemsRows}
 
             ${sepSolid}
 
-            <!-- ── TOTALES ── -->
             ${totalsRows}
             <tr>
-              <td style="padding:2pt 0;font-size:${fsLg};font-weight:900;border-top:1px solid #000;">TOTAL</td>
-              <td style="padding:2pt 0;font-size:${fsLg};font-weight:900;text-align:right;border-top:1px solid #000;">$${(sale.total_amount || 0).toLocaleString()}</td>
+              <td style="padding:3pt 0;font-size:${fsLg};font-weight:900;border-top:1.5px solid #000;">TOTAL</td>
+              <td style="padding:3pt 0;font-size:${fsLg};font-weight:900;text-align:right;border-top:1.5px solid #000;">$${(sale.total_amount || 0).toLocaleString()}</td>
             </tr>
 
             ${sepDashed}
 
-            <!-- ── PAGOS ── -->
             ${paymentRows}
 
             ${sepSolid}
 
-            <!-- ── PIE ── -->
-            <tr><td colspan="2" style="text-align:center;padding-top:5pt;font-size:${fsSm};">
+            <tr><td colspan="2" style="text-align:center;padding-top:5pt;font-size:${fs};">
               ${companyInfo.receiptFooter || '¡Gracias por su compra!'}
             </td></tr>
 
