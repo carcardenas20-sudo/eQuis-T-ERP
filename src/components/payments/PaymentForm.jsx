@@ -32,7 +32,9 @@ export default function PaymentForm({ employee, payment, pendingDeliveries, onSu
   );
 
   const handleAmountChange = (deliveryId, value) => {
-    const numValue = parseFloat(value) || 0;
+    const delivery = validPendingDeliveries.find(d => d.id === deliveryId);
+    const maxAmt = delivery ? (delivery.pending_amount || 0) : 0;
+    const numValue = Math.min(parseFloat(value) || 0, maxAmt);
     setDeliveryAmounts(prev => ({
       ...prev,
       [deliveryId]: numValue
@@ -50,6 +52,16 @@ export default function PaymentForm({ employee, payment, pendingDeliveries, onSu
     if (totalAmount <= 0) {
       alert("Debes asignar al menos un monto a una entrega.");
       return;
+    }
+
+    // Validar que ningún monto supere el pendiente real de cada entrega
+    for (const [delivery_id, amount] of Object.entries(deliveryAmounts)) {
+      if (amount <= 0) continue;
+      const delivery = validPendingDeliveries.find(d => d.id === delivery_id);
+      if (delivery && amount > (delivery.pending_amount || 0)) {
+        alert(`El monto ingresado ($${amount.toLocaleString()}) supera el pendiente de la entrega ($${(delivery.pending_amount || 0).toLocaleString()}).`);
+        return;
+      }
     }
 
     const deliveryPayments = Object.entries(deliveryAmounts)
