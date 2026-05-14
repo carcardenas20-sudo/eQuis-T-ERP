@@ -191,7 +191,7 @@ export default function SaleDetailModal({ sale, onClose }) {
     document.body.appendChild(container);
 
     try {
-      await new Promise(r => setTimeout(r, 0));
+      await new Promise(r => setTimeout(r, 150));
       const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
 

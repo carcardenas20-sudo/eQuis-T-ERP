@@ -96,9 +96,12 @@ export async function sendInvoiceWhatsApp({ sale, items = [], companyInfo = {}, 
     } else {
       // En Edge móvil y en general, usamos la ventana actual para evitar bloqueos
       if (waWindow && !waWindow.closed) { try { waWindow.close(); } catch (_) {} }
-      try {
-        document.body.innerHTML = '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:20px;text-align:center;color:#334"><div style="width:32px;height:32px;border:3px solid #ddd;border-top-color:#09f;border-radius:50%;margin:16px auto;animation:spin 0.8s linear infinite"></div><p>Abriendo WhatsApp…</p><p>Si no abre, toca: <a href="' + waMeLink + '">wa.me</a> o <a href="' + webLink + '">web</a></p><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div>';
-      } catch (_) {}
+      // Mostrar overlay sin destruir el DOM de React
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#fff;font-family:system-ui,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;';
+      overlay.innerHTML = `<p style="font-size:16px;color:#333;margin-bottom:16px;">Abriendo WhatsApp…</p><p style="font-size:14px;color:#555;">Si no abre automáticamente:<br><a href="${waMeLink}" style="color:#25D366;font-weight:bold;">Toca aquí para abrir WhatsApp</a></p>`;
+      document.body.appendChild(overlay);
+      setTimeout(() => { try { overlay.remove(); } catch(_){} }, 5000);
       openWhatsApp(window);
     }
   } catch (err) {
