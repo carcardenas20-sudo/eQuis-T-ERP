@@ -96,71 +96,48 @@ export default function SaleDetailModal({ sale, onClose }) {
       receiptFooter: "¡Gracias por su compra!"
     };
 
-    // Generate HTML content
     const printableContent = generatePrintableHTML(sale, enrichedItemsForPrint, companyInfo, paymentMethodLabels, printFormat);
-
-    // Print via hidden iframe (better support on mobile)
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
 
     const isThermal = printFormat === '58mm' || printFormat === '80mm';
     const widthMM = printFormat === '58mm' ? 58 : (printFormat === '80mm' ? 80 : (printFormat === 'half-letter' ? 140 : 216));
-    const margin = isThermal ? '0' : '10mm';
+
     const pageStyle = isThermal
-      ? `@page { size: ${widthMM}mm auto; margin: 0; } body { margin: 0; width: ${widthMM}mm; } @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`
-      : `@page { size: ${printFormat === 'half-letter' ? '140mm 216mm' : '216mm 279mm'}; margin: ${margin}; } @media print { .print-container { width: 100%; max-width: ${widthMM}mm; margin: 0 auto; } }`;
+      ? `@page { size: ${widthMM}mm auto; margin: 0; }`
+      : `@page { size: ${printFormat === 'half-letter' ? '140mm 216mm' : '216mm 279mm'}; margin: 10mm; }`;
 
     const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Recibo de Venta #${sale.invoice_number || sale.id.slice(-8)}</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Recibo #${sale.invoice_number || (sale.id || '').slice(-8)}</title>
 <style>
   ${pageStyle}
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
-  th { background: #f8f8f8; font-weight: bold; }
-  /* Responsive on-screen preview */
-  @media screen and (max-width: 480px) {
-    .print-container { width: 100% !important; max-width: 100% !important; padding: 12px; }
-    th, td { padding: 6px; font-size: 12px; }
-    h1 { font-size: 18px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; background: #fff; }
+  @media print {
+    body { margin: 0; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
-<body>
-  <div class="print-container">${printableContent}</div>
-</body>
+<body>${printableContent}</body>
 </html>`;
 
-    const doc = iframe.contentWindow?.document;
-    if (doc) {
-      doc.open();
-      doc.write(fullHtml);
-      doc.close();
-      const handleAfterPrint = () => {
-        setTimeout(() => {
-          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-        }, 300);
-        iframe.contentWindow?.removeEventListener?.('afterprint', handleAfterPrint);
-      };
-      iframe.contentWindow?.addEventListener?.('afterprint', handleAfterPrint);
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      }, 300);
-    } else {
-      alert("No se pudo inicializar la impresión. Revisa el bloqueo de ventanas emergentes.");
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    // window.open() sincrónico desde gesto de usuario — funciona en iOS y Android
+    const pw = window.open('', '_blank');
+    if (!pw) {
+      alert('Permite ventanas emergentes para imprimir, o usa el botón de descarga PDF.');
+      return;
     }
+    pw.document.open();
+    pw.document.write(fullHtml);
+    pw.document.close();
+    // onload asegura que el contenido está renderizado antes de disparar print()
+    pw.onload = () => { pw.focus(); pw.print(); };
+    // Fallback: algunos browsers no disparan onload en document.write
+    pw.focus();
+    pw.print();
   };
 
   const handleDownloadPDF = async () => {
@@ -238,10 +215,10 @@ export default function SaleDetailModal({ sale, onClose }) {
     const fecha = new Date(sale.created_date || Date.now()).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
 
     if (isThermal) {
-      const fs = printFormat === '58mm' ? '8px' : '10px';
-      const fsH = printFormat === '58mm' ? '11px' : '13px';
+      const fs = printFormat === '58mm' ? '7pt' : '9pt';
+      const fsH = printFormat === '58mm' ? '9pt' : '11pt';
       const pad = printFormat === '58mm' ? '2mm' : '3mm';
-      const sep = `<div style="border-top:1px dashed #000;margin:4px 0;"></div>`;
+      const sep = `<div style="border-top:1px dashed #000;margin:3pt 0;"></div>`;
 
       const itemsHTML = enrichedItems.map(item => `
         <div style="margin-bottom:3px;">

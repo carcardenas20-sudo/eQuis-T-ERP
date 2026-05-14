@@ -7,10 +7,10 @@ export function generatePrintableHTML(sale, enrichedItems, companyInfo, paymentM
   const labels = paymentMethodLabels || { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', credit: 'Crédito', courtesy: 'Cortesía' };
 
   if (isThermal) {
-    const fs = printFormat === '58mm' ? '8px' : '10px';
-    const fsH = printFormat === '58mm' ? '11px' : '13px';
+    const fs = printFormat === '58mm' ? '7pt' : '9pt';
+    const fsH = printFormat === '58mm' ? '9pt' : '11pt';
     const pad = printFormat === '58mm' ? '2mm' : '3mm';
-    const sep = `<div style="border-top:1px dashed #000;margin:4px 0;"></div>`;
+    const sep = `<div style="border-top:1px dashed #000;margin:3pt 0;"></div>`;
 
     const itemsHTML = (enrichedItems || []).map(item => `
       <div style="margin-bottom:3px;">
