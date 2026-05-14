@@ -307,16 +307,10 @@ export default function DeliveryForm({ delivery, employees, products, dispatches
                           </div>
                           
                           <div className="space-y-1">
-                            <Label className="text-xs">Precio Unit. *</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={item.unit_price}
-                              onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                              required
-                              className="h-9"
-                            />
+                            <Label className="text-xs">Precio Unit.</Label>
+                            <div className="h-9 flex items-center px-3 bg-slate-100 rounded-md border text-sm">
+                              ${(parseFloat(item.unit_price) || 0).toLocaleString()}
+                            </div>
                           </div>
                           
                           <div className="space-y-1">

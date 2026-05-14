@@ -53,7 +53,6 @@ import Op_Dispatches from './pages/Op_Dispatches';
 import Op_Pending from './pages/Op_Pending';
 import Op_Payments from './pages/Op_Payments';
 import Op_BankTransfers from './pages/Op_BankTransfers';
-import Op_SalaryQuote from './pages/Op_SalaryQuote';
 import Op_EmployeePurchases from './pages/Op_EmployeePurchases';
 import Op_AuditLog from './pages/Op_AuditLog';
 import Op_EmployeePortal from './pages/Op_EmployeePortal';
@@ -113,8 +112,7 @@ export const PAGES = {
   "Op_Pending": Op_Pending,
   "Op_Payments": Op_Payments,
   "Op_BankTransfers": Op_BankTransfers,
-  "Op_SalaryQuote": Op_SalaryQuote,
-  "Op_EmployeePurchases": Op_EmployeePurchases,
+"Op_EmployeePurchases": Op_EmployeePurchases,
   "Op_AuditLog": Op_AuditLog,
   "Op_EmployeePortal": Op_EmployeePortal,
   "Op_EmployeeProfile": Op_EmployeeProfile,
