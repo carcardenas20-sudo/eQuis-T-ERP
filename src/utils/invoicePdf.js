@@ -8,13 +8,13 @@ export function generatePrintableHTML(sale, enrichedItems, companyInfo, paymentM
 
   if (isThermal) {
     const is58 = printFormat === '58mm';
-    const fs      = is58 ? '7.5pt' : '9pt';
-    const fsSm    = is58 ? '6.5pt' : '7.5pt';
-    const fsLg    = is58 ? '10pt'  : '12pt';
-    const fsMed   = is58 ? '8pt'   : '10pt';
-    const pad     = is58 ? '3mm'   : '4mm';
-    const lh      = '1.45';
-    const rowPad  = is58 ? '1.5pt 0' : '2pt 0';
+    const fs      = is58 ? '9pt'  : '10pt';
+    const fsSm    = is58 ? '8pt'  : '9pt';
+    const fsLg    = is58 ? '12pt' : '14pt';
+    const fsMed   = is58 ? '9.5pt': '11pt';
+    const pad     = is58 ? '3mm'  : '4mm';
+    const lh      = '1.5';
+    const rowPad  = is58 ? '2pt 0' : '3pt 0';
 
     const sepSolid  = `<tr><td colspan="2" style="padding:3pt 0 2pt;"><div style="border-top:1.5px solid #000;"></div></td></tr>`;
     const sepDashed = `<tr><td colspan="2" style="padding:2pt 0 1pt;"><div style="border-top:1px dashed #555;"></div></td></tr>`;
@@ -27,11 +27,11 @@ export function generatePrintableHTML(sale, enrichedItems, companyInfo, paymentM
 
     const itemsRows = (enrichedItems || []).map(item => `
       <tr>
-        <td style="padding:2pt 0 0;font-size:${fsMed};font-weight:bold;" colspan="2">${item.product?.name || item.product_id}</td>
+        <td colspan="2" style="padding:3pt 0 0;font-size:${fsMed};font-weight:bold;">${item.product?.name || item.product_id}</td>
       </tr>
       <tr>
-        <td style="padding:0 0 3pt;font-size:${fsSm};color:#333;">${item.quantity} ud${item.quantity !== 1 ? 's' : ''} × $${(item.unit_price || 0).toLocaleString()}</td>
-        <td style="padding:0 0 3pt;font-size:${fsMed};font-weight:bold;text-align:right;">$${(item.line_total || 0).toLocaleString()}</td>
+        <td style="padding:0 0 4pt;font-size:${fs};">${item.quantity} × $${(item.unit_price || 0).toLocaleString()}</td>
+        <td style="padding:0 0 4pt;font-size:${fs};font-weight:bold;text-align:right;">$${(item.line_total || 0).toLocaleString()}</td>
       </tr>`).join('');
 
     const paymentRows = (sale.payment_methods || []).map(p =>
@@ -70,7 +70,7 @@ export function generatePrintableHTML(sale, enrichedItems, companyInfo, paymentM
           ${sepDashed}
           ${paymentRows}
           ${sepSolid}
-          <tr><td colspan="2" style="text-align:center;padding-top:5pt;font-size:${fsSm};">
+          <tr><td colspan="2" style="text-align:center;padding-top:5pt;font-size:${fs};">
             ${companyInfo.receiptFooter || '¡Gracias por su compra!'}
           </td></tr>
         </table>
