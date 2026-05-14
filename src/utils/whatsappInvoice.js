@@ -6,34 +6,42 @@ function normalizePhone(input) {
   return digits; // let the user include country code if desired
 }
 
-export async function sendInvoiceWhatsApp({ sale, items = [], companyInfo = {}, printFormat = '80mm', defaultPhone = '' }) {
+function closeWindow(w) {
+  if (w && !w.closed) { try { w.close(); } catch (_) {} }
+}
+
+export async function sendInvoiceWhatsApp({ sale, items = [], companyInfo = {}, printFormat = '80mm', defaultPhone = '', pdfBlobPromise = null }) {
+  const defaultNumber = defaultPhone || (sale?.customer_phone || '');
+
+  // Open a blank tab immediately on mobile to avoid popup blockers
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isEdge = /Edg/i.test(navigator.userAgent);
+  let waWindow = null;
+  if (isMobile && !isEdge) {
+    try {
+      waWindow = window.open('about:blank', '_blank');
+      if (waWindow) {
+        try {
+          waWindow.document.open();
+          waWindow.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Preparando factura…</title><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:20px;text-align:center;color:#334} .spinner{width:32px;height:32px;border:3px solid #ddd;border-top-color:#09f;border-radius:50%;margin:16px auto;animation:spin 0.8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style></head><body><div class="spinner"></div><p>Preparando tu factura…</p><p>No cierres esta ventana.</p></body></html>');
+          waWindow.document.close();
+        } catch (_) {}
+      }
+    } catch (_) { waWindow = null; }
+  }
+
   try {
-    const defaultNumber = defaultPhone || (sale?.customer_phone || '');
+    // Build PDF — usa blob pre-generado si está disponible para no bloquear el gesto
+    const pdfBlob = pdfBlobPromise
+      ? await pdfBlobPromise
+      : await buildInvoicePdfBlob(sale, items, companyInfo, printFormat);
 
-    // Open a blank tab immediately on mobile to avoid popup blockers
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    let waWindow = null;
-    if (isMobile && !/Edg/i.test(navigator.userAgent)) {
-      try {
-        waWindow = window.open('about:blank', '_blank');
-        if (waWindow) {
-          try {
-            waWindow.document.open();
-            waWindow.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Preparando factura…</title><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:20px;text-align:center;color:#334} .spinner{width:32px;height:32px;border:3px solid #ddd;border-top-color:#09f;border-radius:50%;margin:16px auto;animation:spin 0.8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style></head><body><div class="spinner"></div><p>Preparando tu factura…</p><p>No cierres esta ventana.</p></body></html>');
-            waWindow.document.close();
-          } catch (_) {}
-        }
-      } catch (_) { waWindow = null; }
-    }
-
-    // Build PDF
-    const pdfBlob = await buildInvoicePdfBlob(sale, items, companyInfo, printFormat);
     const fileName = `Factura_${sale.invoice_number || (sale.id ? sale.id.slice(-8) : 'venta')}.pdf`;
     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
     // Try native share with the PDF file (mobile)
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      if (waWindow && !waWindow.closed) { try { waWindow.close(); } catch (_) {} }
+      closeWindow(waWindow);
       try {
         await navigator.share({
           files: [file],
@@ -48,9 +56,13 @@ export async function sendInvoiceWhatsApp({ sale, items = [], companyInfo = {}, 
 
     // Ask phone only for WhatsApp fallback
     const phoneInput = window.prompt("Número de WhatsApp (con indicativo si aplica):", defaultNumber);
-    if (!phoneInput) return; // cancelled
+    if (!phoneInput) {
+      closeWindow(waWindow);
+      return; // cancelled
+    }
     const phone = normalizePhone(phoneInput);
     if (!phone) {
+      closeWindow(waWindow);
       alert('Número inválido');
       return;
     }
@@ -67,7 +79,6 @@ export async function sendInvoiceWhatsApp({ sale, items = [], companyInfo = {}, 
     const waMeLink = `https://wa.me/${dialPhone}?text=${encodeURIComponent(message)}`;
     const ua = navigator.userAgent || '';
     const isAndroid = /Android/i.test(ua);
-    const isEdge = /Edg/i.test(ua);
 
     const openWhatsApp = (target) => {
       const intentLink = isAndroid ? `intent://send/?text=${encodeURIComponent(message)}#Intent;scheme=whatsapp;package=com.whatsapp;end` : null;
@@ -88,14 +99,13 @@ export async function sendInvoiceWhatsApp({ sale, items = [], companyInfo = {}, 
     if (waWindow && !waWindow.closed && !isEdge) {
       try {
         waWindow.document.open();
-        waWindow.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Abriendo WhatsApp…</title><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:20px;text-align:center;color:#334} .spinner{width:32px;height:32px;border:3px solid #ddd;border-top-color:#09f;border-radius:50%;margin:16px auto;animation:spin 0.8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style></head><body><div class="spinner"></div><p>Preparando tu factura y abriendo WhatsApp…</p><p>No cierres esta ventana.</p></body></html>');
+        waWindow.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Abriendo WhatsApp…</title><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:20px;text-align:center;color:#334} .spinner{width:32px;height:32px;border:3px solid #ddd;border-top-color:#09f;border-radius:50%;margin:16px auto;animation:spin 0.8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style></head><body><div class="spinner"></div><p>Abriendo WhatsApp…</p></body></html>');
         waWindow.document.close();
       } catch (_) {}
       openWhatsApp(waWindow);
       try { waWindow.focus(); } catch (_) {}
     } else {
-      // En Edge móvil y en general, usamos la ventana actual para evitar bloqueos
-      if (waWindow && !waWindow.closed) { try { waWindow.close(); } catch (_) {} }
+      if (waWindow && !waWindow.closed) { closeWindow(waWindow); }
       // Mostrar overlay sin destruir el DOM de React
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#fff;font-family:system-ui,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;';
@@ -105,6 +115,7 @@ export async function sendInvoiceWhatsApp({ sale, items = [], companyInfo = {}, 
       openWhatsApp(window);
     }
   } catch (err) {
+    closeWindow(waWindow);
     console.error('sendInvoiceWhatsApp error:', err);
     alert('No se pudo preparar el envío por WhatsApp.');
   }
