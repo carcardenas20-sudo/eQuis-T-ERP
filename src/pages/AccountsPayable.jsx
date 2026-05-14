@@ -705,7 +705,7 @@ export default function AccountsPayablePage() {
           description: `Pago a ${payable.supplier_name} - ${payable.description}`,
           amount: paymentData.amount,
           category: payable.category || "otros",
-          expense_date: new Date().toISOString().split('T')[0],
+          expense_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
           location_id: paymentData.location_id,
           payment_method: "cash",
           receipt_number: paymentData.reference || "",
@@ -752,7 +752,7 @@ export default function AccountsPayablePage() {
             compras_historico: [
               ...(mat.compras_historico || []),
               {
-                fecha: new Date().toISOString().split('T')[0],
+                fecha: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
                 cantidad, proveedor: proveedor || "",
                 precio_unitario: precioUnitario,
                 esCredito: esCredito || false,
@@ -768,7 +768,7 @@ export default function AccountsPayablePage() {
       if (cantInventario > 0.001) {
         const movimiento = {
           id: `mov_${Date.now()}`,
-          fecha: new Date().toISOString().split('T')[0],
+          fecha: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
           tipo: 'entrada',
           cantidad: cantInventario,
           referencia: item._presupuesto.numero_presupuesto,

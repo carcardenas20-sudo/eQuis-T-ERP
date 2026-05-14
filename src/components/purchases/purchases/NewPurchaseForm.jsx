@@ -8,7 +8,7 @@ import { X, Plus, Trash2 } from "lucide-react";
 
 export default function NewPurchaseForm({ employees, products, dispatches, deliveries = [], purchases = [], onClose, onSaved }) {
   const [employeeId, setEmployeeId] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [purchaseDate, setPurchaseDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }));
   const [paymentMethod, setPaymentMethod] = useState("descuento_saldo");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState([]);

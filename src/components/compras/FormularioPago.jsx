@@ -15,7 +15,7 @@ export default function FormularioPago({ pago, factura, facturas, onSubmit, onCa
     factura_id: factura?.id || "",
     proveedor_id: factura?.proveedor_id || "",
     proveedor_nombre: factura?.proveedor_nombre || "",
-    fecha_pago: new Date().toISOString().split('T')[0],
+    fecha_pago: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
     monto: 0,
     metodo_pago: "transferencia",
     referencia: "",

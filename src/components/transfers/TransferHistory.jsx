@@ -341,7 +341,7 @@ export default function TransferHistory({ locations, products, onRefresh }) {
 
     setReverting(transfer.out_movement.id);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 
       // Fetch current inventory records for both locations
       const allInv = await Inventory.list();

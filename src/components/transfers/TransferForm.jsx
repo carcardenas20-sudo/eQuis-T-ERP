@@ -80,7 +80,7 @@ import { useSession } from "@/components/providers/SessionProvider";
     setIsProcessing(true);
     try {
       // ✅ FECHA SIMPLIFICADA: Usar fecha actual directamente
-      const transferDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const transferDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }); // YYYY-MM-DD
       
       // Create transfer out movement (from origin)
       const transferOutMovement = await InventoryMovement.create({

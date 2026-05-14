@@ -210,7 +210,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
     setFormData(prev => {
       const mat = prev.materiales_calculados[index];
       const cantidadNueva = (mat.cantidad_comprada || 0) + (parseFloat(cantidad) || 0);
-      const entrada = { fecha: new Date().toISOString().split('T')[0], cantidad: parseFloat(cantidad) || 0, nota: nota || '' };
+      const entrada = { fecha: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }), cantidad: parseFloat(cantidad) || 0, nota: nota || '' };
       const nuevosMateriales = prev.materiales_calculados.map((m, i) => i !== index ? m : {
         ...m,
         cantidad_comprada: cantidadNueva,
@@ -223,7 +223,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
   };
 
   const handleMarcarTodoComprado = () => {
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
     setFormData(prev => ({
       ...prev,
       materiales_calculados: prev.materiales_calculados.map(m => {
