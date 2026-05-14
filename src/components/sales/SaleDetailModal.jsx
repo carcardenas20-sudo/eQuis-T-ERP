@@ -18,6 +18,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import MobilePageHeader from "../layout/MobilePageHeader";
 import { sendInvoiceWhatsApp } from "@/utils/whatsappInvoice";
+import { buildInvoicePdfBlob } from "@/utils/invoicePdf";
 
 const statusColors = {
   completed: "bg-green-100 text-green-800",
@@ -37,9 +38,10 @@ const statusLabels = {
 
 export default function SaleDetailModal({ sale, onClose }) {
   const [products, setProducts] = useState([]);
-  const [systemSettings, setSystemSettings] = useState(null); // Added state for system settings
+  const [systemSettings, setSystemSettings] = useState(null);
   const [printFormat, setPrintFormat] = useState('58mm');
   const [isExporting, setIsExporting] = useState(false);
+  const [pdfBlobPromise, setPdfBlobPromise] = useState(null);
   
   useEffect(() => {
     loadData();
@@ -49,12 +51,27 @@ export default function SaleDetailModal({ sale, onClose }) {
     try {
       const [productsData, settingsData] = await Promise.all([
         Product.list(),
-        SystemSettings.list() // Load system settings
+        SystemSettings.list()
       ]);
       setProducts(productsData);
-      
-      // Get the first (and should be only) system settings record
-      setSystemSettings(settingsData.length > 0 ? settingsData[0] : null);
+      const settings = settingsData.length > 0 ? settingsData[0] : null;
+      setSystemSettings(settings);
+
+      // Pre-genera el PDF en segundo plano para que WhatsApp no bloquee el gesto del usuario
+      const enriched = sale.items?.map(item => {
+        const product = productsData.find(p => p.sku === item.product_id);
+        return { ...item, product };
+      }) || [];
+      const info = settings ? {
+        name: settings.company_name || "JacketMaster POS",
+        address: settings.company_address || "Dirección no configurada",
+        document: settings.company_document || "NIT no configurado",
+        phone: settings.company_phone || "Teléfono no configurado",
+        email: settings.company_email || "",
+        receiptHeader: settings.receipt_header || "",
+        receiptFooter: settings.receipt_footer || "¡Gracias por su compra!"
+      } : { name: "JacketMaster POS", address: "", document: "", phone: "", email: "", receiptHeader: "", receiptFooter: "¡Gracias por su compra!" };
+      setPdfBlobPromise(buildInvoicePdfBlob(sale, enriched, info, '80mm'));
     } catch (error) {
       console.error("Error loading data:", error);
     }
@@ -129,7 +146,7 @@ export default function SaleDetailModal({ sale, onClose }) {
   }
 </style>
 </head>
-<body>${printableContent}</body>
+<body><div class="no-print" style="background:#f5f5f5;padding:10px;text-align:center;font-family:sans-serif;font-size:13px;color:#555;">Después de imprimir, <a href="javascript:window.close()" style="color:#1a73e8;font-weight:bold;">cierra esta pestaña</a></div>${printableContent}</body>
 </html>`;
 
     // window.open() sincrónico desde gesto de usuario — funciona en iOS y Android
@@ -605,7 +622,7 @@ export default function SaleDetailModal({ sale, onClose }) {
             <Download className={`w-4 h-4 select-none ${isExporting ? 'animate-pulse' : ''}`} />
             {isExporting ? 'Generando…' : 'Descargar PDF'}
           </Button>
-          <Button variant="outline" onClick={() => sendInvoiceWhatsApp({ sale, items: enrichedItems, companyInfo: derivedCompanyInfo, printFormat, defaultPhone: sale.customer_phone })} className="gap-2 select-none" disabled={isExporting}>
+          <Button variant="outline" onClick={() => sendInvoiceWhatsApp({ sale, items: enrichedItems, companyInfo: derivedCompanyInfo, printFormat: '80mm', defaultPhone: sale.customer_phone, pdfBlobPromise })} className="gap-2 select-none" disabled={isExporting}>
            <Send className="w-4 h-4" /> Enviar WhatsApp
           </Button>
           <Button onClick={onClose} className="select-none">Cerrar</Button>
