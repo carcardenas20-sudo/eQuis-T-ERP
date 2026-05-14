@@ -310,10 +310,6 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
         });
         saleId = sale.id;
 
-        for (const item of takeItems) {
-          await SaleItem.create({ sale_id: sale.id, product_id: item.product.sku, quantity: item.quantity, unit_price: getPrice(item.product), unit_cost: item.product.base_cost || 0, discount_percentage: 0, discount_amount: 0, tax_rate: 0, line_total: getPrice(item.product) * item.quantity });
-        }
-
         for (const p of paymentMethods) {
           if (p.method !== "credit") {
             await Payment.create({ sale_id: sale.id, payment_date: nowISO, amount: p.amount, method: p.method, type: "new_sale", location_id: locationId });
@@ -389,7 +385,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
 
           <div className="flex flex-1 flex-col md:flex-row min-h-0 overflow-hidden">
             {/* Columna izquierda: productos */}
-            <div className="flex-1 flex flex-col overflow-hidden md:border-r border-0">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden md:border-r border-0">
               {/* Búsqueda */}
               <div className="p-3 border-b shrink-0">
                 <div className="relative">
@@ -445,7 +441,7 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
             </div>
 
             {/* Columna derecha: resumen */}
-            <div className="w-full md:w-80 flex flex-col overflow-hidden bg-slate-50 border-t md:border-t-0">
+            <div className="w-full md:w-80 shrink-0 h-[44vh] md:h-auto flex flex-col overflow-hidden bg-slate-50 border-t md:border-t-0">
               <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-3">
                 {/* Lista de precios */}
                 {priceLists.length > 0 && (
