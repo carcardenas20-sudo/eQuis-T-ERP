@@ -47,7 +47,6 @@ import Serv_Ordenes from './pages/Serv_Ordenes';
 import Op_Dashboard from './pages/Op_Dashboard';
 import Op_DailyOperations from './pages/Op_DailyOperations';
 import Op_Employees from './pages/Op_Employees';
-import Op_Inventory from './pages/Op_Inventory';
 import Op_Deliveries from './pages/Op_Deliveries';
 import Op_Dispatches from './pages/Op_Dispatches';
 import Op_Pending from './pages/Op_Pending';
@@ -106,8 +105,7 @@ export const PAGES = {
   "Op_Dashboard": Op_Dashboard,
   "Op_DailyOperations": Op_DailyOperations,
   "Op_Employees": Op_Employees,
-  "Op_Inventory": Op_Inventory,
-  "Op_Deliveries": Op_Deliveries,
+"Op_Deliveries": Op_Deliveries,
   "Op_Dispatches": Op_Dispatches,
   "Op_Pending": Op_Pending,
   "Op_Payments": Op_Payments,
