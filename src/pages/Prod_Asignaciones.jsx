@@ -372,11 +372,20 @@ export default function Asignaciones() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {presupuestos.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.numero_presupuesto}{p.cliente ? ` · ${p.cliente}` : ""}
-                    </SelectItem>
-                  ))}
+                  {presupuestos.map(p => {
+                    const fecha = p.fecha_entrega
+                      ? new Date(p.fecha_entrega).toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'2-digit' })
+                      : null;
+                    const nProd = (p.productos || []).length;
+                    return (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="font-medium">{p.numero_presupuesto}</span>
+                        {p.cliente ? ` · ${p.cliente}` : ""}
+                        {fecha ? ` · entrega ${fecha}` : ""}
+                        {nProd > 0 ? ` (${nProd} ref.)` : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               {lotes.length > 0 && (
