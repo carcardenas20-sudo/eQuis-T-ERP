@@ -155,22 +155,21 @@ export default function Asignaciones() {
   const printSlipCss = `
     @page { size: letter landscape; margin: 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-    body { width: 100%; }
-    .page-group { height: calc(216mm - 12mm); display: flex; flex-direction: row; gap: 3mm; break-after: page; }
-    .page-group:last-child { break-after: avoid; }
-    .slip { flex: 1; height: 100%; border: 1.5px solid #bbb; padding: 5px 6px; display: flex; flex-direction: column; gap: 3px; overflow: hidden; min-height: 0; }
-    .slip-header { border-bottom: 2px solid #333; padding-bottom: 3px; margin-bottom: 1px; }
+    body { width: 100%; display: flex; flex-direction: row; gap: 3mm; align-items: flex-start; }
+    .page-group { width: 100%; display: flex; flex-direction: row; gap: 3mm; break-after: page; page-break-after: always; align-items: flex-start; }
+    .page-group:last-child { break-after: avoid; page-break-after: avoid; }
+    .slip { flex: 1; border: 1.5px solid #bbb; padding: 5px 6px; }
+    .slip-header { border-bottom: 2px solid #333; padding-bottom: 3px; margin-bottom: 3px; }
     .slip-title { font-size: 11px; font-weight: 900; color: #000; letter-spacing: 0.2px; }
     .slip-combo { font-size: 9px; font-weight: 600; color: #2563eb; margin-top: 1px; }
     .slip-num { font-size: 6.5px; color: #aaa; font-family: monospace; word-break: break-all; }
-    .tallas-row { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }
+    .tallas-row { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 3px; }
     .talla-box { border: 1.5px solid #555; border-radius: 2px; padding: 1px 4px; text-align: center; min-width: 24px; }
     .total-box { border-color: #000; background: #eee; }
     .talla-label { font-size: 6.5px; color: #555; font-weight: 600; text-transform: uppercase; }
     .talla-qty { font-size: 12px; font-weight: 900; color: #000; }
     .total-box .talla-qty { font-size: 13px; }
-    .mats-header { font-size: 6.5px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; }
-    .mats { flex: 1; overflow: hidden; }
+    .mats-header { font-size: 6.5px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px; }
     .mat-row { display: flex; align-items: center; border-bottom: 1px dotted #e5e5e5; padding: 2px 0; gap: 4px; }
     .mat-nombre { flex: 1; font-size: 8.5px; color: #222; }
     .mat-color { color: #888; font-size: 7.5px; margin-left: 2px; }
