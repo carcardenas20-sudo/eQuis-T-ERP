@@ -127,10 +127,9 @@ export default function SaleDetailModal({ sale, onClose }) {
   }
 </style>
 </head>
-<body><div class="no-print" style="background:#f5f5f5;padding:10px;text-align:center;font-family:sans-serif;font-size:13px;color:#555;">Después de imprimir, <a href="javascript:window.close()" style="color:#1a73e8;font-weight:bold;">cierra esta pestaña</a></div>${printableContent}</body>
+<body>${printableContent}</body>
 </html>`;
 
-    // window.open() sincrónico desde gesto de usuario — funciona en iOS y Android
     const pw = window.open('', '_blank');
     if (!pw) {
       alert('Permite ventanas emergentes para imprimir, o usa el botón de descarga PDF.');
@@ -139,11 +138,7 @@ export default function SaleDetailModal({ sale, onClose }) {
     pw.document.open();
     pw.document.write(fullHtml);
     pw.document.close();
-    // onload asegura que el contenido está renderizado antes de disparar print()
-    pw.onload = () => { pw.focus(); pw.print(); };
-    // Fallback: algunos browsers no disparan onload en document.write
-    pw.focus();
-    pw.print();
+    setTimeout(() => { try { pw.focus(); pw.print(); } catch (_) {} }, 400);
   };
 
   const handleDownloadPDF = async () => {

@@ -340,18 +340,13 @@ export default function POS() {
     const widthMM = 58;
     const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', credit: 'Crédito', courtesy: 'Cortesía' };
     const html = generatePrintableHTML(sale, items, companyInfo, labels, '58mm');
-    const closeBanner = `<div class="no-print" style="background:#f5f5f5;padding:10px;text-align:center;font-family:sans-serif;font-size:13px;color:#555;">
-      Después de imprimir, <a href="javascript:window.close()" style="color:#1a73e8;font-weight:bold;">cierra esta pestaña</a>
-    </div>`;
-    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;width:100%;max-width:100%;}@page{size:${widthMM}mm auto;margin:0;}@media print{body{width:${widthMM}mm;margin:0;}.no-print{display:none;}}</style></head><body>${closeBanner}${html}</body></html>`;
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;width:100%;max-width:100%;}@page{size:${widthMM}mm auto;margin:0;}@media print{body{width:${widthMM}mm;margin:0;}}</style></head><body>${html}</body></html>`;
     const pw = window.open('', '_blank');
     if (!pw) { alert('Permite ventanas emergentes para imprimir.'); return; }
     pw.document.open();
     pw.document.write(fullHtml);
     pw.document.close();
-    pw.onload = () => { pw.focus(); pw.print(); };
-    pw.focus();
-    pw.print();
+    setTimeout(() => { try { pw.focus(); pw.print(); } catch (_) {} }, 400);
   }, [postSaleInfo]);
 
   const handlePostSaleWhatsApp = useCallback(() => {
