@@ -437,7 +437,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                     </Button>
                   </div>
 
-                  <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+                  <div className="space-y-3 pr-1">
                     {formData.materiales_requeridos.length === 0 ? (
                       <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 text-sm">
                         No hay materiales agregados.
