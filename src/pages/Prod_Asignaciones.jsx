@@ -156,10 +156,10 @@ export default function Asignaciones() {
     @page { size: letter landscape; margin: 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
     body { width: 100%; }
-    .page-group { display: flex; flex-direction: row; gap: 3mm; break-after: page; page-break-after: always; height: calc(216mm - 12mm); }
+    .page-group { display: flex; flex-direction: row; gap: 3mm; break-after: page; page-break-after: always; }
     .page-group:last-child { break-after: avoid; page-break-after: avoid; }
-    .slip { flex: 1; height: 100%; border: 1.5px solid #bbb; padding: 5px 6px; display: flex; flex-direction: column; }
-    .mats { flex: 1; overflow: hidden; }
+    .slip { flex: 1; height: calc(216mm - 12mm); border: 1.5px solid #bbb; padding: 5px 6px; display: flex; flex-direction: column; overflow: hidden; }
+    .mats { flex: 1; min-height: 0; }
     .slip-header { border-bottom: 2px solid #333; padding-bottom: 3px; margin-bottom: 3px; }
     .slip-title { font-size: 11px; font-weight: 900; color: #000; letter-spacing: 0.2px; }
     .slip-combo { font-size: 9px; font-weight: 600; color: #2563eb; margin-top: 1px; }
