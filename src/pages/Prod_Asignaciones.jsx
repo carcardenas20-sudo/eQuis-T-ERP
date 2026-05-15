@@ -23,7 +23,7 @@ function calcularMateriales(productoInfo, combinacion, tallasCorte, materiasPrim
     const mp = materiasPrimas.find(m => m.id === mat.materia_prima_id);
     if (!mp) return;
     let colorNombre = mp.color_por_defecto || "Sin definir";
-    if (!mp.color_fijo) {
+    if (!mp.color_fijo || mat.color_independiente) {
       const ce = (combinacion.colores_por_material || []).find(cm => cm.row_id === mat.row_id);
       if (ce?.color_nombre) colorNombre = ce.color_nombre;
       else if (ce?.color_id) colorNombre = colores.find(c => c.id === ce.color_id)?.nombre || "?";
