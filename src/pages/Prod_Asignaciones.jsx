@@ -158,10 +158,10 @@ export default function Asignaciones() {
   };
 
   const printSlipCss = `
-    @page { size: letter portrait; margin: 6mm; }
+    @page { size: letter landscape; margin: 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
     body { width: 100%; }
-    .page-group { height: calc(279mm - 12mm); display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; break-after: page; }
+    .page-group { height: calc(216mm - 12mm); display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; break-after: page; }
     .page-group:last-child { break-after: avoid; }
     .slip { border: 1.5px solid #bbb; padding: 5px 6px; display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
     .slip-header { border-bottom: 2px solid #333; padding-bottom: 3px; margin-bottom: 1px; }
