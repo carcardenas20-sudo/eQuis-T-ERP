@@ -137,14 +137,9 @@ export default function Asignaciones() {
     const tallasHtml = (lote.tallas_cantidades || []).map(tc =>
       `<div class="talla-box"><div class="talla-label">${tc.talla}</div><div class="talla-qty">${tc.cantidad}</div></div>`
     ).join('') + `<div class="talla-box total-box"><div class="talla-label">Total</div><div class="talla-qty">${totalUds}</div></div>`;
-    const matsHtml = (lote.materiales_calculados || []).map(m => {
-      const colorHtml = m.color && m.color !== 'Sin definir' ? `<span class="mat-color">${m.color}</span>` : '';
-      const qtyHtml = m.cantidad == null ? '—' : `${Number(m.cantidad).toFixed(2).replace(/\.?0+$/, '')} <span class="mat-etiqueta">${m.etiqueta}</span>`;
-      return `<div class="mat-row">
-        <div class="mat-info"><span class="mat-nombre">${m.nombre}</span>${colorHtml}</div>
-        <div class="mat-right"><span class="mat-qty">${qtyHtml}</span><div class="mat-checks"><span class="chk"></span><span class="chk"></span></div></div>
-      </div>`;
-    }).join('');
+    const matsHtml = (lote.materiales_calculados || []).map(m =>
+      `<div class="mat-row"><span class="mat-nombre">${m.nombre}${m.color && m.color !== 'Sin definir' ? ` <span class="mat-color">${m.color}</span>` : ''}</span><span class="mat-mid">${m.cantidad == null ? '—' : `${Number(m.cantidad).toFixed(2).replace(/\.?0+$/, '')} <span class="mat-etiqueta">${m.etiqueta}</span>`}</span><span class="chk"></span><span class="chk"></span></div>`
+    ).join('');
     return `<div class="slip">
       <div class="slip-header">
         <div class="slip-title">${lote.producto_nombre || ''}</div>
@@ -176,14 +171,11 @@ export default function Asignaciones() {
     .total-box .talla-qty { font-size: 13px; }
     .mats-header { font-size: 6.5px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; }
     .mats { flex: 1; overflow: hidden; }
-    .mat-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dotted #ddd; padding: 2.5px 0; gap: 2px; }
-    .mat-info { flex: 1; min-width: 0; }
-    .mat-nombre { font-size: 8px; color: #111; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .mat-color { font-size: 7px; color: #888; display: block; }
-    .mat-right { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-    .mat-qty { font-size: 8px; font-weight: 700; color: #000; white-space: nowrap; }
-    .mat-etiqueta { font-weight: 400; font-size: 7px; color: #666; }
-    .mat-checks { display: flex; gap: 2px; margin-left: 2px; }
+    .mat-row { display: flex; align-items: center; border-bottom: 1px dotted #e5e5e5; padding: 2px 0; gap: 4px; }
+    .mat-nombre { flex: 1; font-size: 8.5px; color: #222; }
+    .mat-color { color: #888; font-size: 7.5px; margin-left: 2px; }
+    .mat-mid { font-size: 8.5px; font-weight: 700; color: #000; white-space: nowrap; flex-shrink: 0; }
+    .mat-etiqueta { font-weight: 400; font-size: 7.5px; color: #666; margin-left: 1px; }
     .chk { display: inline-block; width: 4.5mm; height: 4.5mm; border: 1px solid #777; border-radius: 1px; flex-shrink: 0; }
   `;
 
