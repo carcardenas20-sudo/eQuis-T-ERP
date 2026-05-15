@@ -155,8 +155,8 @@ export default function Asignaciones() {
   const printSlipCss = `
     @page { size: letter landscape; margin: 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-    body { width: 100%; display: flex; flex-direction: row; gap: 3mm; align-items: flex-start; }
-    .page-group { width: 100%; display: flex; flex-direction: row; gap: 3mm; break-after: page; page-break-after: always; align-items: flex-start; }
+    body { width: 100%; }
+    .page-group { display: flex; flex-direction: row; gap: 3mm; break-after: page; page-break-after: always; align-items: flex-start; }
     .page-group:last-child { break-after: avoid; page-break-after: avoid; }
     .slip { flex: 1; border: 1.5px solid #bbb; padding: 5px 6px; }
     .slip-header { border-bottom: 2px solid #333; padding-bottom: 3px; margin-bottom: 3px; }
