@@ -158,7 +158,7 @@ export default function Asignaciones() {
     body { width: 100%; }
     .page-group { height: calc(216mm - 12mm); display: flex; flex-direction: row; gap: 3mm; break-after: page; }
     .page-group:last-child { break-after: avoid; }
-    .slip { flex: 1; border: 1.5px solid #bbb; padding: 5px 6px; display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+    .slip { flex: 1; height: 100%; border: 1.5px solid #bbb; padding: 5px 6px; display: flex; flex-direction: column; gap: 3px; overflow: hidden; min-height: 0; }
     .slip-header { border-bottom: 2px solid #333; padding-bottom: 3px; margin-bottom: 1px; }
     .slip-title { font-size: 11px; font-weight: 900; color: #000; letter-spacing: 0.2px; }
     .slip-combo { font-size: 9px; font-weight: 600; color: #2563eb; margin-top: 1px; }
