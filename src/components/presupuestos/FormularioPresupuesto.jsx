@@ -65,7 +65,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
       return initialData;
     } else {
       return {
-        numero_presupuesto: `PRES-${Date.now()}`,
+        numero_presupuesto: `PRES-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(Math.floor(Math.random()*900)+100)}`,
         cliente: "",
         fecha_entrega: "",
         productos: [],
