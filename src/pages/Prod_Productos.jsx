@@ -4,6 +4,7 @@ import { Product } from "@/entities/Product";
 import { ProductPrice } from "@/entities/all";
 import { MateriaPrima } from "@/entities/MateriaPrima";
 import { Color } from "@/entities/Color";
+import { Operacion } from "@/api/entitiesChaquetas";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ export default function Productos() {
   const [materiasPrimas, setMateriasPrimas] = useState([]);
   const [colores, setColores] = useState([]);
   const [familias, setFamilias] = useState([]);
+  const [operaciones, setOperaciones] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProducto, setEditingProducto] = useState(null);
@@ -46,16 +48,18 @@ export default function Productos() {
 
   const loadData = async () => {
     setIsLoading(true);
-    const [productosData, materiasData, coloresData, familiasData] = await Promise.all([
+    const [productosData, materiasData, coloresData, familiasData, opsData] = await Promise.all([
       Producto.list("-created_date"),
       MateriaPrima.list(),
       Color.list(),
-      Product.list()
+      Product.list(),
+      Operacion.list("orden_procesamiento"),
     ]);
     setProductos(productosData);
     setMateriasPrimas(materiasData);
     setColores(coloresData);
     setFamilias(familiasData || []);
+    setOperaciones((opsData || []).filter(o => o.activa !== false));
     setIsLoading(false);
   };
 
@@ -195,6 +199,7 @@ export default function Productos() {
             materiasPrimas={materiasPrimas}
             colores={colores}
             familias={familias}
+            operaciones={operaciones}
             onSubmit={handleSubmit}
             onCancel={() => {
               setShowForm(false);

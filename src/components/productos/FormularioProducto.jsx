@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import GestorCombinacionesPredefinidas from './GestorCombinacionesPredefinidas';
 
-export default function FormularioProducto({ producto, materiasPrimas, colores = [], familias = [], onSubmit, onCancel }) {
+export default function FormularioProducto({ producto, materiasPrimas, colores = [], familias = [], operaciones = [], onSubmit, onCancel }) {
   const DRAFT_KEY = `producto_draft_${producto?.id || 'nuevo'}`;
 
   const [formData, setFormData] = useState(() => {
@@ -50,6 +50,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
       familia_id: "",
       precio_venta: 0,
       precio_empleado: 0,
+      operaciones_requeridas: [],
     };
   });
 
@@ -422,6 +423,40 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                       </div>
                     )}
                   </div>
+
+                  {/* Procesos de planta requeridos */}
+                  {operaciones.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-slate-700">Procesos de planta requeridos</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {operaciones.map(op => {
+                          const checked = (formData.operaciones_requeridas || []).includes(op.id);
+                          return (
+                            <button
+                              key={op.id}
+                              type="button"
+                              onClick={() => {
+                                const current = formData.operaciones_requeridas || [];
+                                setFormData({
+                                  ...formData,
+                                  operaciones_requeridas: checked
+                                    ? current.filter(id => id !== op.id)
+                                    : [...current, op.id],
+                                });
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                                checked
+                                  ? "bg-emerald-600 text-white border-emerald-600"
+                                  : "bg-white text-slate-600 border-slate-300 hover:border-emerald-400"
+                              }`}
+                            >
+                              {op.nombre}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* TAB: MATERIALES */}

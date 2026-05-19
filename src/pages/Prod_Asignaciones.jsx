@@ -321,6 +321,7 @@ export default function Asignaciones() {
         estado: "pendiente",
         producto_nombre: productoInfo?.nombre || formItem.producto_id,
         producto_reference: productoInfo?.reference || "",
+        producto_id: formItem.producto_id,
       });
 
       setShowForm(false);
