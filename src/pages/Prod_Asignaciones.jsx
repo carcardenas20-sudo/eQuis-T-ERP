@@ -161,21 +161,21 @@ export default function Asignaciones() {
     .slip { flex: 1; height: calc(216mm - 16mm); border: 1.5px solid #bbb; padding: 5px 6px; display: grid; grid-template-rows: auto auto auto 1fr; gap: 3px; overflow: hidden; }
     .mats { overflow: hidden; }
     .slip-header { border-bottom: 2px solid #333; padding-bottom: 3px; margin-bottom: 3px; }
-    .slip-title { font-size: 11px; font-weight: 900; color: #000; letter-spacing: 0.2px; }
-    .slip-combo { font-size: 9px; font-weight: 600; color: #2563eb; margin-top: 1px; }
-    .slip-num { font-size: 6.5px; color: #aaa; font-family: monospace; word-break: break-all; }
+    .slip-title { font-size: 15px; font-weight: 900; color: #000; letter-spacing: 0.2px; }
+    .slip-combo { font-size: 12px; font-weight: 600; color: #2563eb; margin-top: 1px; }
+    .slip-num { font-size: 8px; color: #aaa; font-family: monospace; word-break: break-all; }
     .tallas-row { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 3px; }
     .talla-box { border: 1.5px solid #555; border-radius: 2px; padding: 1px 4px; text-align: center; min-width: 24px; }
     .total-box { border-color: #000; background: #eee; }
-    .talla-label { font-size: 6.5px; color: #555; font-weight: 600; text-transform: uppercase; }
-    .talla-qty { font-size: 12px; font-weight: 900; color: #000; }
-    .total-box .talla-qty { font-size: 13px; }
-    .mats-header { font-size: 6.5px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px; }
+    .talla-label { font-size: 9px; color: #555; font-weight: 600; text-transform: uppercase; }
+    .talla-qty { font-size: 16px; font-weight: 900; color: #000; }
+    .total-box .talla-qty { font-size: 17px; }
+    .mats-header { font-size: 9px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px; }
     .mat-row { display: flex; align-items: center; border-bottom: 1px dotted #e5e5e5; padding: 2px 0; gap: 4px; }
-    .mat-nombre { flex: 1; font-size: 8.5px; color: #222; }
-    .mat-color { color: #888; font-size: 7.5px; margin-left: 2px; }
-    .mat-mid { font-size: 8.5px; font-weight: 700; color: #000; white-space: nowrap; flex-shrink: 0; }
-    .mat-etiqueta { font-weight: 400; font-size: 7.5px; color: #666; margin-left: 1px; }
+    .mat-nombre { flex: 1; font-size: 11.5px; color: #222; }
+    .mat-color { color: #888; font-size: 10px; margin-left: 2px; }
+    .mat-mid { font-size: 11.5px; font-weight: 700; color: #000; white-space: nowrap; flex-shrink: 0; }
+    .mat-etiqueta { font-weight: 400; font-size: 10px; color: #666; margin-left: 1px; }
     .chk { display: inline-block; width: 4.5mm; height: 4.5mm; border: 1px solid #777; border-radius: 1px; flex-shrink: 0; }
   `;
 
