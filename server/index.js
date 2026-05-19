@@ -63,7 +63,7 @@ const PORTAL_PUBLIC_ENTITIES = new Set([
   // Planillador (lectura + escritura)
   'Delivery', 'Dispatch', 'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog',
   // Portal planta (lectura + escritura estado)
-  'Remision', 'OrdenServicio',
+  'Remision', 'OrdenServicio', 'Operacion', 'Presupuesto',
 ]);
 // Entidades en las que el portal puede escribir
 const PORTAL_WRITE_ENTITIES = new Set([
