@@ -21,3 +21,4 @@ export const Devolucion     = p.Devolucion;
 export const ActivityLog    = p.ActivityLog;
 export const Remision       = p.Remision;
 export const OrdenServicio  = p.OrdenServicio;
+export const Operacion      = p.Operacion;

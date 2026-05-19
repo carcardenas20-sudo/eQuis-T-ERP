@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Remision, OrdenServicio } from "@/api/publicEntities";
-import { Factory, Package, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, Clock, Play, Check } from "lucide-react";
+import { Remision, OrdenServicio, Operacion } from "@/api/publicEntities";
+import { Factory, Package, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, Play, Check } from "lucide-react";
 
-const ESTADO_CONFIG = {
-  pendiente:   { label: "Pendiente",   color: "bg-amber-100 text-amber-700 border-amber-200" },
-  en_proceso:  { label: "En proceso",  color: "bg-blue-100 text-blue-700 border-blue-200" },
-  listo:       { label: "Listo",       color: "bg-green-100 text-green-700 border-green-200" },
-  despachado:  { label: "Despachado",  color: "bg-slate-100 text-slate-500 border-slate-200" },
-  entregado:   { label: "Entregado",   color: "bg-purple-100 text-purple-700 border-purple-200" },
+const ESTADO_CFG = {
+  pendiente:  { label: "Pendiente",  color: "bg-amber-100 text-amber-700 border-amber-200" },
+  en_proceso: { label: "En proceso", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  listo:      { label: "Listo",      color: "bg-green-100 text-green-700 border-green-200" },
+  despachado: { label: "Despachado", color: "bg-slate-100 text-slate-500 border-slate-200" },
+  entregado:  { label: "Entregado",  color: "bg-purple-100 text-purple-700 border-purple-200" },
 };
 
 function EstadoBadge({ estado }) {
-  const cfg = ESTADO_CONFIG[estado] || ESTADO_CONFIG.pendiente;
+  const cfg = ESTADO_CFG[estado] || ESTADO_CFG.pendiente;
   return (
     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${cfg.color}`}>
       {cfg.label}
@@ -19,37 +19,35 @@ function EstadoBadge({ estado }) {
   );
 }
 
-function AccionBtn({ estadoActual, onCambiar, loading }) {
-  if (estadoActual === "listo" || estadoActual === "despachado" || estadoActual === "entregado") return null;
-  const siguiente = estadoActual === "pendiente" ? "en_proceso" : "listo";
-  const label = estadoActual === "pendiente" ? "Iniciar" : "Marcar listo";
-  const Icon = estadoActual === "pendiente" ? Play : Check;
-  return (
-    <button
-      onClick={onCambiar}
-      disabled={loading}
-      className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all
-        ${estadoActual === "pendiente"
-          ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-          : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}
-        disabled:opacity-50`}
-    >
-      {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}
-      {label}
-    </button>
-  );
+// Determina si una remision es relevante para una operacion según los tipos de material
+function remisionMatchesOp(remision, operacion) {
+  const matTypes = new Set((remision.materiales_calculados || []).map(m => m.tipo).filter(Boolean));
+  const matIds = new Set((remision.materiales_calculados || []).map(m => m.materia_prima_id).filter(Boolean));
+  const tipos = operacion.tipos_materiales_requeridos || [];
+  const especificos = operacion.materiales_especificos || [];
+  if (tipos.length === 0 && especificos.length === 0) return true;
+  if (operacion.condicion_logica === "todos") {
+    return tipos.every(t => matTypes.has(t)) && especificos.every(id => matIds.has(id));
+  }
+  return tipos.some(t => matTypes.has(t)) || especificos.some(id => matIds.has(id));
 }
 
-// ─── Tarjeta de remisión (lote de despacho) ──────────────────────────────────
-function RemisionCard({ remision, onUpdate }) {
+// ─── Tarjeta de remisión por proceso ─────────────────────────────────────────
+function RemisionCard({ remision, operacionId, onUpdate }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const estadoProceso = (remision.procesos_estado || {})[operacionId] || "pendiente";
+  const totalUds = (remision.tallas_cantidades || []).reduce((s, t) => s + (Number(t.cantidad) || 0), 0);
+
   const cambiarEstado = async () => {
-    const siguiente = remision.estado === "pendiente" ? "en_proceso" : "listo";
+    if (estadoProceso === "listo") return;
+    const siguiente = estadoProceso === "pendiente" ? "en_proceso" : "listo";
     setLoading(true);
     try {
-      await Remision.update(remision.id, { estado: siguiente });
+      await Remision.update(remision.id, {
+        procesos_estado: { ...(remision.procesos_estado || {}), [operacionId]: siguiente }
+      });
       onUpdate();
     } catch (e) {
       alert("Error al actualizar: " + e.message);
@@ -57,17 +55,14 @@ function RemisionCard({ remision, onUpdate }) {
     setLoading(false);
   };
 
-  const totalUds = (remision.tallas_cantidades || []).reduce((s, t) => s + (Number(t.cantidad) || 0), 0);
+  const isListo = estadoProceso === "listo";
 
   return (
-    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${remision.estado === "listo" ? "border-green-200" : "border-slate-200"}`}>
-      <div
-        className="flex items-center justify-between px-4 py-3 cursor-pointer"
-        onClick={() => setOpen(o => !o)}
-      >
+    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isListo ? "border-green-200" : "border-slate-200"}`}>
+      <div className="flex items-center justify-between px-4 py-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex-shrink-0">
-            {remision.estado === "listo"
+            {isListo
               ? <CheckCircle2 className="w-5 h-5 text-green-500" />
               : <Package className="w-5 h-5 text-amber-500" />}
           </div>
@@ -77,7 +72,7 @@ function RemisionCard({ remision, onUpdate }) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <EstadoBadge estado={remision.estado} />
+          <EstadoBadge estado={estadoProceso} />
           {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
@@ -116,9 +111,23 @@ function RemisionCard({ remision, onUpdate }) {
           )}
 
           {/* Acción */}
-          <div className="flex justify-end pt-1">
-            <AccionBtn estadoActual={remision.estado} onCambiar={cambiarEstado} loading={loading} />
-          </div>
+          {!isListo && (
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={cambiarEstado}
+                disabled={loading}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50
+                  ${estadoProceso === "pendiente"
+                    ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}`}
+              >
+                {loading
+                  ? <RefreshCw className="w-3 h-3 animate-spin" />
+                  : estadoProceso === "pendiente" ? <Play className="w-3 h-3" /> : <Check className="w-3 h-3" />}
+                {estadoProceso === "pendiente" ? "Iniciar" : "Marcar listo"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -144,10 +153,7 @@ function OrdenCard({ orden, onUpdate }) {
 
   return (
     <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${orden.estado === "listo" ? "border-green-200" : "border-slate-200"}`}>
-      <div
-        className="flex items-center justify-between px-4 py-3 cursor-pointer"
-        onClick={() => setOpen(o => !o)}
-      >
+      <div className="flex items-center justify-between px-4 py-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex-shrink-0">
             {orden.estado === "listo"
@@ -167,29 +173,35 @@ function OrdenCard({ orden, onUpdate }) {
 
       {open && (
         <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
-          {/* Items */}
           {(orden.items || []).length > 0 && (
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Servicios</p>
               {orden.items.map((item, i) => (
                 <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
                   <p className="text-sm font-medium text-slate-800">{item.servicio_nombre || item.servicio_id}</p>
-                  <span className="text-sm font-bold text-slate-700">
-                    {item.cantidad} {item.unidad || ""}
-                  </span>
+                  <span className="text-sm font-bold text-slate-700">{item.cantidad} {item.unidad || ""}</span>
                 </div>
               ))}
             </div>
           )}
-
           {orden.notas && (
             <p className="text-xs text-slate-500 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">{orden.notas}</p>
           )}
-
-          <div className="flex justify-between items-center pt-1">
-            <p className="text-xs text-slate-400">{orden.fecha_orden || ""}</p>
-            <AccionBtn estadoActual={orden.estado} onCambiar={cambiarEstado} loading={loading} />
-          </div>
+          {orden.estado !== "listo" && orden.estado !== "entregado" && (
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={cambiarEstado}
+                disabled={loading}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50
+                  ${orden.estado === "pendiente"
+                    ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}`}
+              >
+                {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : orden.estado === "pendiente" ? <Play className="w-3 h-3" /> : <Check className="w-3 h-3" />}
+                {orden.estado === "pendiente" ? "Iniciar" : "Marcar listo"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -197,29 +209,27 @@ function OrdenCard({ orden, onUpdate }) {
 }
 
 // ─── Portal principal ─────────────────────────────────────────────────────────
-const TABS = [
-  { id: "despachos", label: "Despachos", Icon: Package },
-  { id: "servicios", label: "Servicios",  Icon: Wrench },
-];
-
 export default function PlantPortal() {
-  const [tab, setTab] = useState("despachos");
+  const [operaciones, setOperaciones] = useState([]);
   const [remisiones, setRemisiones] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tabId, setTabId] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState("activos");
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [remData, ordData] = await Promise.all([
+      const [opsData, remData, ordData] = await Promise.all([
+        Operacion.list("orden_procesamiento"),
         Remision.filter({ tipo_remision: "asignacion_despacho" }),
         OrdenServicio.list("-fecha_orden"),
       ]);
-      setRemisiones(
-        (remData || []).sort((a, b) => new Date(a.created_date || 0) - new Date(b.created_date || 0))
-      );
+      const activas = (opsData || []).filter(o => o.activa !== false);
+      setOperaciones(activas);
+      setRemisiones((remData || []).sort((a, b) => new Date(a.created_date || 0) - new Date(b.created_date || 0)));
       setOrdenes(ordData || []);
+      setTabId(prev => prev ?? (activas[0]?.id || "servicios"));
     } catch (e) {
       console.error("Error cargando datos:", e);
     }
@@ -228,33 +238,64 @@ export default function PlantPortal() {
 
   useEffect(() => { loadData(); }, []);
 
-  const remFiltradas = remisiones.filter(r => {
-    if (filtroEstado === "activos") return r.estado !== "despachado" && r.estado !== "entregado";
-    if (filtroEstado === "listos") return r.estado === "listo";
-    return true;
-  });
+  // Remisiones filtradas por operacion seleccionada
+  const remDeOp = tabId && tabId !== "servicios"
+    ? remisiones.filter(r => {
+        const op = operaciones.find(o => o.id === tabId);
+        return op ? remisionMatchesOp(r, op) : false;
+      })
+    : [];
 
-  const ordFiltradas = ordenes.filter(o => {
-    if (filtroEstado === "activos") return o.estado !== "entregado" && o.estado !== "cancelado";
-    if (filtroEstado === "listos") return o.estado === "listo";
-    return true;
-  });
+  const filtrar = (lista, esServicio = false) => {
+    return lista.filter(item => {
+      const estado = esServicio ? item.estado : ((item.procesos_estado || {})[tabId] || "pendiente");
+      if (filtroEstado === "activos") return estado !== "despachado" && estado !== "entregado" && estado !== "listo";
+      if (filtroEstado === "listos")  return estado === "listo";
+      return true;
+    });
+  };
 
-  const pendRemisiones = remisiones.filter(r => r.estado === "pendiente" || r.estado === "en_proceso").length;
+  const ordFiltradas = tabId === "servicios"
+    ? ordenes.filter(o => {
+        if (filtroEstado === "activos") return o.estado !== "entregado" && o.estado !== "cancelado" && o.estado !== "listo";
+        if (filtroEstado === "listos") return o.estado === "listo";
+        return true;
+      })
+    : [];
+
+  const pendDeOp = (op) => {
+    const rem = remisiones.filter(r => remisionMatchesOp(r, op));
+    return rem.filter(r => {
+      const e = (r.procesos_estado || {})[op.id] || "pendiente";
+      return e === "pendiente" || e === "en_proceso";
+    }).length;
+  };
   const pendOrdenes = ordenes.filter(o => o.estado === "pendiente" || o.estado === "en_proceso").length;
+
+  const tabs = [
+    ...operaciones.map(op => ({
+      id: op.id,
+      label: op.nombre,
+      Icon: Factory,
+      count: pendDeOp(op),
+    })),
+    { id: "servicios", label: "Servicios", Icon: Wrench, count: pendOrdenes },
+  ];
+
+  const remFiltradas = filtrar(remDeOp);
 
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center">
               <Factory className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="font-bold text-slate-900 text-base leading-tight">Portal de Planta</h1>
-              <p className="text-xs text-slate-500">Operaciones · eQuis-T</p>
+              <p className="text-xs text-slate-500">Procesos · eQuis-T</p>
             </div>
           </div>
           <button
@@ -265,28 +306,25 @@ export default function PlantPortal() {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mt-3">
-          {TABS.map(({ id, label, Icon }) => {
-            const count = id === "despachos" ? pendRemisiones : pendOrdenes;
-            return (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex-1 justify-center
-                  ${tab === id ? "bg-emerald-600 text-white shadow" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-                {count > 0 && (
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold
-                    ${tab === id ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"}`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        {/* Tabs de procesos */}
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
+          {tabs.map(({ id, label, Icon, count }) => (
+            <button
+              key={id}
+              onClick={() => setTabId(id)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0
+                ${tabId === id ? "bg-emerald-600 text-white shadow" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+              {count > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold
+                  ${tabId === id ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Filtro estado */}
@@ -314,28 +352,24 @@ export default function PlantPortal() {
           <div className="flex justify-center py-16">
             <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
           </div>
-        ) : tab === "despachos" ? (
-          remFiltradas.length === 0 ? (
-            <div className="text-center py-16 text-slate-400">
-              <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No hay lotes {filtroEstado === "activos" ? "pendientes" : filtroEstado}</p>
-            </div>
-          ) : (
-            remFiltradas.map(r => (
-              <RemisionCard key={r.id} remision={r} onUpdate={loadData} />
-            ))
-          )
-        ) : (
+        ) : tabId === "servicios" ? (
           ordFiltradas.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
               <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No hay órdenes {filtroEstado === "activos" ? "pendientes" : filtroEstado}</p>
+              <p className="font-medium">No hay órdenes {filtroEstado === "activos" ? "activas" : filtroEstado}</p>
             </div>
           ) : (
-            ordFiltradas.map(o => (
-              <OrdenCard key={o.id} orden={o} onUpdate={loadData} />
-            ))
+            ordFiltradas.map(o => <OrdenCard key={o.id} orden={o} onUpdate={loadData} />)
           )
+        ) : remFiltradas.length === 0 ? (
+          <div className="text-center py-16 text-slate-400">
+            <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">No hay lotes {filtroEstado === "activos" ? "activos" : filtroEstado}</p>
+          </div>
+        ) : (
+          remFiltradas.map(r => (
+            <RemisionCard key={r.id} remision={r} operacionId={tabId} onUpdate={loadData} />
+          ))
         )}
       </div>
     </div>
