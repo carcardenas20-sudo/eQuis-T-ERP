@@ -8,13 +8,13 @@ function normalizePhone(input) {
 function renderReceipt(pdf, sale, items, companyInfo, printFormat, startY) {
   const is58 = printFormat === '58mm';
   const pageW = is58 ? 58 : 80;
-  const margin = 3;
+  const margin = 5;
   const lh = 4;
   let y = startY;
 
   const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', credit: 'Crédito', courtesy: 'Cortesía' };
-  const fecha = new Date(sale.created_date || sale.sale_date || Date.now())
-    .toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+  const dt = new Date(sale.created_date || sale.sale_date || Date.now());
+  const fecha = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getFullYear()).slice(-2)} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
 
   const font = (size, bold = false) => {
     pdf.setFontSize(size);
@@ -103,10 +103,10 @@ function buildReceiptPdfBlob(sale, items, companyInfo, printFormat = '80mm') {
 
   // Primera pasada para medir la altura real
   const tmp = new jsPDF({ orientation: 'p', unit: 'mm', format: [pageW, 500] });
-  const finalY = renderReceipt(tmp, sale, items, companyInfo, printFormat, margin);
+  const finalY = renderReceipt(tmp, sale, items, companyInfo, printFormat, 5);
 
   // Segunda pasada con la altura correcta
-  const height = Math.ceil(finalY) + margin;
+  const height = Math.ceil(finalY) + 5;
   const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: [pageW, height] });
   renderReceipt(pdf, sale, items, companyInfo, printFormat, margin);
 
