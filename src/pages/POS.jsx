@@ -697,9 +697,20 @@ export default function POS() {
               >
                 <div className="h-full flex flex-col">
                   <SheetHeader className="px-4 py-3 border-b">
-                    <SheetTitle className="flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5 text-blue-600" />
-                      Carrito ({cart.length})
+                    <SheetTitle className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2">
+                        <ShoppingCart className="w-5 h-5 text-blue-600" />
+                        Carrito ({cart.length})
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-8 text-amber-600 border-amber-300"
+                        disabled={!selectedLocationId}
+                        onClick={() => { setShowMobileCart(false); setShowHoldCart(true); }}
+                      >
+                        <Clock className="w-3.5 h-3.5" /> En Espera
+                      </Button>
                     </SheetTitle>
                   </SheetHeader>
                   <div className="flex-1 overflow-y-auto touch-pan-y">
