@@ -239,7 +239,7 @@ export default function InventoryPage() {
         {activeTab === "inventory" && (
           <>
             {/* Stats Cards - these use 'inventory' state directly now */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
               <Card className="shadow-lg border-0">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">

@@ -520,7 +520,7 @@ export default function PurchasesPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -619,19 +619,19 @@ export default function PurchasesPage() {
           <TabsContent value="purchases" className="space-y-4">
             <Card>
               <CardHeader>
-                <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex flex-col gap-2">
                   <Input
-                    placeholder="Buscar por número de compra, proveedor o factura..."
+                    placeholder="Buscar compra, proveedor o factura..."
                     value={purchaseFilters.search}
                     onChange={(e) => setPurchaseFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="md:max-w-md"
+                    className="w-full"
                   />
-                  
+                  <div className="flex gap-2">
                   <Select
                     value={purchaseFilters.status}
                     onValueChange={(value) => setPurchaseFilters(prev => ({ ...prev, status: value }))}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Estado" />
                     </SelectTrigger>
                     <SelectContent>
@@ -648,7 +648,7 @@ export default function PurchasesPage() {
                     value={purchaseFilters.supplier}
                     onValueChange={(value) => setPurchaseFilters(prev => ({ ...prev, supplier: value }))}
                   >
-                    <SelectTrigger className="w-48">
+                    <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Proveedor" />
                     </SelectTrigger>
                     <SelectContent>
@@ -660,6 +660,7 @@ export default function PurchasesPage() {
                       <SelectItem value="all">Todos los Proveedores</SelectItem>
                     </SelectContent>
                   </Select>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

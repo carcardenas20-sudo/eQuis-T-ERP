@@ -366,10 +366,10 @@ export default function Asignaciones() {
         ) : (
           <>
             {/* Selector presupuesto */}
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
               <Label className="shrink-0 text-slate-600 text-sm">Presupuesto:</Label>
               <Select value={selectedId} onValueChange={setSelectedId}>
-                <SelectTrigger className="max-w-xs">
+                <SelectTrigger className="w-full sm:max-w-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -566,12 +566,12 @@ export default function DailyOperations() {
                             <p className="text-xs text-slate-400 mt-0.5 ml-6 font-mono">{dispatch.lote_remision}</p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
                           <Select
                             value={loteEmployee[dispatch.id] || ""}
                             onValueChange={v => setLoteEmployee(prev => ({ ...prev, [dispatch.id]: v }))}
                           >
-                            <SelectTrigger className="w-44 h-9 text-sm">
+                            <SelectTrigger className="flex-1 sm:w-44 h-9 text-sm">
                               <SelectValue placeholder="Operario..." />
                             </SelectTrigger>
                             <SelectContent>

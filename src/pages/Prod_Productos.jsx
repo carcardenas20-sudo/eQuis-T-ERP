@@ -163,14 +163,14 @@ export default function Productos() {
     <div className="p-3 sm:p-8 space-y-4 sm:space-y-8 bg-transparent">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-2">Catálogo de Productos</h1>
-            <p className="text-slate-600 text-lg">Gestiona los diseños y especificaciones de tus chaquetas</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 mb-1">Catálogo de Productos</h1>
+            <p className="text-slate-600 text-sm sm:text-lg">Gestiona los diseños y especificaciones de tus chaquetas</p>
           </div>
           <Button
             onClick={() => setShowForm(true)}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium px-6 py-3 shadow-lg"
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium px-4 py-2 sm:px-6 sm:py-3 shadow-lg w-full sm:w-auto"
           >
             <Plus className="w-5 h-5 mr-2" />
             Nuevo Producto
@@ -210,7 +210,7 @@ export default function Productos() {
         )}
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
           {isLoading ? (
             Array(6).fill(0).map((_, i) => (
               <Card key={i} className="bg-white animate-pulse">

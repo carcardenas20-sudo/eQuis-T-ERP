@@ -272,20 +272,21 @@ export default function Employees() {
 
   return (
     <>
-    <div className="p-6 bg-slate-50 min-h-screen">
+    <div className="p-3 sm:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-5 sm:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Empleados</h1>
-            <p className="text-slate-600">Gestiona la información y el acceso de los empleados.</p>
+            <h1 className="text-xl sm:text-3xl font-bold text-slate-900 mb-1">Empleados</h1>
+            <p className="text-slate-600 text-sm">Gestiona la información y el acceso de los empleados.</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleCleanDuplicates} className="text-amber-600 border-amber-300 hover:bg-amber-50">
-              <Users className="w-4 h-4 mr-2" />
-              Limpiar duplicados
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={handleCleanDuplicates} className="text-amber-600 border-amber-300 hover:bg-amber-50 flex-1 sm:flex-none text-xs sm:text-sm">
+              <Users className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Limpiar duplicados</span>
+              <span className="sm:hidden">Duplicados</span>
             </Button>
-            <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
+            <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none text-xs sm:text-sm">
+              <Plus className="w-4 h-4 mr-1 sm:mr-2" />
               Nuevo Empleado
             </Button>
           </div>
