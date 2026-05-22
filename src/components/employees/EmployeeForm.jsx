@@ -11,7 +11,8 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
     if (employee) {
       return {
         ...employee,
-        hire_date: employee.hire_date ? new Date(employee.hire_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+        hire_date: employee.hire_date ? new Date(employee.hire_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        fecha_retiro: employee.fecha_retiro ? new Date(employee.fecha_retiro).toISOString().split('T')[0] : ''
       };
     }
     // Auto-generar código de 3 dígitos
@@ -27,7 +28,11 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
       position: "",
       hire_date: new Date().toISOString().split('T')[0],
       is_active: true,
-      salary_per_unit: ""
+      salary_per_unit: "",
+      cedula: "",
+      genero: "F",
+      salario_certificado: "",
+      fecha_retiro: ""
     };
   });
   const [errors, setErrors] = useState({});
@@ -66,7 +71,9 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
     setErrors({});
     onSubmit({
       ...formData,
-      salary_per_unit: formData.salary_per_unit ? parseFloat(formData.salary_per_unit) : undefined
+      salary_per_unit: formData.salary_per_unit ? parseFloat(formData.salary_per_unit) : undefined,
+      salario_certificado: formData.salario_certificado ? parseFloat(formData.salario_certificado) : undefined,
+      fecha_retiro: formData.fecha_retiro || undefined
     });
   };
 
@@ -145,7 +152,7 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
                 onChange={(e) => handleInputChange('hire_date', e.target.value)}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="salary_per_unit">Pago por Unidad ($)</Label>
               <Input
@@ -156,6 +163,56 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
                 onChange={(e) => handleInputChange('salary_per_unit', e.target.value)}
                 placeholder="Ej: 1500"
               />
+            </div>
+          </div>
+
+          <div className="border-t pt-4 mt-2">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Datos para Certificado Laboral</p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cedula">Cédula de ciudadanía</Label>
+                <Input
+                  id="cedula"
+                  value={formData.cedula || ''}
+                  onChange={(e) => handleInputChange('cedula', e.target.value)}
+                  placeholder="Ej: 53.041.786"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="genero">Género</Label>
+                <select
+                  id="genero"
+                  value={formData.genero || 'F'}
+                  onChange={(e) => handleInputChange('genero', e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="F">Femenino</option>
+                  <option value="M">Masculino</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="salario_certificado">Salario para certificado ($)</Label>
+                <Input
+                  id="salario_certificado"
+                  type="number"
+                  value={formData.salario_certificado || ''}
+                  onChange={(e) => handleInputChange('salario_certificado', e.target.value)}
+                  placeholder="Ej: 3000000"
+                />
+                <p className="text-xs text-slate-400">Monto que aparecerá en el certificado laboral</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fecha_retiro">Fecha de retiro (si aplica)</Label>
+                <Input
+                  id="fecha_retiro"
+                  type="date"
+                  value={formData.fecha_retiro || ''}
+                  onChange={(e) => handleInputChange('fecha_retiro', e.target.value)}
+                />
+                <p className="text-xs text-slate-400">Solo para empleados que ya salieron</p>
+              </div>
             </div>
           </div>
 

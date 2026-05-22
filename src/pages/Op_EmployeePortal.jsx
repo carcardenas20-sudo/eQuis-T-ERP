@@ -26,12 +26,165 @@ async function portalLogin(employeeId, pin) {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { User, DollarSign, Clock, TrendingUp, Package, Calendar, Phone, Briefcase, Factory, BellRing, Hourglass, Calculator, TruckIcon } from "lucide-react";
+import { User, DollarSign, Clock, TrendingUp, Package, Calendar, Phone, Briefcase, Factory, BellRing, Hourglass, Calculator, TruckIcon, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 import EmployeeTimeline from "../components/employees/EmployeeTimeline";
 import EmployeePendingItems from "../components/employees/EmployeePendingItems";
 import EmployeePaymentsSummary from "../components/employees/EmployeePaymentsSummary";
+
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DIAS_ES = ['','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte','veintiuno','veintidós','veintitrés','veinticuatro','veinticinco','veintiséis','veintisiete','veintiocho','veintinueve','treinta','treinta y uno'];
+const ANIOS_ES = {2020:'dos mil veinte',2021:'dos mil veintiuno',2022:'dos mil veintidós',2023:'dos mil veintitrés',2024:'dos mil veinticuatro',2025:'dos mil veinticinco',2026:'dos mil veintiséis',2027:'dos mil veintisiete',2028:'dos mil veintiocho',2029:'dos mil veintinueve',2030:'dos mil treinta',2031:'dos mil treinta y uno'};
+
+function generateCertificadoHTML(emp) {
+  const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+  const dia = hoy.getDate();
+  const mes = MESES[hoy.getMonth()];
+  const anio = hoy.getFullYear();
+  const diaEs = DIAS_ES[dia] || String(dia);
+  const anioEs = ANIOS_ES[anio] || String(anio);
+
+  const esFemenino = (emp.genero || 'F') === 'F';
+  const tratamiento = esFemenino ? 'la señora' : 'el señor';
+  const identificadoA = esFemenino ? 'identificada' : 'identificado';
+
+  const hireDate = emp.hire_date ? new Date(emp.hire_date + 'T00:00:00') : null;
+  const mesInicio = hireDate ? MESES[hireDate.getMonth()] : '';
+  const anioInicio = hireDate ? hireDate.getFullYear() : '';
+
+  let periodoLaboral = '';
+  if (emp.fecha_retiro) {
+    const retiro = new Date(emp.fecha_retiro + 'T00:00:00');
+    periodoLaboral = `desde ${mesInicio} de ${anioInicio} hasta ${MESES[retiro.getMonth()]} de ${retiro.getFullYear()}`;
+  } else {
+    periodoLaboral = `desde ${mesInicio} de ${anioInicio} a la actualidad`;
+  }
+
+  const salario = emp.salario_certificado
+    ? Number(emp.salario_certificado).toLocaleString('es-CO') + ' de pesos'
+    : '[salario no configurado]';
+
+  const cedula = emp.cedula || '[cédula no registrada]';
+  const cargo = emp.position || '[cargo no registrado]';
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Certificado Laboral - ${emp.name}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #111; background: #fff; }
+  .page { width: 21cm; min-height: 29.7cm; margin: 0 auto; padding: 2.2cm 2.5cm; position: relative; }
+  .watermark {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-20deg);
+    font-size: 130px; font-weight: 900; letter-spacing: 8px;
+    color: rgba(0,0,0,0.045); z-index: 0; white-space: nowrap;
+    pointer-events: none; user-select: none;
+  }
+  .content { position: relative; z-index: 1; }
+  .header { text-align: center; margin-bottom: 1.6cm; }
+  .header h1 { font-size: 28px; font-weight: 900; color: #111; margin-bottom: 6px; }
+  .header .info { color: #c8960a; font-size: 12px; line-height: 1.7; }
+  .footer-header { text-align: center; margin-top: 1.4cm; }
+  .footer-header h1 { font-size: 22px; font-weight: 900; color: #111; margin-bottom: 4px; }
+  .footer-header .info { color: #c8960a; font-size: 11px; line-height: 1.7; }
+  .fecha { margin-bottom: 1cm; font-size: 13px; }
+  .ref { margin-bottom: 0.8cm; font-size: 13px; }
+  .yo { margin-bottom: 0.7cm; font-size: 13px; }
+  .certifico { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 0.6cm; }
+  .cuerpo { margin-bottom: 0.7cm; font-size: 13px; line-height: 1.75; text-align: justify; }
+  .damos-fe { margin-bottom: 0.9cm; font-size: 13px; line-height: 1.75; text-align: justify; }
+  .constancia { margin-bottom: 1.4cm; font-size: 13px; line-height: 1.75; text-align: justify; }
+  .cordialmente { margin-bottom: 0.4cm; font-size: 13px; }
+  .firma-espacio { height: 2.4cm; }
+  .firmante { font-size: 13px; }
+  .no-print { position: fixed; top: 16px; right: 16px; z-index: 100; }
+  button {
+    background: #1e40af; color: #fff; border: none; padding: 10px 22px;
+    border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  button:hover { background: #1d4ed8; }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff; }
+    .page { padding: 1.5cm 2cm; }
+    .watermark { position: fixed; }
+  }
+</style>
+</head>
+<body>
+<div class="no-print"><button onclick="window.print()">🖨️ Imprimir / Guardar PDF</button></div>
+<div class="watermark">eQuis T</div>
+<div class="page">
+  <div class="content">
+    <div class="header">
+      <h1>eQuis - T</h1>
+      <div class="info">
+        Calle 10 # 11 20<br>
+        321 233 4884<br>
+        Nit.: 1.024.543.179-8<br>
+        Calle 10 # 11 - 20
+      </div>
+    </div>
+
+    <div class="fecha">Bogotá, ${dia} de ${mes} de ${anio}</div>
+
+    <div class="ref">
+      Ref.: Certificación laboral<br>
+      Ciudad
+    </div>
+
+    <div class="yo">Yo <strong>Carlos Cárdenas,</strong> Líder general de <strong>eQuis - T</strong></div>
+
+    <div class="certifico">CERTIFICO:</div>
+
+    <div class="cuerpo">
+      Que ${tratamiento} <strong>${emp.name},</strong> ${identificadoA} con cédula de ciudadanía No.
+      <strong>${cedula}</strong> expedida en Bogotá labora en nuestra empresa ${periodoLaboral},
+      desempeñando el cargo de <strong>${cargo}</strong> con un contrato a término indefinido
+      y devengando un salario a ${anio} de ${salario}.
+    </div>
+
+    <div class="damos-fe">
+      Damos fe de sus valores morales, entre los cuales destacan la responsabilidad y la honestidad.
+    </div>
+
+    <div class="constancia">
+      Para constancia de lo anterior se firma en Bogotá a los ${diaEs} (${dia}) días del mes de
+      ${mes} del ${anioEs} (${anio}).
+    </div>
+
+    <div class="cordialmente">Cordialmente,</div>
+    <div class="firma-espacio"></div>
+    <div class="firmante">
+      Carlos Cárdenas - Tel Cel.:&nbsp; <strong>315 592 52 80</strong><br>
+      C.C 1.024.543.179 expedida en Bogotá
+    </div>
+
+    <div class="footer-header">
+      <h1>eQuis - T</h1>
+      <div class="info">
+        Calle 10 # 11 20<br>
+        321 233 4884<br>
+        Nit.: 1.024.543.179-8<br>
+        Calle 10 # 11 - 20
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // Auto-abrir el diálogo de impresión cuando se carga
+  window.onload = function() {
+    setTimeout(function() { window.print(); }, 600);
+  };
+</script>
+</body>
+</html>`;
+}
 
 export default function EmployeePortal() {
   const [employee, setEmployee] = useState(null);
@@ -367,6 +520,17 @@ export default function EmployeePortal() {
     setCalculationSteps(steps);
   };
   
+  const handleDescargarCertificado = () => {
+    const html = generateCertificadoHTML(employee);
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('Tu navegador bloqueó la ventana emergente. Por favor permite ventanas emergentes para este sitio e intenta de nuevo.');
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+  };
+
   const handleRequestPayment = async () => {
     if (stats.pendingAmount <= 0) {
       alert("No tienes saldo pendiente para solicitar.");
@@ -582,6 +746,37 @@ export default function EmployeePortal() {
                     </div>
                 ) : null}
             </CardContent>
+        </Card>
+
+        {/* Certificado Laboral */}
+        <Card className="mb-6 border-emerald-200 bg-emerald-50">
+          <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-emerald-600 text-white rounded-full p-3 shrink-0">
+                <FileText className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-emerald-900">Certificado Laboral</h3>
+                {employee.cedula && employee.salario_certificado ? (
+                  <p className="text-sm text-emerald-700">Tu certificado está listo. Se abrirá listo para guardar como PDF.</p>
+                ) : (
+                  <p className="text-sm text-emerald-700">
+                    {!employee.cedula && 'Falta cédula. '}
+                    {!employee.salario_certificado && 'Falta salario. '}
+                    Pídele al administrador que complete tu perfil.
+                  </p>
+                )}
+              </div>
+            </div>
+            <Button
+              onClick={handleDescargarCertificado}
+              disabled={!employee.cedula || !employee.salario_certificado}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 w-full sm:w-auto"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Descargar Certificado
+            </Button>
+          </CardContent>
         </Card>
 
         {/* Tabla de precios por referencia */}
