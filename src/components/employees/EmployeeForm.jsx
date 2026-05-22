@@ -166,31 +166,8 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
           </div>
 
           <div className="border-t pt-4 mt-2">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Datos para Certificado Laboral</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Certificado Laboral</p>
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cedula">Cédula de ciudadanía</Label>
-                <Input
-                  id="cedula"
-                  value={formData.cedula || ''}
-                  onChange={(e) => handleInputChange('cedula', e.target.value)}
-                  placeholder="Ej: 53.041.786"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="genero">Género</Label>
-                <select
-                  id="genero"
-                  value={formData.genero || 'F'}
-                  onChange={(e) => handleInputChange('genero', e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="F">Femenino</option>
-                  <option value="M">Masculino</option>
-                </select>
-              </div>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="fecha_retiro">Fecha de retiro (si aplica)</Label>
                 <Input

@@ -196,8 +196,10 @@ export default function EmployeePortal() {
   const [isPaymentWindowOpen, setIsPaymentWindowOpen] = useState(false);
   const [paymentWindowClosesAt, setPaymentWindowClosesAt] = useState(null);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
-  const [solicitudCert, setSolicitudCert] = useState(null);   // última solicitud de certificado
+  const [solicitudCert, setSolicitudCert] = useState(null);
   const [loadingSolicitud, setLoadingSolicitud] = useState(false);
+  const [showCertForm, setShowCertForm] = useState(false);
+  const [certFormData, setCertFormData] = useState({ cedula: '', genero: 'F' });
   const [calculationSteps, setCalculationSteps] = useState([]);
 
   // PIN state
@@ -548,10 +550,8 @@ export default function EmployeePortal() {
   };
 
   const handleSolicitarCertificado = async () => {
-    if (!employee.cedula) {
-      alert('Tu perfil no tiene cédula registrada. Pídele al administrador que la configure.');
-      return;
-    }
+    const cedula = (certFormData.cedula || employee.cedula || '').trim();
+    if (!cedula) return;
     setLoadingSolicitud(true);
     try {
       const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))
@@ -559,16 +559,17 @@ export default function EmployeePortal() {
       const solicitud = await CertificadoSolicitud.create({
         employee_id: employee.employee_id,
         employee_name: employee.name,
-        cedula: employee.cedula,
+        cedula,
         cargo: employee.position || '',
         hire_date: employee.hire_date || '',
         fecha_retiro: employee.fecha_retiro || '',
-        genero: employee.genero || 'F',
+        genero: certFormData.genero || employee.genero || 'F',
         monto_sugerido: calcularSalarioPromedio(),
         status: 'pendiente',
         request_date: hoy,
       });
       setSolicitudCert(solicitud);
+      setShowCertForm(false);
     } catch (e) {
       alert('Error al enviar la solicitud. Intenta de nuevo.');
     }
@@ -806,73 +807,118 @@ export default function EmployeePortal() {
 
         {/* Certificado Laboral */}
         <Card className={`mb-6 ${
-          !solicitudCert ? 'border-emerald-200 bg-emerald-50' :
-          solicitudCert.status === 'pendiente' ? 'border-amber-200 bg-amber-50' :
-          solicitudCert.status === 'aprobado' ? 'border-emerald-200 bg-emerald-50' :
-          'border-red-200 bg-red-50'
+          solicitudCert?.status === 'pendiente' ? 'border-amber-200 bg-amber-50' :
+          solicitudCert?.status === 'aprobado'  ? 'border-emerald-200 bg-emerald-50' :
+          solicitudCert?.status === 'rechazado' ? 'border-red-200 bg-red-50' :
+          'border-emerald-200 bg-emerald-50'
         }`}>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className={`text-white rounded-full p-3 shrink-0 ${
-                  solicitudCert?.status === 'pendiente' ? 'bg-amber-500' :
-                  solicitudCert?.status === 'aprobado' ? 'bg-emerald-600' :
-                  solicitudCert?.status === 'rechazado' ? 'bg-red-500' :
-                  'bg-emerald-600'
-                }`}>
-                  <FileText className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900">Certificado Laboral</h3>
-                  {!solicitudCert && (
-                    <p className="text-sm text-slate-600">
-                      {employee.cedula
-                        ? `Salario referencia: $${calcularSalarioPromedio().toLocaleString('es-CO')} (promedio últimos meses). El administrador revisará y aprobará.`
-                        : 'Falta tu cédula en el perfil. Pídele al administrador que la configure.'}
-                    </p>
-                  )}
-                  {solicitudCert?.status === 'pendiente' && (
-                    <p className="text-sm text-amber-700">⏳ Solicitud enviada el {solicitudCert.request_date} — en espera de aprobación del administrador.</p>
-                  )}
-                  {solicitudCert?.status === 'aprobado' && (
-                    <p className="text-sm text-emerald-700">✅ Aprobado — monto: <strong>${Number(solicitudCert.monto_aprobado).toLocaleString('es-CO')}</strong>. Listo para descargar.</p>
-                  )}
-                  {solicitudCert?.status === 'rechazado' && (
-                    <div>
-                      <p className="text-sm text-red-700">❌ Solicitud rechazada.{solicitudCert.admin_notes && ` Motivo: ${solicitudCert.admin_notes}`}</p>
-                      <p className="text-xs text-slate-500 mt-1">Puedes enviar una nueva solicitud.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+          <CardContent className="p-4 sm:p-6 space-y-4">
 
-              <div className="w-full sm:w-auto shrink-0">
-                {(!solicitudCert || solicitudCert.status === 'rechazado') && (
-                  <Button
-                    onClick={handleSolicitarCertificado}
-                    disabled={!employee.cedula || loadingSolicitud}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    {loadingSolicitud ? 'Enviando...' : 'Solicitar Certificado'}
-                  </Button>
-                )}
+            {/* Cabecera siempre visible */}
+            <div className="flex items-center gap-4">
+              <div className={`text-white rounded-full p-3 shrink-0 ${
+                solicitudCert?.status === 'pendiente' ? 'bg-amber-500' :
+                solicitudCert?.status === 'aprobado'  ? 'bg-emerald-600' :
+                solicitudCert?.status === 'rechazado' ? 'bg-red-500' :
+                'bg-emerald-600'
+              }`}>
+                <FileText className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900">Certificado Laboral</h3>
                 {solicitudCert?.status === 'pendiente' && (
-                  <span className="inline-flex items-center gap-2 text-amber-700 text-sm font-medium px-4 py-2 bg-amber-100 rounded-lg">
-                    <Hourglass className="w-4 h-4" /> En revisión
-                  </span>
+                  <p className="text-sm text-amber-700">⏳ Solicitud enviada el {solicitudCert.request_date} — esperando aprobación.</p>
                 )}
                 {solicitudCert?.status === 'aprobado' && (
-                  <Button
-                    onClick={handleDescargarCertificadoAprobado}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Descargar PDF
-                  </Button>
+                  <p className="text-sm text-emerald-700">✅ Aprobado · monto: <strong>${Number(solicitudCert.monto_aprobado).toLocaleString('es-CO')}</strong></p>
+                )}
+                {solicitudCert?.status === 'rechazado' && (
+                  <p className="text-sm text-red-700">❌ Rechazada.{solicitudCert.admin_notes ? ` Motivo: ${solicitudCert.admin_notes}` : ''} Puedes volver a solicitar.</p>
+                )}
+                {!solicitudCert && !showCertForm && (
+                  <p className="text-sm text-slate-600">Salario referencia: <strong>${calcularSalarioPromedio().toLocaleString('es-CO')}</strong> (promedio tus últimos meses). El admin revisará y aprobará.</p>
                 )}
               </div>
             </div>
+
+            {/* Formulario inline de cédula — aparece al pulsar Solicitar */}
+            {(!solicitudCert || solicitudCert.status === 'rechazado') && showCertForm && (
+              <div className="bg-white rounded-xl border border-emerald-200 p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-700">Completa tus datos para el certificado</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-600">Cédula de ciudadanía *</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ej: 53.041.786"
+                      value={certFormData.cedula}
+                      onChange={e => setCertFormData(p => ({ ...p, cedula: e.target.value }))}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-600">Género</label>
+                    <select
+                      value={certFormData.genero}
+                      onChange={e => setCertFormData(p => ({ ...p, genero: e.target.value }))}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="F">Femenino</option>
+                      <option value="M">Masculino</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setShowCertForm(false)}
+                    disabled={loadingSolicitud}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={handleSolicitarCertificado}
+                    disabled={!certFormData.cedula.trim() || loadingSolicitud}
+                  >
+                    {loadingSolicitud ? 'Enviando...' : 'Enviar solicitud'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Botones de acción */}
+            <div className="flex justify-end">
+              {(!solicitudCert || solicitudCert.status === 'rechazado') && !showCertForm && (
+                <Button
+                  onClick={() => { setShowCertForm(true); setCertFormData({ cedula: employee.cedula || '', genero: employee.genero || 'F' }); }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Solicitar Certificado
+                </Button>
+              )}
+              {solicitudCert?.status === 'pendiente' && (
+                <span className="inline-flex items-center gap-2 text-amber-700 text-sm font-medium px-4 py-2 bg-amber-100 rounded-lg">
+                  <Hourglass className="w-4 h-4" /> En revisión
+                </span>
+              )}
+              {solicitudCert?.status === 'aprobado' && (
+                <Button
+                  onClick={handleDescargarCertificadoAprobado}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Descargar PDF
+                </Button>
+              )}
+            </div>
+
           </CardContent>
         </Card>
 
