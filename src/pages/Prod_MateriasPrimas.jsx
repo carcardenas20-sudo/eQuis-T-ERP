@@ -77,12 +77,12 @@ export default function MateriasPrimas() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-2">Materias Primas</h1>
-            <p className="text-slate-600 text-lg">Gestiona el inventario de materiales para tus chaquetas</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 mb-2">Materias Primas</h1>
+            <p className="text-slate-600 text-sm sm:text-lg">Gestiona el inventario de materiales para tus chaquetas</p>
           </div>
-          <Button 
+          <Button
             onClick={() => setShowForm(true)}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-6 py-3 shadow-lg"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-6 py-3 shadow-lg w-full md:w-auto"
           >
             <Plus className="w-5 h-5 mr-2" />
             Nueva Materia Prima
@@ -117,7 +117,7 @@ export default function MateriasPrimas() {
         )}
 
         {/* Materials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
           {isLoading ? (
             Array(6).fill(0).map((_, i) => (
               <Card key={i} className="bg-white animate-pulse">

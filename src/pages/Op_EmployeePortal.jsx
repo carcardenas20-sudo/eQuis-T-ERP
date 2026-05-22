@@ -490,19 +490,19 @@ export default function EmployeePortal() {
 
   return (
     <div className="bg-slate-100 min-h-screen">
-      <header className="bg-white shadow-sm py-6">
+      <header className="bg-white shadow-sm py-4 sm:py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
-              <Factory className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
+              <Factory className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <h2 className="font-bold text-slate-900 text-lg">Producción eQuis-T</h2>
+            <h2 className="font-bold text-slate-900 text-base sm:text-lg">Producción eQuis-T</h2>
           </div>
 
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2 flex items-center gap-3">
-                <User className="w-8 h-8" />
+              <h1 className="text-xl sm:text-3xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+                <User className="w-6 h-6 sm:w-8 sm:h-8 shrink-0" />
                 {employee.name}
               </h1>
               <div className="flex flex-wrap gap-4 text-sm text-slate-600">
@@ -520,7 +520,7 @@ export default function EmployeePortal() {
       </header>
       
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6">
           <Card>
             <CardContent className="p-6 flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><DollarSign className="w-6 h-6 text-green-600" /></div><div><p className="text-sm text-slate-600">Total Recibido</p><p className="text-2xl font-bold text-green-700">${stats.totalEarned.toLocaleString()}</p></div></CardContent>
           </Card>

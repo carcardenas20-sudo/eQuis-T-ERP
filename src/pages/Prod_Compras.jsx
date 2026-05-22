@@ -182,7 +182,7 @@ export default function Compras() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
           <Card className="bg-white border-slate-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -286,7 +286,7 @@ export default function Compras() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               {isLoading ? (
                 Array(6).fill(0).map((_, i) => (
                   <Card key={i} className="animate-pulse">
@@ -339,7 +339,7 @@ export default function Compras() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               {isLoading ? (
                 Array(6).fill(0).map((_, i) => (
                   <Card key={i} className="animate-pulse">
@@ -396,7 +396,7 @@ export default function Compras() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               {isLoading ? (
                 Array(6).fill(0).map((_, i) => (
                   <Card key={i} className="animate-pulse">
@@ -442,7 +442,7 @@ export default function Compras() {
               <h2 className="text-xl sm:text-2xl font-bold">Estados de Cuenta por Proveedor</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               {proveedores.map((proveedor) => {
                 const facturasProveedor = facturas.filter(f => f.proveedor_id === proveedor.id);
                 const totalDeuda = facturasProveedor.reduce((sum, f) => sum + (f.saldo_pendiente || 0), 0);

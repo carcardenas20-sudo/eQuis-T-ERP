@@ -106,10 +106,10 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen">
+    <div className="p-3 sm:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+        <div className="mb-5 sm:mb-8">
+          <h1 className="text-xl sm:text-3xl font-bold text-slate-900 mb-2 flex items-center gap-2">
             <LayoutDashboard className="w-7 h-7" />
             Dashboard Principal
           </h1>

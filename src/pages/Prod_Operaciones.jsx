@@ -156,8 +156,8 @@ export default function Operaciones() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-2">Operaciones de Producción</h1>
-            <p className="text-slate-600 text-lg">Configura qué materiales activan cada tipo de remisión</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 mb-2">Operaciones de Producción</h1>
+            <p className="text-slate-600 text-sm sm:text-lg">Configura qué materiales activan cada tipo de remisión</p>
           </div>
           <div className="flex gap-3">
             {operaciones.length === 0 && (
