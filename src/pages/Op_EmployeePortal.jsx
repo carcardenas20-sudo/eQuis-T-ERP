@@ -49,22 +49,26 @@ function generateCertificadoHTML(emp, salarioCalculado) {
   const esFemenino = (emp.genero || 'F') === 'F';
   const tratamiento = esFemenino ? 'la señora' : 'el señor';
   const identificadoA = esFemenino ? 'identificada' : 'identificado';
+  const esRetiro = !!emp.fecha_retiro;
 
   const hireDate = emp.hire_date ? new Date(emp.hire_date + 'T00:00:00') : null;
   const mesInicio = hireDate ? MESES[hireDate.getMonth()] : '';
   const anioInicio = hireDate ? hireDate.getFullYear() : '';
 
   let periodoLaboral = '';
-  if (emp.fecha_retiro) {
+  if (esRetiro) {
     const retiro = new Date(emp.fecha_retiro + 'T00:00:00');
     periodoLaboral = `desde ${mesInicio} de ${anioInicio} hasta ${MESES[retiro.getMonth()]} de ${retiro.getFullYear()}`;
   } else {
     periodoLaboral = `desde ${mesInicio} de ${anioInicio} a la actualidad`;
   }
 
-  const salario = salarioCalculado > 0
-    ? Number(salarioCalculado).toLocaleString('es-CO') + ' de pesos'
-    : 'a convenir';
+  // Verbos: presente para activos, pasado para retirados
+  const laboraVerbo    = esRetiro ? 'laboró' : 'labora';
+  const desempenVerbo  = esRetiro ? 'desempeñando' : 'desempeñando'; // igual en ambos
+  const devengandoText = esRetiro
+    ? `devengó durante su vinculación un salario de ${salarioCalculado > 0 ? Number(salarioCalculado).toLocaleString('es-CO') + ' de pesos' : 'a convenir'}`
+    : `devengando un salario a ${anio} de ${salarioCalculado > 0 ? Number(salarioCalculado).toLocaleString('es-CO') + ' de pesos' : 'a convenir'}`;
 
   const cedula = emp.cedula || '[cédula no registrada]';
   const cargo = emp.position || '[cargo no registrado]';
@@ -145,9 +149,9 @@ function generateCertificadoHTML(emp, salarioCalculado) {
 
     <div class="cuerpo">
       Que ${tratamiento} <strong>${emp.name},</strong> ${identificadoA} con cédula de ciudadanía No.
-      <strong>${cedula}</strong> expedida en Bogotá labora en nuestra empresa ${periodoLaboral},
-      desempeñando el cargo de <strong>${cargo}</strong> con un contrato a término indefinido
-      y devengando un salario a ${anio} de ${salario}.
+      <strong>${cedula}</strong> expedida en Bogotá ${laboraVerbo} en nuestra empresa ${periodoLaboral},
+      ${desempenVerbo} el cargo de <strong>${cargo}</strong> con un contrato a término indefinido
+      y ${devengandoText}.
     </div>
 
     <div class="damos-fe">
@@ -199,7 +203,7 @@ export default function EmployeePortal() {
   const [solicitudCert, setSolicitudCert] = useState(null);
   const [loadingSolicitud, setLoadingSolicitud] = useState(false);
   const [showCertForm, setShowCertForm] = useState(false);
-  const [certFormData, setCertFormData] = useState({ cedula: '', genero: 'F' });
+  const [certFormData, setCertFormData] = useState({ cedula: '', genero: 'F', fecha_retiro: '' });
   const [calculationSteps, setCalculationSteps] = useState([]);
 
   // PIN state
@@ -562,7 +566,7 @@ export default function EmployeePortal() {
         cedula,
         cargo: employee.position || '',
         hire_date: employee.hire_date || '',
-        fecha_retiro: employee.fecha_retiro || '',
+        fecha_retiro: certFormData.fecha_retiro || employee.fecha_retiro || '',
         genero: certFormData.genero || employee.genero || 'F',
         monto_sugerido: calcularSalarioPromedio(),
         status: 'pendiente',
@@ -578,7 +582,14 @@ export default function EmployeePortal() {
 
   const handleDescargarCertificadoAprobado = () => {
     if (!solicitudCert || solicitudCert.status !== 'aprobado') return;
-    const html = generateCertificadoHTML(employee, solicitudCert.monto_aprobado);
+    // Usar datos de la solicitud (cédula, género, fecha_retiro ingresados por el operario)
+    const empData = {
+      ...employee,
+      cedula:       solicitudCert.cedula       || employee.cedula,
+      genero:       solicitudCert.genero       || employee.genero,
+      fecha_retiro: solicitudCert.fecha_retiro || employee.fecha_retiro || '',
+    };
+    const html = generateCertificadoHTML(empData, solicitudCert.monto_aprobado);
     const win = window.open('', '_blank');
     if (!win) {
       alert('Tu navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio.');
@@ -870,6 +881,17 @@ export default function EmployeePortal() {
                     </select>
                   </div>
                 </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-600">
+                    Fecha de retiro <span className="text-slate-400 font-normal">(solo si ya no trabajas aquí)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={certFormData.fecha_retiro}
+                    onChange={e => setCertFormData(p => ({ ...p, fecha_retiro: e.target.value }))}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
                 <div className="flex gap-2 pt-1">
                   <Button
                     variant="outline"
@@ -896,7 +918,7 @@ export default function EmployeePortal() {
             <div className="flex justify-end">
               {(!solicitudCert || solicitudCert.status === 'rechazado') && !showCertForm && (
                 <Button
-                  onClick={() => { setShowCertForm(true); setCertFormData({ cedula: employee.cedula || '', genero: employee.genero || 'F' }); }}
+                  onClick={() => { setShowCertForm(true); setCertFormData({ cedula: employee.cedula || '', genero: employee.genero || 'F', fecha_retiro: employee.fecha_retiro || '' }); }}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
                 >
                   <FileText className="w-4 h-4 mr-2" />
