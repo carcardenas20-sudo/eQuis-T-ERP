@@ -203,7 +203,7 @@ export default function EmployeePortal() {
   const [solicitudCert, setSolicitudCert] = useState(null);
   const [loadingSolicitud, setLoadingSolicitud] = useState(false);
   const [showCertForm, setShowCertForm] = useState(false);
-  const [certFormData, setCertFormData] = useState({ cedula: '', genero: 'F', fecha_retiro: '' });
+  const [certFormData, setCertFormData] = useState({ cedula: '', genero: 'F', fecha_retiro: '', monto: '' });
   const [calculationSteps, setCalculationSteps] = useState([]);
 
   // PIN state
@@ -560,6 +560,7 @@ export default function EmployeePortal() {
     try {
       const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))
         .toISOString().split('T')[0];
+      const montoSolicitado = Number(certFormData.monto) || calcularSalarioPromedio();
       const solicitud = await CertificadoSolicitud.create({
         employee_id: employee.employee_id,
         employee_name: employee.name,
@@ -568,7 +569,8 @@ export default function EmployeePortal() {
         hire_date: employee.hire_date || '',
         fecha_retiro: certFormData.fecha_retiro || employee.fecha_retiro || '',
         genero: certFormData.genero || employee.genero || 'F',
-        monto_sugerido: calcularSalarioPromedio(),
+        monto_sugerido: montoSolicitado,
+        monto_calculado: calcularSalarioPromedio(),
         status: 'pendiente',
         request_date: hoy,
       });
@@ -892,6 +894,25 @@ export default function EmployeePortal() {
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
                   />
                 </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-600">
+                    Monto a certificar ($) *
+                    <span className="text-slate-400 font-normal ml-1">— el admin puede ajustarlo antes de aprobar</span>
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="Ej: 3000000"
+                    value={certFormData.monto}
+                    onChange={e => setCertFormData(p => ({ ...p, monto: e.target.value }))}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:outline-none focus:border-emerald-500"
+                  />
+                  {calcularSalarioPromedio() > 0 && (
+                    <p className="text-xs text-emerald-600">
+                      Promedio de tus últimos meses: <strong>${calcularSalarioPromedio().toLocaleString('es-CO')}</strong>
+                    </p>
+                  )}
+                </div>
                 <div className="flex gap-2 pt-1">
                   <Button
                     variant="outline"
@@ -918,7 +939,7 @@ export default function EmployeePortal() {
             <div className="flex justify-end">
               {(!solicitudCert || solicitudCert.status === 'rechazado') && !showCertForm && (
                 <Button
-                  onClick={() => { setShowCertForm(true); setCertFormData({ cedula: employee.cedula || '', genero: employee.genero || 'F', fecha_retiro: employee.fecha_retiro || '' }); }}
+                  onClick={() => { setShowCertForm(true); setCertFormData({ cedula: employee.cedula || '', genero: employee.genero || 'F', fecha_retiro: employee.fecha_retiro || '', monto: String(calcularSalarioPromedio() || '') }); }}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
                 >
                   <FileText className="w-4 h-4 mr-2" />

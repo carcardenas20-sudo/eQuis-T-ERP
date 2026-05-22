@@ -383,10 +383,16 @@ export default function Employees() {
                     <p className="text-xs text-slate-500">
                       {sol.cargo} · Solicitado: {sol.request_date} · CC: {sol.cedula}
                     </p>
-                    <p className="text-sm text-emerald-800 mt-1">
-                      Monto sugerido (promedio entregas):&nbsp;
-                      <strong>${Number(sol.monto_sugerido || 0).toLocaleString('es-CO')}</strong>
-                    </p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+                      <p className="text-sm text-emerald-800">
+                        Operario solicitó: <strong>${Number(sol.monto_sugerido || 0).toLocaleString('es-CO')}</strong>
+                      </p>
+                      {sol.monto_calculado > 0 && sol.monto_calculado !== sol.monto_sugerido && (
+                        <p className="text-sm text-slate-500">
+                          Promedio real: ${Number(sol.monto_calculado).toLocaleString('es-CO')}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <Button
@@ -542,9 +548,14 @@ export default function Employees() {
             <p><span className="text-slate-500">Cargo:</span> <strong>{certModal.solicitud.cargo || '—'}</strong></p>
             <p><span className="text-slate-500">Cédula:</span> <strong>{certModal.solicitud.cedula}</strong></p>
             <p><span className="text-slate-500">Vinculación:</span> <strong>{certModal.solicitud.hire_date}</strong></p>
-            <p className="pt-1 text-emerald-700 font-medium">
-              Monto sugerido (promedio entregas): ${Number(certModal.solicitud.monto_sugerido || 0).toLocaleString('es-CO')}
+            <p className="pt-1 text-emerald-800 font-semibold">
+              Operario solicitó: ${Number(certModal.solicitud.monto_sugerido || 0).toLocaleString('es-CO')}
             </p>
+            {certModal.solicitud.monto_calculado > 0 && (
+              <p className="text-slate-500">
+                Promedio real de entregas: ${Number(certModal.solicitud.monto_calculado).toLocaleString('es-CO')}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
