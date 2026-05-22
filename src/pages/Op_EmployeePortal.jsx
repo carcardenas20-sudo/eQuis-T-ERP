@@ -952,13 +952,26 @@ export default function EmployeePortal() {
                 </span>
               )}
               {solicitudCert?.status === 'aprobado' && (
-                <Button
-                  onClick={handleDescargarCertificadoAprobado}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Descargar PDF
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <Button
+                    onClick={handleDescargarCertificadoAprobado}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Descargar PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 w-full sm:w-auto text-sm"
+                    onClick={() => {
+                      setSolicitudCert(null);
+                      setShowCertForm(true);
+                      setCertFormData({ cedula: employee.cedula || '', genero: employee.genero || 'F', fecha_retiro: employee.fecha_retiro || '', monto: String(calcularSalarioPromedio() || '') });
+                    }}
+                  >
+                    Solicitar nuevo
+                  </Button>
+                </div>
               )}
             </div>
 
