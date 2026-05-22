@@ -92,12 +92,12 @@ export default function Colores() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-2">Gestión de Colores</h1>
-            <p className="text-slate-600 text-lg">Administra la paleta de colores disponible para las chaquetas</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 mb-2">Gestión de Colores</h1>
+            <p className="text-slate-600 text-sm sm:text-lg">Administra la paleta de colores disponible para las chaquetas</p>
           </div>
-          <Button 
+          <Button
             onClick={() => setShowForm(true)}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium px-6 py-3 shadow-lg"
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium px-6 py-3 shadow-lg w-full md:w-auto"
           >
             <Plus className="w-5 h-5 mr-2" />
             Nuevo Color
