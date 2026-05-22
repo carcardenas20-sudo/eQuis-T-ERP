@@ -37,7 +37,7 @@ const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto'
 const DIAS_ES = ['','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte','veintiuno','veintidós','veintitrés','veinticuatro','veinticinco','veintiséis','veintisiete','veintiocho','veintinueve','treinta','treinta y uno'];
 const ANIOS_ES = {2020:'dos mil veinte',2021:'dos mil veintiuno',2022:'dos mil veintidós',2023:'dos mil veintitrés',2024:'dos mil veinticuatro',2025:'dos mil veinticinco',2026:'dos mil veintiséis',2027:'dos mil veintisiete',2028:'dos mil veintiocho',2029:'dos mil veintinueve',2030:'dos mil treinta',2031:'dos mil treinta y uno'};
 
-function generateCertificadoHTML(emp) {
+function generateCertificadoHTML(emp, salarioCalculado) {
   const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
   const dia = hoy.getDate();
   const mes = MESES[hoy.getMonth()];
@@ -61,9 +61,9 @@ function generateCertificadoHTML(emp) {
     periodoLaboral = `desde ${mesInicio} de ${anioInicio} a la actualidad`;
   }
 
-  const salario = emp.salario_certificado
-    ? Number(emp.salario_certificado).toLocaleString('es-CO') + ' de pesos'
-    : '[salario no configurado]';
+  const salario = salarioCalculado > 0
+    ? Number(salarioCalculado).toLocaleString('es-CO') + ' de pesos'
+    : 'a convenir';
 
   const cedula = emp.cedula || '[cédula no registrada]';
   const cargo = emp.position || '[cargo no registrado]';
@@ -521,7 +521,36 @@ export default function EmployeePortal() {
   };
   
   const handleDescargarCertificado = () => {
-    const html = generateCertificadoHTML(employee);
+    // Calcular promedio mensual de los últimos 3 meses completos
+    const mesActual = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))
+      .toISOString().substring(0, 7);
+
+    const byMonth = {};
+    data.deliveries.forEach(d => {
+      if (!d.delivery_date || !d.total_amount) return;
+      if (d.notes && d.notes.includes('Compra empleado')) return;
+      const month = d.delivery_date.substring(0, 7);
+      byMonth[month] = (byMonth[month] || 0) + d.total_amount;
+    });
+
+    const mesesCompletos = Object.keys(byMonth).sort().filter(m => m < mesActual);
+    const mesesRecientes = mesesCompletos.slice(-3);
+
+    let salarioPromedio = 0;
+    if (mesesRecientes.length > 0) {
+      const total = mesesRecientes.reduce((sum, m) => sum + byMonth[m], 0);
+      // Redondear al 10.000 más cercano
+      salarioPromedio = Math.round((total / mesesRecientes.length) / 10000) * 10000;
+    } else {
+      // Si no hay meses completos, usar lo que haya
+      const todosLosMeses = Object.keys(byMonth);
+      if (todosLosMeses.length > 0) {
+        const total = todosLosMeses.reduce((sum, m) => sum + byMonth[m], 0);
+        salarioPromedio = Math.round((total / todosLosMeses.length) / 10000) * 10000;
+      }
+    }
+
+    const html = generateCertificadoHTML(employee, salarioPromedio);
     const win = window.open('', '_blank');
     if (!win) {
       alert('Tu navegador bloqueó la ventana emergente. Por favor permite ventanas emergentes para este sitio e intenta de nuevo.');
@@ -757,20 +786,16 @@ export default function EmployeePortal() {
               </div>
               <div>
                 <h3 className="font-bold text-emerald-900">Certificado Laboral</h3>
-                {employee.cedula && employee.salario_certificado ? (
-                  <p className="text-sm text-emerald-700">Tu certificado está listo. Se abrirá listo para guardar como PDF.</p>
+                {employee.cedula ? (
+                  <p className="text-sm text-emerald-700">Tu certificado está listo. El salario se calcula del promedio de tus últimos meses.</p>
                 ) : (
-                  <p className="text-sm text-emerald-700">
-                    {!employee.cedula && 'Falta cédula. '}
-                    {!employee.salario_certificado && 'Falta salario. '}
-                    Pídele al administrador que complete tu perfil.
-                  </p>
+                  <p className="text-sm text-emerald-700">Falta tu número de cédula. Pídele al administrador que lo configure en tu perfil.</p>
                 )}
               </div>
             </div>
             <Button
               onClick={handleDescargarCertificado}
-              disabled={!employee.cedula || !employee.salario_certificado}
+              disabled={!employee.cedula}
               className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 w-full sm:w-auto"
             >
               <FileText className="w-4 h-4 mr-2" />

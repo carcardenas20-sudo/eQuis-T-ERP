@@ -72,7 +72,6 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
     onSubmit({
       ...formData,
       salary_per_unit: formData.salary_per_unit ? parseFloat(formData.salary_per_unit) : undefined,
-      salario_certificado: formData.salario_certificado ? parseFloat(formData.salario_certificado) : undefined,
       fecha_retiro: formData.fecha_retiro || undefined
     });
   };
@@ -192,17 +191,6 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="salario_certificado">Salario para certificado ($)</Label>
-                <Input
-                  id="salario_certificado"
-                  type="number"
-                  value={formData.salario_certificado || ''}
-                  onChange={(e) => handleInputChange('salario_certificado', e.target.value)}
-                  placeholder="Ej: 3000000"
-                />
-                <p className="text-xs text-slate-400">Monto que aparecerá en el certificado laboral</p>
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="fecha_retiro">Fecha de retiro (si aplica)</Label>
                 <Input
