@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Plus, DollarSign, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { format } from "date-fns";
 
 import PaymentForm from "../components/payments/PaymentForm";
 import PaymentsHistory from "../components/payments/PaymentsHistory";
@@ -16,6 +17,7 @@ export default function Payments() {
   const [payments, setPayments] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [paymentRequests, setPaymentRequests] = useState([]);
+  const [allPaymentRequests, setAllPaymentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -34,13 +36,14 @@ export default function Payments() {
         base44.entities.Delivery.list(),
         base44.entities.Payment.list('-payment_date'),
         base44.entities.EmployeePurchase.list(),
-        base44.entities.PaymentRequest.filter({ status: 'pending' }, '-request_date'),
+        base44.entities.PaymentRequest.list('-request_date'),
       ]);
       setEmployees(employeesData.filter(e => e.is_active));
       setDeliveries(deliveriesData);
       setPayments(paymentsData);
       setPurchases(purchasesData || []);
-      setPaymentRequests(requestsData || []);
+      setAllPaymentRequests(requestsData || []);
+      setPaymentRequests((requestsData || []).filter(r => r.status === 'pending'));
     } catch (err) {
       console.error("Error cargando datos:", err);
     }
@@ -358,12 +361,21 @@ export default function Payments() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {paymentRequests.map(req => (
+                        {paymentRequests.map(req => {
+                          const lastPayment = payments.find(p => p.employee_id === req.employee_id);
+                          return (
                           <div key={req.id} className="flex items-center justify-between gap-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-slate-900">{req.employee_name}</p>
-                              <p className="text-xs text-slate-500">ID: {req.employee_id} · {req.request_date}</p>
+                              <p className="text-xs text-slate-500">ID: {req.employee_id} · Solicitó el {req.request_date}</p>
                               <p className="text-xl font-bold text-blue-700 mt-1">${req.requested_amount?.toLocaleString()}</p>
+                              {lastPayment ? (
+                                <p className="text-xs text-emerald-600 mt-1">
+                                  Último pago: {format(new Date(lastPayment.payment_date), 'dd/MM/yy')} · ${lastPayment.amount.toLocaleString()}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-slate-400 mt-1">Sin pagos anteriores</p>
+                              )}
                             </div>
                             <div className="flex gap-2 shrink-0">
                               <Button
@@ -387,7 +399,8 @@ export default function Payments() {
                               </Button>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </CardContent>
@@ -409,11 +422,25 @@ export default function Payments() {
                       .filter(emp => pendingPayments[emp.employee_id] && pendingPayments[emp.employee_id].total !== 0)
                       .map(employee => {
                         const pending = pendingPayments[employee.employee_id];
+                        const lastPayment = payments.find(p => p.employee_id === employee.employee_id);
+                        const lastRequest = allPaymentRequests.find(r => r.employee_id === employee.employee_id);
                         return (
                           <Card key={employee.id} className="border-slate-200 flex flex-col">
                             <CardContent className="p-6 flex-1">
-                              <h3 className="font-bold text-slate-900 text-lg mb-2">{employee.name}</h3>
-                              <p className="text-sm text-slate-600 mb-4">ID: {employee.employee_id}</p>
+                              <h3 className="font-bold text-slate-900 text-lg mb-1">{employee.name}</h3>
+                              <p className="text-sm text-slate-600 mb-1">ID: {employee.employee_id}</p>
+                              <div className="text-xs text-slate-500 space-y-0.5 mb-3">
+                                {lastRequest ? (
+                                  <p>Última sol.: {lastRequest.request_date} · ${lastRequest.requested_amount?.toLocaleString()}</p>
+                                ) : (
+                                  <p>Sin solicitudes previas</p>
+                                )}
+                                {lastPayment ? (
+                                  <p className="text-emerald-600">Último pago: {format(new Date(lastPayment.payment_date), 'dd/MM/yy')} · ${lastPayment.amount.toLocaleString()}</p>
+                                ) : (
+                                  <p>Sin pagos anteriores</p>
+                                )}
+                              </div>
                               
                               <div className={`text-center p-4 rounded-lg mb-4 ${pending.total < 0 ? 'bg-red-50' : 'bg-orange-50'}`}>
                                 <p className={`text-sm ${pending.total < 0 ? 'text-red-700' : 'text-orange-700'}`}>
@@ -452,9 +479,10 @@ export default function Payments() {
               </TabsContent>
 
               <TabsContent value="history">
-                <PaymentsHistory 
-                  payments={payments} 
+                <PaymentsHistory
+                  payments={payments}
                   employees={employees}
+                  paymentRequests={allPaymentRequests}
                   onDelete={handleDeletePayment}
                 />
               </TabsContent>
