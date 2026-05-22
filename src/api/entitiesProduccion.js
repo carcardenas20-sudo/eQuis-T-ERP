@@ -9,3 +9,4 @@ export const PaymentRequest = base44Produccion.entities.PaymentRequest;
 export const ActivityLog = base44Produccion.entities.ActivityLog;
 export const AppConfig = base44Produccion.entities.AppConfig;
 export const Devolucion = base44Produccion.entities.Devolucion;
+export const CertificadoSolicitud = base44Produccion.entities.CertificadoSolicitud;

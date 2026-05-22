@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { portalClient } from "@/api/portalClient";
-const { Delivery, Dispatch, Payment, PaymentRequest, Producto: ProductoEntity, AppConfig, EmployeePurchase } = {
+const { Delivery, Dispatch, Payment, PaymentRequest, Producto: ProductoEntity, AppConfig, EmployeePurchase, CertificadoSolicitud } = {
   Delivery: portalClient.entities.Delivery,
   Dispatch: portalClient.entities.Dispatch,
   Payment: portalClient.entities.Payment,
@@ -9,6 +9,7 @@ const { Delivery, Dispatch, Payment, PaymentRequest, Producto: ProductoEntity, A
   Producto: portalClient.entities.Producto,
   AppConfig: portalClient.entities.AppConfig,
   EmployeePurchase: portalClient.entities.EmployeePurchase,
+  CertificadoSolicitud: portalClient.entities.CertificadoSolicitud,
 };
 
 // Carga empleado verificando PIN en el servidor
@@ -195,6 +196,8 @@ export default function EmployeePortal() {
   const [isPaymentWindowOpen, setIsPaymentWindowOpen] = useState(false);
   const [paymentWindowClosesAt, setPaymentWindowClosesAt] = useState(null);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
+  const [solicitudCert, setSolicitudCert] = useState(null);   // última solicitud de certificado
+  const [loadingSolicitud, setLoadingSolicitud] = useState(false);
   const [calculationSteps, setCalculationSteps] = useState([]);
 
   // PIN state
@@ -245,18 +248,22 @@ export default function EmployeePortal() {
       try {
         const empId = employee?.employee_id || employeeId;
 
-        const [deliveries, dispatches, payments, products, existingRequests, purchases] = await Promise.all([
+        const [deliveries, dispatches, payments, products, existingRequests, purchases, certSolicitudes] = await Promise.all([
           Delivery.filter({ employee_id: empId }),
           Dispatch.filter({ employee_id: empId }),
           Payment.filter({ employee_id: empId }, '-payment_date'),
           ProductoEntity.list(),
           PaymentRequest.filter({ employee_id: empId, status: 'pending' }),
-          EmployeePurchase.filter({ employee_id: empId })
+          EmployeePurchase.filter({ employee_id: empId }),
+          CertificadoSolicitud.filter({ employee_id: empId }, '-request_date'),
         ]);
 
         const normProducts = (products || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra }));
         setData({ deliveries, dispatches, payments, products: normProducts, purchases: purchases || [] });
         setHasPendingRequest(existingRequests.length > 0);
+        // Tomar la solicitud de certificado más reciente
+        const ultimaSolicitud = (certSolicitudes || []).sort((a, b) => new Date(b.request_date) - new Date(a.request_date))[0] || null;
+        setSolicitudCert(ultimaSolicitud);
         calculateStats(deliveries, dispatches, payments, purchases || []);
         calculateBalance(deliveries, dispatches, payments, normProducts, purchases || []);
 
@@ -520,40 +527,60 @@ export default function EmployeePortal() {
     setCalculationSteps(steps);
   };
   
-  const handleDescargarCertificado = () => {
-    // Calcular promedio mensual de los últimos 3 meses completos
+  const calcularSalarioPromedio = () => {
     const mesActual = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))
       .toISOString().substring(0, 7);
-
     const byMonth = {};
     data.deliveries.forEach(d => {
       if (!d.delivery_date || !d.total_amount) return;
       if (d.notes && d.notes.includes('Compra empleado')) return;
-      const month = d.delivery_date.substring(0, 7);
-      byMonth[month] = (byMonth[month] || 0) + d.total_amount;
+      byMonth[d.delivery_date.substring(0, 7)] = (byMonth[d.delivery_date.substring(0, 7)] || 0) + d.total_amount;
     });
-
-    const mesesCompletos = Object.keys(byMonth).sort().filter(m => m < mesActual);
-    const mesesRecientes = mesesCompletos.slice(-3);
-
-    let salarioPromedio = 0;
-    if (mesesRecientes.length > 0) {
-      const total = mesesRecientes.reduce((sum, m) => sum + byMonth[m], 0);
-      // Redondear al 10.000 más cercano
-      salarioPromedio = Math.round((total / mesesRecientes.length) / 10000) * 10000;
-    } else {
-      // Si no hay meses completos, usar lo que haya
-      const todosLosMeses = Object.keys(byMonth);
-      if (todosLosMeses.length > 0) {
-        const total = todosLosMeses.reduce((sum, m) => sum + byMonth[m], 0);
-        salarioPromedio = Math.round((total / todosLosMeses.length) / 10000) * 10000;
-      }
+    const meses = Object.keys(byMonth).sort().filter(m => m < mesActual).slice(-3);
+    if (meses.length > 0) {
+      return Math.round((meses.reduce((s, m) => s + byMonth[m], 0) / meses.length) / 10000) * 10000;
     }
+    const todos = Object.keys(byMonth);
+    if (todos.length > 0) {
+      return Math.round((todos.reduce((s, m) => s + byMonth[m], 0) / todos.length) / 10000) * 10000;
+    }
+    return 0;
+  };
 
-    const html = generateCertificadoHTML(employee, salarioPromedio);
+  const handleSolicitarCertificado = async () => {
+    if (!employee.cedula) {
+      alert('Tu perfil no tiene cédula registrada. Pídele al administrador que la configure.');
+      return;
+    }
+    setLoadingSolicitud(true);
+    try {
+      const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))
+        .toISOString().split('T')[0];
+      const solicitud = await CertificadoSolicitud.create({
+        employee_id: employee.employee_id,
+        employee_name: employee.name,
+        cedula: employee.cedula,
+        cargo: employee.position || '',
+        hire_date: employee.hire_date || '',
+        fecha_retiro: employee.fecha_retiro || '',
+        genero: employee.genero || 'F',
+        monto_sugerido: calcularSalarioPromedio(),
+        status: 'pendiente',
+        request_date: hoy,
+      });
+      setSolicitudCert(solicitud);
+    } catch (e) {
+      alert('Error al enviar la solicitud. Intenta de nuevo.');
+    }
+    setLoadingSolicitud(false);
+  };
+
+  const handleDescargarCertificadoAprobado = () => {
+    if (!solicitudCert || solicitudCert.status !== 'aprobado') return;
+    const html = generateCertificadoHTML(employee, solicitudCert.monto_aprobado);
     const win = window.open('', '_blank');
     if (!win) {
-      alert('Tu navegador bloqueó la ventana emergente. Por favor permite ventanas emergentes para este sitio e intenta de nuevo.');
+      alert('Tu navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio.');
       return;
     }
     win.document.write(html);
@@ -778,29 +805,74 @@ export default function EmployeePortal() {
         </Card>
 
         {/* Certificado Laboral */}
-        <Card className="mb-6 border-emerald-200 bg-emerald-50">
-          <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="bg-emerald-600 text-white rounded-full p-3 shrink-0">
-                <FileText className="w-6 h-6" />
+        <Card className={`mb-6 ${
+          !solicitudCert ? 'border-emerald-200 bg-emerald-50' :
+          solicitudCert.status === 'pendiente' ? 'border-amber-200 bg-amber-50' :
+          solicitudCert.status === 'aprobado' ? 'border-emerald-200 bg-emerald-50' :
+          'border-red-200 bg-red-50'
+        }`}>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className={`text-white rounded-full p-3 shrink-0 ${
+                  solicitudCert?.status === 'pendiente' ? 'bg-amber-500' :
+                  solicitudCert?.status === 'aprobado' ? 'bg-emerald-600' :
+                  solicitudCert?.status === 'rechazado' ? 'bg-red-500' :
+                  'bg-emerald-600'
+                }`}>
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">Certificado Laboral</h3>
+                  {!solicitudCert && (
+                    <p className="text-sm text-slate-600">
+                      {employee.cedula
+                        ? `Salario referencia: $${calcularSalarioPromedio().toLocaleString('es-CO')} (promedio últimos meses). El administrador revisará y aprobará.`
+                        : 'Falta tu cédula en el perfil. Pídele al administrador que la configure.'}
+                    </p>
+                  )}
+                  {solicitudCert?.status === 'pendiente' && (
+                    <p className="text-sm text-amber-700">⏳ Solicitud enviada el {solicitudCert.request_date} — en espera de aprobación del administrador.</p>
+                  )}
+                  {solicitudCert?.status === 'aprobado' && (
+                    <p className="text-sm text-emerald-700">✅ Aprobado — monto: <strong>${Number(solicitudCert.monto_aprobado).toLocaleString('es-CO')}</strong>. Listo para descargar.</p>
+                  )}
+                  {solicitudCert?.status === 'rechazado' && (
+                    <div>
+                      <p className="text-sm text-red-700">❌ Solicitud rechazada.{solicitudCert.admin_notes && ` Motivo: ${solicitudCert.admin_notes}`}</p>
+                      <p className="text-xs text-slate-500 mt-1">Puedes enviar una nueva solicitud.</p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-emerald-900">Certificado Laboral</h3>
-                {employee.cedula ? (
-                  <p className="text-sm text-emerald-700">Tu certificado está listo. El salario se calcula del promedio de tus últimos meses.</p>
-                ) : (
-                  <p className="text-sm text-emerald-700">Falta tu número de cédula. Pídele al administrador que lo configure en tu perfil.</p>
+
+              <div className="w-full sm:w-auto shrink-0">
+                {(!solicitudCert || solicitudCert.status === 'rechazado') && (
+                  <Button
+                    onClick={handleSolicitarCertificado}
+                    disabled={!employee.cedula || loadingSolicitud}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    {loadingSolicitud ? 'Enviando...' : 'Solicitar Certificado'}
+                  </Button>
+                )}
+                {solicitudCert?.status === 'pendiente' && (
+                  <span className="inline-flex items-center gap-2 text-amber-700 text-sm font-medium px-4 py-2 bg-amber-100 rounded-lg">
+                    <Hourglass className="w-4 h-4" /> En revisión
+                  </span>
+                )}
+                {solicitudCert?.status === 'aprobado' && (
+                  <Button
+                    onClick={handleDescargarCertificadoAprobado}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Descargar PDF
+                  </Button>
                 )}
               </div>
             </div>
-            <Button
-              onClick={handleDescargarCertificado}
-              disabled={!employee.cedula}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 w-full sm:w-auto"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Descargar Certificado
-            </Button>
           </CardContent>
         </Card>
 

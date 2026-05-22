@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Employee } from "@/api/entitiesProduccion";
+import { Employee, CertificadoSolicitud } from "@/api/entitiesProduccion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Phone, Calendar, Link as LinkIcon, Check, Eye, AlertTriangle, KeyRound, Users, ArrowRightLeft, Package } from "lucide-react";
+import { Plus, Edit, Trash2, Phone, Calendar, Link as LinkIcon, Check, Eye, AlertTriangle, KeyRound, Users, ArrowRightLeft, Package, FileText, CheckCircle, XCircle } from "lucide-react";
 import { Delivery, Dispatch, Payment } from "@/api/entitiesProduccion";
 import { Producto } from "@/api/entitiesChaquetas";
 import { format } from "date-fns";
@@ -26,6 +26,11 @@ export default function Employees() {
   const [pinValue, setPinValue] = useState('');
   const [savingPin, setSavingPin] = useState(false);
 
+  // Certificados laborales
+  const [solicitudesCert, setSolicitudesCert] = useState([]);
+  const [certModal, setCertModal] = useState(null); // { solicitud, montoAprobado }
+  const [savingCert, setSavingCert] = useState(false);
+
   // Gestión de prendas (bajas y traslados)
   const [gestionModal, setGestionModal] = useState(null); // employee
   const [gestionData, setGestionData] = useState({ dispatches: [], deliveries: [], products: [] });
@@ -41,13 +46,47 @@ export default function Employees() {
   const loadEmployees = async () => {
     setLoading(true);
     try {
-      const data = await Employee.list();
-      setEmployees(data || []);
+      const [empData, certData] = await Promise.all([
+        Employee.list(),
+        CertificadoSolicitud.filter({ status: 'pendiente' }, '-request_date'),
+      ]);
+      setEmployees(empData || []);
+      setSolicitudesCert(certData || []);
     } catch (err) {
       console.error("Error cargando empleados:", err);
       setEmployees([]);
     }
     setLoading(false);
+  };
+
+  const handleAprobarCertificado = async () => {
+    if (!certModal) return;
+    setSavingCert(true);
+    try {
+      const hoy = getColombiaToday();
+      await CertificadoSolicitud.update(certModal.solicitud.id, {
+        status: 'aprobado',
+        monto_aprobado: Number(certModal.montoAprobado),
+        approved_date: hoy,
+      });
+      setSolicitudesCert(prev => prev.filter(s => s.id !== certModal.solicitud.id));
+      setCertModal(null);
+    } catch (e) {
+      alert('Error al aprobar. Intenta de nuevo.');
+    }
+    setSavingCert(false);
+  };
+
+  const handleRechazarCertificado = async (solicitud, nota) => {
+    try {
+      await CertificadoSolicitud.update(solicitud.id, {
+        status: 'rechazado',
+        admin_notes: nota || '',
+      });
+      setSolicitudesCert(prev => prev.filter(s => s.id !== solicitud.id));
+    } catch (e) {
+      alert('Error al rechazar. Intenta de nuevo.');
+    }
   };
 
   const openGestion = async (employee) => {
@@ -327,6 +366,54 @@ export default function Employees() {
           </div>
         )}
 
+        {/* Panel de solicitudes de certificado laboral */}
+        {solicitudesCert.length > 0 && (
+          <div className="mb-6 rounded-xl border-2 border-emerald-300 bg-emerald-50 overflow-hidden">
+            <div className="px-5 py-3 bg-emerald-100 border-b border-emerald-200 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-emerald-700" />
+              <span className="font-semibold text-emerald-900">
+                {solicitudesCert.length} solicitud{solicitudesCert.length !== 1 ? 'es' : ''} de certificado laboral pendiente{solicitudesCert.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className="divide-y divide-emerald-100">
+              {solicitudesCert.map(sol => (
+                <div key={sol.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900">{sol.employee_name}</p>
+                    <p className="text-xs text-slate-500">
+                      {sol.cargo} · Solicitado: {sol.request_date} · CC: {sol.cedula}
+                    </p>
+                    <p className="text-sm text-emerald-800 mt-1">
+                      Monto sugerido (promedio entregas):&nbsp;
+                      <strong>${Number(sol.monto_sugerido || 0).toLocaleString('es-CO')}</strong>
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                      onClick={() => setCertModal({ solicitud: sol, montoAprobado: sol.monto_sugerido || 0 })}
+                    >
+                      <CheckCircle className="w-4 h-4" /> Aprobar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 border-red-300 hover:bg-red-50 gap-1.5"
+                      onClick={() => {
+                        const nota = window.prompt(`Motivo del rechazo para ${sol.employee_name} (opcional):`);
+                        if (nota !== null) handleRechazarCertificado(sol, nota);
+                      }}
+                    >
+                      <XCircle className="w-4 h-4" /> Rechazar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {showForm && (
           <EmployeeForm
             employee={editingEmployee}
@@ -436,6 +523,64 @@ export default function Employees() {
         </Card>
       </div>
     </div>
+
+    {/* Modal: Aprobación de certificado laboral */}
+    {certModal && (
+      <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <FileText className="w-6 h-6 text-emerald-700" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">Aprobar Certificado</h3>
+              <p className="text-sm text-slate-500">{certModal.solicitud.employee_name}</p>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 rounded-lg p-4 space-y-1 text-sm">
+            <p><span className="text-slate-500">Cargo:</span> <strong>{certModal.solicitud.cargo || '—'}</strong></p>
+            <p><span className="text-slate-500">Cédula:</span> <strong>{certModal.solicitud.cedula}</strong></p>
+            <p><span className="text-slate-500">Vinculación:</span> <strong>{certModal.solicitud.hire_date}</strong></p>
+            <p className="pt-1 text-emerald-700 font-medium">
+              Monto sugerido (promedio entregas): ${Number(certModal.solicitud.monto_sugerido || 0).toLocaleString('es-CO')}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">Monto a certificar ($)</label>
+            <input
+              type="number"
+              value={certModal.montoAprobado}
+              onChange={e => setCertModal(prev => ({ ...prev, montoAprobado: e.target.value }))}
+              className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-lg font-bold text-center focus:outline-none focus:border-emerald-500"
+            />
+            <p className="text-xs text-slate-400 text-center">
+              Edita si necesitas ajustar. El operario verá este monto en el PDF.
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setCertModal(null)}
+              disabled={savingCert}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={handleAprobarCertificado}
+              disabled={savingCert || !certModal.montoAprobado}
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              {savingCert ? 'Guardando...' : 'Confirmar'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Modal: Gestión de prendas */}
     {gestionModal && (
