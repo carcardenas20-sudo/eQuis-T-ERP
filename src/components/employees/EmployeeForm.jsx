@@ -11,8 +11,8 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
     if (employee) {
       return {
         ...employee,
-        hire_date: employee.hire_date ? new Date(employee.hire_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        fecha_retiro: employee.fecha_retiro ? new Date(employee.fecha_retiro).toISOString().split('T')[0] : ''
+        hire_date: employee.hire_date ? employee.hire_date.split('T')[0] : new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
+        fecha_retiro: employee.fecha_retiro ? employee.fecha_retiro.split('T')[0] : ''
       };
     }
     // Auto-generar código de 3 dígitos

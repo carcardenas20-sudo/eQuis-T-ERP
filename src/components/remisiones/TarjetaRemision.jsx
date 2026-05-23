@@ -246,7 +246,7 @@ function TarjetaRemision({ remision, onEdit, onDelete }) {
         ${remision.fecha_entrega ? `
         <div class="info-item">
             <div class="label">Fecha de Entrega</div>
-            <div class="value">${format(new Date(remision.fecha_entrega), 'dd/MM/yyyy')}</div>
+            <div class="value">${format(new Date(remision.fecha_entrega + 'T00:00:00'), 'dd/MM/yyyy')}</div>
         </div>
         ` : ''}
         
@@ -501,7 +501,7 @@ function TarjetaRemision({ remision, onEdit, onDelete }) {
               <Calendar className="w-4 h-4 text-slate-400" />
               <span className="text-slate-600">Entrega: </span>
               <span className="font-medium text-slate-900">
-                {remision.fecha_entrega ? format(new Date(remision.fecha_entrega), "dd/MM/yyyy") : 'N/A'}
+                {remision.fecha_entrega ? format(new Date(remision.fecha_entrega + 'T00:00:00'), "dd/MM/yyyy") : 'N/A'}
               </span>
             </div>
           )}

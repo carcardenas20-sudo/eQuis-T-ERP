@@ -168,7 +168,7 @@ export default function Empleado() {
                     {employee.hire_date && (
                       <p className="text-slate-600 flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        Contratado desde: {format(new Date(employee.hire_date), 'dd/MM/yyyy')}
+                        Contratado desde: {format(new Date(employee.hire_date + 'T00:00:00'), 'dd/MM/yyyy')}
                       </p>
                     )}
                   </div>
@@ -247,7 +247,7 @@ export default function Empleado() {
                           </div>
                           <div>
                             <p className="text-slate-600">Fecha</p>
-                            <p className="font-medium">{format(new Date(delivery.delivery_date), 'dd/MM/yyyy')}</p>
+                            <p className="font-medium">{format(new Date(delivery.delivery_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                           </div>
                         </div>
                       </div>

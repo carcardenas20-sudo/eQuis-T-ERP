@@ -47,7 +47,7 @@ export default function EmployeeCard({ employee, onEdit, onToggleStatus }) {
               {employee.hire_date && (
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Calendar className="w-4 h-4" />
-                  {format(new Date(employee.hire_date), "dd 'de' MMMM, yyyy", { locale: es })}
+                  {format(new Date(employee.hire_date + 'T00:00:00'), "dd 'de' MMMM, yyyy", { locale: es })}
                 </div>
               )}
               

@@ -50,7 +50,7 @@ export default function DeliveriesTable({ deliveries, employees, products, loadi
                 <TableCell>{item.quantity}</TableCell>
                 {index === 0 && (
                   <>
-                    <TableCell rowSpan={items.length}>{format(new Date(delivery.delivery_date), "dd/MM/yyyy")}</TableCell>
+                    <TableCell rowSpan={items.length}>{format(new Date(delivery.delivery_date + 'T00:00:00'), "dd/MM/yyyy")}</TableCell>
                     <TableCell rowSpan={items.length}>${delivery.total_amount?.toLocaleString()}</TableCell>
                     <TableCell rowSpan={items.length}>
                       <Badge variant={delivery.status === 'pagado' ? 'default' : 'secondary'} className={delivery.status === 'pagado' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>

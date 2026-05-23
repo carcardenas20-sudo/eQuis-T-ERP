@@ -743,7 +743,7 @@ export default function EmployeePortal() {
                 <span className="flex items-center gap-1"><Briefcase className="w-4 h-4" />ID: {employee.employee_id}</span>
                 {employee.position && <span className="flex items-center gap-1"><Briefcase className="w-4 h-4" />{employee.position}</span>}
                 {employee.phone && <span className="flex items-center gap-1"><Phone className="w-4 h-4" />{employee.phone}</span>}
-                {employee.hire_date && <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />Desde: {format(new Date(employee.hire_date), 'dd/MM/yyyy')}</span>}
+                {employee.hire_date && <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />Desde: {format(new Date(employee.hire_date + 'T00:00:00'), 'dd/MM/yyyy')}</span>}
               </div>
             </div>
             <Badge className={employee.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>

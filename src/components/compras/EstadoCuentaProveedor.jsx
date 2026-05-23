@@ -202,7 +202,7 @@ export default function EstadoCuentaProveedor({ proveedor, facturas, pagos, onCl
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
                             <div className="text-sm font-medium text-slate-600">
-                              {format(new Date(transaccion.fecha), "dd/MMM/yyyy")}
+                              {format(new Date(String(transaccion.fecha).length === 10 ? transaccion.fecha + 'T00:00:00' : transaccion.fecha), "dd/MMM/yyyy")}
                             </div>
                             <Badge className={`${
                               transaccion.tipo === 'factura' 

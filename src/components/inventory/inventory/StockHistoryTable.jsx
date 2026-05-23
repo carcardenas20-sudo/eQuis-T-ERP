@@ -86,7 +86,7 @@ export default function StockHistoryTable({ movements, products, onEdit, onDelet
               </div>
               
               <p className="text-sm text-slate-600">
-                <strong>Fecha:</strong> {format(new Date(movement.movement_date), 'dd/MM/yyyy')}
+                <strong>Fecha:</strong> {format(new Date(movement.movement_date + 'T00:00:00'), 'dd/MM/yyyy')}
               </p>
               
               {movement.reason && (
@@ -123,7 +123,7 @@ export default function StockHistoryTable({ movements, products, onEdit, onDelet
             {movements.map(movement => (
               <tr key={movement.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="py-3 px-4 text-sm">
-                  {format(new Date(movement.movement_date), 'dd/MM/yyyy')}
+                  {format(new Date(movement.movement_date + 'T00:00:00'), 'dd/MM/yyyy')}
                 </td>
                 <td className="py-3 px-4">
                   <div>

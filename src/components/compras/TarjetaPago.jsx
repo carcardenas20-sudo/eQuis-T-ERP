@@ -79,7 +79,7 @@ function TarjetaPago({ pago, onEdit, onDelete }) {
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="w-4 h-4 text-slate-400" />
             <span className="text-slate-600">
-              Fecha: {format(new Date(pago.fecha_pago), "dd/MM/yyyy")}
+              Fecha: {format(new Date(pago.fecha_pago + 'T00:00:00'), "dd/MM/yyyy")}
             </span>
           </div>
 

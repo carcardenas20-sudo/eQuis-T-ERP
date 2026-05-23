@@ -89,7 +89,7 @@ export default function PaymentRequests({ paymentRequests, onRefresh }) {
                 <div className="flex-1 min-w-0">
                   <span className="flex items-center gap-2 font-medium"><User className="w-4 h-4 text-slate-500 shrink-0"/>{req.employee_name}</span>
                   <span className="text-xs text-slate-500 flex items-center gap-1 pl-6">
-                    <Calendar className="w-3 h-3"/> {format(new Date(req.request_date), 'dd/MM/yy')} <Clock className="w-3 h-3 ml-1"/> {req.request_time}
+                    <Calendar className="w-3 h-3"/> {format(new Date(req.request_date + 'T00:00:00'), 'dd/MM/yy')} <Clock className="w-3 h-3 ml-1"/> {req.request_time}
                   </span>
                 </div>
                 <span className="font-bold text-indigo-800 shrink-0">${req.requested_amount.toLocaleString()}</span>

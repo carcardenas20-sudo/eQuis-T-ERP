@@ -209,7 +209,7 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-slate-900">{event.title}</h4>
                     <span className="text-xs text-slate-500">
-                      {format(new Date(event.date), 'dd/MM/yyyy')}
+                      {format(new Date(String(event.date).length === 10 ? event.date + 'T00:00:00' : event.date), 'dd/MM/yyyy')}
                     </span>
                   </div>
                   <p className="text-sm text-slate-600">{event.subtitle}</p>

@@ -168,7 +168,7 @@ export default function PayableList({ payables, locations, onEdit, onDelete, onP
                 <div>
                   <p className="text-slate-500 text-xs">Fecha Límite</p>
                   <p className={`font-semibold text-sm ${isOverdue ? 'text-red-600' : ''}`}>
-                    {format(new Date(payable.due_date), 'dd/MM/yyyy')}
+                    {format(new Date(payable.due_date + 'T00:00:00'), 'dd/MM/yyyy')}
                   </p>
                 </div>
               </div>

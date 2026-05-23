@@ -457,7 +457,7 @@ export default function Employees() {
                       <div className="space-y-2">
                         {employee.position && <p className="text-sm text-slate-600"><strong>Cargo:</strong> {employee.position}</p>}
                         {employee.phone && <p className="text-sm text-slate-600 flex items-center gap-1"><Phone className="w-3 h-3" /> {employee.phone}</p>}
-                        {employee.hire_date && <p className="text-sm text-slate-600 flex items-center gap-1"><Calendar className="w-3 h-3" /> Contratado: {format(new Date(employee.hire_date), 'dd/MM/yyyy')}</p>}
+                        {employee.hire_date && <p className="text-sm text-slate-600 flex items-center gap-1"><Calendar className="w-3 h-3" /> Contratado: {format(new Date(employee.hire_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>}
                         {employee.salary_per_unit && <p className="text-sm text-green-600 font-medium">${employee.salary_per_unit.toLocaleString()} por unidad</p>}
                       </div>
 

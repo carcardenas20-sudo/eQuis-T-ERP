@@ -79,7 +79,7 @@ function TarjetaCompra({ compra, onEdit, onDelete }) {
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="w-4 h-4 text-slate-400" />
             <span className="text-slate-600">
-              Orden: {format(new Date(compra.fecha_orden), "dd/MM/yyyy")}
+              Orden: {format(new Date(compra.fecha_orden + 'T00:00:00'), "dd/MM/yyyy")}
             </span>
           </div>
 
@@ -87,7 +87,7 @@ function TarjetaCompra({ compra, onEdit, onDelete }) {
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="w-4 h-4 text-orange-400" />
               <span className="text-slate-600">
-                Entrega: {format(new Date(compra.fecha_entrega_esperada), "dd/MM/yyyy")}
+                Entrega: {format(new Date(compra.fecha_entrega_esperada + 'T00:00:00'), "dd/MM/yyyy")}
               </span>
             </div>
           )}

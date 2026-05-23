@@ -333,7 +333,7 @@ export default function CreditsPage() {
                   <div>
                     <p className="text-xs text-slate-500">Vencimiento</p>
                     <p className="font-medium text-slate-900">
-                      {credit.due_date ? format(new Date(credit.due_date), "dd/MM/yyyy", { locale: es }) : '-'}
+                      {credit.due_date ? format(new Date(credit.due_date + 'T00:00:00'), "dd/MM/yyyy", { locale: es }) : '-'}
                     </p>
                     <p className="text-xs text-slate-400">
                       #{credit.sale_id?.slice(-6)}
@@ -389,8 +389,8 @@ export default function CreditsPage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{credit.due_date ? format(new Date(credit.due_date), "dd/MM/yyyy", { locale: es }) : '-'}</p>
-                            <p className="text-xs text-slate-500">{credit.due_date ? format(new Date(credit.due_date), "EEEE", { locale: es }) : ''}</p>
+                            <p className="font-medium">{credit.due_date ? format(new Date(credit.due_date + 'T00:00:00'), "dd/MM/yyyy", { locale: es }) : '-'}</p>
+                            <p className="text-xs text-slate-500">{credit.due_date ? format(new Date(credit.due_date + 'T00:00:00'), "EEEE", { locale: es }) : ''}</p>
                           </div>
                         </TableCell>
                         <TableCell className="text-right">

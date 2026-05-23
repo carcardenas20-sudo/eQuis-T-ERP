@@ -50,7 +50,7 @@ export default function DispatchesTable({ dispatches, employees, products, loadi
                             </TableCell>
                             <TableCell>{dispatch.quantity}</TableCell>
                             <TableCell>
-                                {dispatch.dispatch_date ? format(new Date(dispatch.dispatch_date), "dd/MM/yyyy") : "N/A"}
+                                {dispatch.dispatch_date ? format(new Date(dispatch.dispatch_date + 'T00:00:00'), "dd/MM/yyyy") : "N/A"}
                             </TableCell>
                             <TableCell>
                                 <Badge 

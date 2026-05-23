@@ -371,7 +371,7 @@ export default function Payments() {
                               <p className="text-xl font-bold text-blue-700 mt-1">${req.requested_amount?.toLocaleString()}</p>
                               {lastPayment ? (
                                 <p className="text-xs text-emerald-600 mt-1">
-                                  Último pago: {format(new Date(lastPayment.payment_date), 'dd/MM/yy')} · ${lastPayment.amount.toLocaleString()}
+                                  Último pago: {format(new Date(lastPayment.payment_date + 'T00:00:00'), 'dd/MM/yy')} · ${lastPayment.amount.toLocaleString()}
                                 </p>
                               ) : (
                                 <p className="text-xs text-slate-400 mt-1">Sin pagos anteriores</p>
@@ -436,7 +436,7 @@ export default function Payments() {
                                   <p>Sin solicitudes previas</p>
                                 )}
                                 {lastPayment ? (
-                                  <p className="text-emerald-600">Último pago: {format(new Date(lastPayment.payment_date), 'dd/MM/yy')} · ${lastPayment.amount.toLocaleString()}</p>
+                                  <p className="text-emerald-600">Último pago: {format(new Date(lastPayment.payment_date + 'T00:00:00'), 'dd/MM/yy')} · ${lastPayment.amount.toLocaleString()}</p>
                                 ) : (
                                   <p>Sin pagos anteriores</p>
                                 )}

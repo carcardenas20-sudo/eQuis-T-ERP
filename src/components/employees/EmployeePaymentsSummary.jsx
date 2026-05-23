@@ -32,7 +32,7 @@ export default function EmployeePaymentsSummary({ payments }) {
                     <p className="font-medium text-slate-900">${payment.amount.toLocaleString()}</p>
                     <p className="text-xs text-slate-600 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {format(new Date(payment.payment_date), 'dd/MM/yyyy')}
+                      {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}
                     </p>
                   </div>
                   <Badge variant={payment.payment_type === 'pago_completo' ? 'default' : 'secondary'} className="text-xs">

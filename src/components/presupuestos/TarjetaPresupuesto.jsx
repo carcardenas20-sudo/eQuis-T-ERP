@@ -44,7 +44,7 @@ function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, 
   const exportarExcel = () => {
     const numeroPresupuesto = presupuesto.numero_presupuesto;
     const cliente = presupuesto.cliente;
-    const fechaEntrega = presupuesto.fecha_entrega ? format(new Date(presupuesto.fecha_entrega), "dd/MM/yyyy") : '';
+    const fechaEntrega = presupuesto.fecha_entrega ? format(new Date(presupuesto.fecha_entrega + 'T00:00:00'), "dd/MM/yyyy") : '';
     const fechaGeneracion = format(new Date(), "dd/MM/yyyy");
     const totalMateriales = (presupuesto.total_materiales || 0).toFixed(2);
     const totalManoObra = (presupuesto.total_mano_obra || 0).toFixed(2);
@@ -115,7 +115,7 @@ function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, 
     // Crear variables para evitar problemas de template literals
     const numeroPresupuesto = presupuesto.numero_presupuesto;
     const cliente = presupuesto.cliente;
-    const fechaEntrega = presupuesto.fecha_entrega ? format(new Date(presupuesto.fecha_entrega), "dd/MM/yyyy") : '';
+    const fechaEntrega = presupuesto.fecha_entrega ? format(new Date(presupuesto.fecha_entrega + 'T00:00:00'), "dd/MM/yyyy") : '';
     const fechaGeneracion = format(new Date(), "dd/MM/yyyy");
 
     let htmlContent = `
@@ -301,7 +301,7 @@ function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, 
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="w-4 h-4 text-slate-400" />
                 <span className="text-slate-600">
-                  Entrega: {format(new Date(presupuesto.fecha_entrega), "dd/MM/yyyy")}
+                  Entrega: {format(new Date(presupuesto.fecha_entrega + 'T00:00:00'), "dd/MM/yyyy")}
                 </span>
               </div>
             )}

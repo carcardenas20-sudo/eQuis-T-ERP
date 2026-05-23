@@ -101,7 +101,7 @@ export default function PaymentForm({ employee, payment, pendingDeliveries, onSu
                 return (
                   <div key={delivery.id} className="p-3 bg-slate-50 rounded-lg border">
                     <div className="mb-2">
-                      <p className="font-medium text-sm">{format(new Date(delivery.delivery_date), 'dd/MM/yyyy')} - {delivery.quantity} unidades</p>
+                      <p className="font-medium text-sm">{format(new Date(delivery.delivery_date + 'T00:00:00'), 'dd/MM/yyyy')} - {delivery.quantity} unidades</p>
                       <p className="text-xs text-orange-600 font-medium">Pendiente: ${pendingAmt.toLocaleString()}</p>
                     </div>
                     <div className="flex items-center gap-2">

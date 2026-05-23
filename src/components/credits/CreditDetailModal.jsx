@@ -156,7 +156,7 @@ export default function CreditDetailModal({ credit, onClose, onRefresh }) {
                   {statusLabels[credit.status]}
                 </Badge>
                 <p className="text-sm text-slate-500 mt-1">
-                  Vence: {format(new Date(credit.due_date), "dd 'de' MMMM, yyyy", { locale: es })}
+                  Vence: {format(new Date(credit.due_date + 'T00:00:00'), "dd 'de' MMMM, yyyy", { locale: es })}
                 </p>
               </div>
             </div>

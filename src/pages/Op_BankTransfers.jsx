@@ -219,7 +219,7 @@ export default function BankTransfers() {
                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-4">
                                <div className="min-w-0">
                                  <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}</h3>
-                                 <p className="text-xs sm:text-sm text-slate-600">Registro: {format(new Date(payment.payment_date), 'dd/MM/yyyy')}</p>
+                                 <p className="text-xs sm:text-sm text-slate-600">Registro: {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                                </div>
                                <div className="sm:text-right">
                                  <p className="text-2xl sm:text-3xl font-bold text-red-600">${payment.amount.toLocaleString()}</p>
@@ -271,7 +271,7 @@ export default function BankTransfers() {
                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-4">
                                <div className="min-w-0">
                                  <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}</h3>
-                                 <p className="text-xs sm:text-sm text-slate-600">Registro: {format(new Date(payment.payment_date), 'dd/MM/yyyy')}</p>
+                                 <p className="text-xs sm:text-sm text-slate-600">Registro: {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                                </div>
                                <div className="sm:text-right">
                                  <p className="text-2xl sm:text-3xl font-bold text-amber-600">${payment.amount.toLocaleString()}</p>
@@ -320,7 +320,7 @@ export default function BankTransfers() {
                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-4">
                                <div className="min-w-0">
                                  <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}</h3>
-                                 <p className="text-xs sm:text-sm text-slate-600">Registro: {format(new Date(payment.payment_date), 'dd/MM/yyyy')}</p>
+                                 <p className="text-xs sm:text-sm text-slate-600">Registro: {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                                </div>
                                <div className="sm:text-right">
                                  <p className="text-2xl sm:text-3xl font-bold text-blue-600">${payment.amount.toLocaleString()}</p>
@@ -378,7 +378,7 @@ export default function BankTransfers() {
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
                         <div className="min-w-0">
                           <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}</h3>
-                          <p className="text-xs sm:text-sm text-slate-600">Fecha: {format(new Date(payment.payment_date), 'dd/MM/yyyy')}</p>
+                          <p className="text-xs sm:text-sm text-slate-600">Fecha: {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                         </div>
                         <div className="sm:text-right flex flex-col items-end gap-2">
                           <p className="text-xl sm:text-2xl font-bold text-green-600">${payment.amount.toLocaleString()}</p>
