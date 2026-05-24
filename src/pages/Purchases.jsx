@@ -498,7 +498,8 @@ export default function PurchasesPage() {
   const pendingPurchases = purchases.filter(p => p.status === "pending").length;
   const receivedThisMonth = purchases.filter(p => 
     p.status === "received" && 
-    new Date(p.purchase_date).getMonth() === new Date().getMonth()
+    new Date(p.purchase_date + 'T00:00:00').getMonth() === new Date().getMonth() &&
+    new Date(p.purchase_date + 'T00:00:00').getFullYear() === new Date().getFullYear()
   ).length;
   const totalSpent = purchases
     .filter(p => p.status === "received")

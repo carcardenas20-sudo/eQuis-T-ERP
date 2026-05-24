@@ -168,7 +168,7 @@ export default function Compras() {
   const totalPorPagar = facturas.reduce((sum, f) => sum + (f.saldo_pendiente || 0), 0);
   const facturasVencidas = facturas.filter(f => 
     f.estado !== 'pagada_total' && 
-    new Date(f.fecha_vencimiento) < new Date()
+    new Date(f.fecha_vencimiento + 'T00:00:00') < new Date()
   ).length;
   const comprasPendientes = compras.filter(c => ['enviada', 'confirmada'].includes(c.estado)).length;
 

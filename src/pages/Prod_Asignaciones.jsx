@@ -375,7 +375,7 @@ export default function Asignaciones() {
                 <SelectContent>
                   {presupuestos.map(p => {
                     const fecha = p.fecha_entrega
-                      ? new Date(p.fecha_entrega).toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'2-digit' })
+                      ? new Date(p.fecha_entrega + 'T00:00:00').toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'2-digit' })
                       : null;
                     const nProd = (p.productos || []).length;
                     return (

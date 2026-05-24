@@ -289,7 +289,7 @@ export default function Presupuestos() {
               const prod = productos.find(pr => pr.id === prodId);
               const data = historial[prodId];
               if (!prod || !data) return null;
-              const fecha = data.ultimaFecha ? new Date(data.ultimaFecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+              const fecha = data.ultimaFecha ? new Date(data.ultimaFecha + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
               return { prod, tallas: [...data.tallas].sort(), ultimoPresupuesto: data.ultimoPresupuesto, fecha };
             })
             .filter(Boolean);

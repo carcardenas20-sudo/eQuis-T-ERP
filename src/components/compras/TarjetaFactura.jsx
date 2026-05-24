@@ -26,7 +26,7 @@ function TarjetaFactura({ factura, onEdit, onDelete, onPagar }) {
 
   const safeDate = (val) => {
     if (!val) return null;
-    const d = new Date(val);
+    const d = new Date(String(val).length === 10 ? val + 'T00:00:00' : val);
     return isNaN(d.getTime()) ? null : d;
   };
 

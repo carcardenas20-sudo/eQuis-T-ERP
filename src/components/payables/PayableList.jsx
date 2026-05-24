@@ -65,7 +65,7 @@ export default function PayableList({ payables, locations, onEdit, onDelete, onP
   };
 
   const getStatusBadge = (status, dueDate) => {
-    const isOverdue = new Date(dueDate) < new Date() && status !== "paid";
+    const isOverdue = new Date(String(dueDate).length === 10 ? dueDate + 'T00:00:00' : dueDate) < new Date() && status !== "paid";
     
     if (isOverdue) {
       return <Badge variant="destructive">Vencida</Badge>;
@@ -108,7 +108,7 @@ export default function PayableList({ payables, locations, onEdit, onDelete, onP
   return (
     <div className="space-y-4">
       {payables.map(payable => {
-        const isOverdue = new Date(payable.due_date) < new Date() && payable.status !== "paid";
+        const isOverdue = new Date(String(payable.due_date).length === 10 ? payable.due_date + 'T00:00:00' : payable.due_date) < new Date() && payable.status !== "paid";
         const isExpanded = expandedPayable === payable.id;
         const payments = paymentHistories[payable.id] || [];
         const isLoadingHistory = loadingHistories[payable.id];

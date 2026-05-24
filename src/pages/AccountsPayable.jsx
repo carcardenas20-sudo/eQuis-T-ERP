@@ -23,9 +23,11 @@ import PaymentModal from "../components/payables/PaymentModal";
 import InstallmentsManager from "../components/payables/InstallmentsManager";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+const parseDueDate = (d) => d ? new Date(String(d).length === 10 ? d + 'T00:00:00' : d) : null;
+
 const URGENCY = (dueDate) => {
   if (!dueDate) return 'sin_fecha';
-  const diff = (new Date(dueDate) - new Date()) / 86400000;
+  const diff = (parseDueDate(dueDate) - new Date()) / 86400000;
   if (diff < 0) return 'vencida';
   if (diff <= 7) return 'urgente';
   if (diff <= 30) return 'proximo';
@@ -55,7 +57,7 @@ const getCategoryMeta = (item) => {
   return CATEGORY_META[cat] || CATEGORY_META.otros;
 };
 
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtDate = (d) => d ? parseDueDate(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const fmtMoney = (n) => `$${(n || 0).toLocaleString('es-CO')}`;
 
 const PERIODICIDAD_LABELS = {
@@ -801,7 +803,7 @@ export default function AccountsPayablePage() {
           pending_amount: totalDeuda,
           paid_amount: 0,
           status: 'pending',
-          due_date: fechaVencimiento ? new Date(fechaVencimiento).toISOString() : null,
+          due_date: fechaVencimiento || null,
           notes: `${cantidad} ${item.unidad_medida} × $${precioUnitario}`,
         });
       }
@@ -824,7 +826,7 @@ export default function AccountsPayablePage() {
         type: 'gasto_variable',
         total_amount: monto, pending_amount: monto, paid_amount: 0,
         status: 'pending',
-        due_date: fechaVenc ? new Date(fechaVenc).toISOString() : null,
+        due_date: fechaVenc || null,
         notes: notas || '',
       });
       await loadData();
@@ -1065,9 +1067,9 @@ export default function AccountsPayablePage() {
               const finMes    = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
               const totalFiltro     = filtered.reduce((s, p) => s + (p.pending_amount || 0), 0);
-              const vencidoFiltro   = filtered.filter(p => p.due_date && new Date(p.due_date) < now).reduce((s, p) => s + (p.pending_amount || 0), 0);
-              const esteMesFiltro   = filtered.filter(p => p.due_date && new Date(p.due_date) >= inicioMes && new Date(p.due_date) <= finMes).reduce((s, p) => s + (p.pending_amount || 0), 0);
-              const proximoFiltro   = filtered.filter(p => p.due_date && new Date(p.due_date) > finMes).reduce((s, p) => s + (p.pending_amount || 0), 0);
+              const vencidoFiltro   = filtered.filter(p => p.due_date && parseDueDate(p.due_date) < now).reduce((s, p) => s + (p.pending_amount || 0), 0);
+              const esteMesFiltro   = filtered.filter(p => p.due_date && parseDueDate(p.due_date) >= inicioMes && parseDueDate(p.due_date) <= finMes).reduce((s, p) => s + (p.pending_amount || 0), 0);
+              const proximoFiltro   = filtered.filter(p => p.due_date && parseDueDate(p.due_date) > finMes).reduce((s, p) => s + (p.pending_amount || 0), 0);
               const sinFechaFiltro  = filtered.filter(p => !p.due_date).reduce((s, p) => s + (p.pending_amount || 0), 0);
 
               // Cuando el filtro es "Todos", mostrar desglose por categoría

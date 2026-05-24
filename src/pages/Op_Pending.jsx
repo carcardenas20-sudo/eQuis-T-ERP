@@ -47,14 +47,14 @@ function getNextFriday() {
   const month = parts.find(p => p.type === 'month').value;
   const day = parts.find(p => p.type === 'day').value;
   
-  const localToday = new Date(`${year}-${month}-${day}`);
+  const localToday = new Date(`${year}-${month}-${day}T00:00:00`);
   const dayOfWeek = localToday.getDay();
   const daysUntilFriday = dayOfWeek === 5 ? 7 : (5 - dayOfWeek + 7) % 7;
-  
+
   const nextFriday = new Date(localToday);
   nextFriday.setDate(localToday.getDate() + daysUntilFriday);
-  
-  return nextFriday.toISOString().split("T")[0];
+
+  return nextFriday.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
 }
 
 async function getActiveFriday() {
@@ -153,7 +153,7 @@ export default function Pending() {
         });
         // Contar para promedio semanal
         if (delivery.delivery_date) {
-          const deliveryDate = new Date(delivery.delivery_date);
+          const deliveryDate = new Date(delivery.delivery_date + 'T00:00:00');
           if (deliveryDate >= fourWeeksAgo && deliveryDate <= today) {
             if (!weeklyDeliveries[empId]) weeklyDeliveries[empId] = 0;
             weeklyDeliveries[empId] += delivery.items.reduce((s, i) => s + (i.quantity || 0), 0);
@@ -163,7 +163,7 @@ export default function Pending() {
         map[empId][delivery.product_reference].delivered += delivery.quantity || 0;
         // Contar para promedio semanal
         if (delivery.delivery_date) {
-          const deliveryDate = new Date(delivery.delivery_date);
+          const deliveryDate = new Date(delivery.delivery_date + 'T00:00:00');
           if (deliveryDate >= fourWeeksAgo && deliveryDate <= today) {
             if (!weeklyDeliveries[empId]) weeklyDeliveries[empId] = 0;
             weeklyDeliveries[empId] += delivery.quantity || 0;
@@ -373,15 +373,15 @@ export default function Pending() {
   const totalCellW = 56;
 
   const getYesterdayFriday = () => {
-    const d = new Date(activeFriday);
+    const d = new Date(activeFriday + 'T00:00:00');
     d.setDate(d.getDate() - 7);
-    return d.toISOString().split("T")[0];
+    return d.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
   };
 
   const getTomorrowFriday = () => {
-    const d = new Date(activeFriday);
+    const d = new Date(activeFriday + 'T00:00:00');
     d.setDate(d.getDate() + 7);
-    return d.toISOString().split("T")[0];
+    return d.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
   };
 
   const handleCloseFriday = async () => {
@@ -618,7 +618,7 @@ export default function Pending() {
 
         <div className="mb-4">
           <h1 className="text-xl font-bold text-slate-900">Planilla de Pendientes</h1>
-          <p className="text-slate-500 text-xs mt-0.5">Fecha: {today} · {visibleRows.length} empleado(s) · Viernes activo: {activeFriday ? new Date(activeFriday).toLocaleDateString("es-CO") : "—"}</p>
+          <p className="text-slate-500 text-xs mt-0.5">Fecha: {today} · {visibleRows.length} empleado(s) · Viernes activo: {activeFriday ? new Date(activeFriday + 'T00:00:00').toLocaleDateString("es-CO") : "—"}</p>
 
           {/* Desktop buttons */}
           <div className="hidden sm:flex gap-1.5 flex-wrap mt-2">

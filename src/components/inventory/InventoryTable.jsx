@@ -76,7 +76,7 @@ export default function InventoryTable({ inventory, onStockAdjustment, isLoading
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
               <span className="text-xs text-slate-500">
                 Mín: {item.product?.minimum_stock || 5} uds
-                {item.last_movement_date && <> · {new Date(item.last_movement_date).toLocaleDateString()}</>}
+                {item.last_movement_date && <> · {new Date(String(item.last_movement_date).length === 10 ? item.last_movement_date + 'T00:00:00' : item.last_movement_date).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}</>}
               </span>
               <Button variant="outline" size="sm" onClick={() => onStockAdjustment(item)} className="gap-1 h-8 text-xs">
                 <Edit className="w-3 h-3" /> Ajustar
@@ -136,7 +136,7 @@ export default function InventoryTable({ inventory, onStockAdjustment, isLoading
                 <TableCell className="text-right">
                   <span className="text-sm text-slate-500">
                     {item.last_movement_date ?
-                      new Date(item.last_movement_date).toLocaleDateString() :
+                      new Date(String(item.last_movement_date).length === 10 ? item.last_movement_date + 'T00:00:00' : item.last_movement_date).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' }) :
                       'Sin movimientos'}
                   </span>
                 </TableCell>
