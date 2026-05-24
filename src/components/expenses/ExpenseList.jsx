@@ -105,7 +105,7 @@ export default function ExpenseList({ expenses, locations, onEdit, onDelete, isL
               <span className="flex items-center gap-1">
                 <Building2 className="w-3 h-3" />{getLocationName(expense.location_id)}
               </span>
-              <span>{formatColombiaDate(expense.expense_date + 'T00:00:00.000Z', "dd/MM/yyyy")}</span>
+              <span>{formatColombiaDate(expense.expense_date, "dd/MM/yyyy")}</span>
             </div>
             <div className="flex gap-2 justify-end pt-1 border-t border-slate-100">
               <Button variant="outline" size="sm" onClick={() => onEdit(expense)} className="text-blue-600 hover:bg-blue-50">
@@ -137,7 +137,7 @@ export default function ExpenseList({ expenses, locations, onEdit, onDelete, isL
             {expenses.map(expense => (
               <TableRow key={expense.id} className="hover:bg-slate-50">
                 <TableCell>
-                  <p className="font-medium text-slate-900">{formatColombiaDate(expense.expense_date + 'T00:00:00.000Z', "dd/MM/yyyy")}</p>
+                  <p className="font-medium text-slate-900">{formatColombiaDate(expense.expense_date, "dd/MM/yyyy")}</p>
                   {expense.created_date && <p className="text-xs text-slate-500">{formatColombiaDate(expense.created_date, "HH:mm")}</p>}
                 </TableCell>
                 <TableCell>

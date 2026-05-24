@@ -244,7 +244,7 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
                         <div className="mt-2 space-y-1">
                           {event.paymentsForDelivery.map((p, idx) => (
                             <p key={idx} className="text-xs text-green-700">
-                              Pagado ${p.amount.toLocaleString()} el {format(new Date(p.date), 'dd/MM/yyyy')} (pago total: ${p.total.toLocaleString()})
+                              Pagado ${p.amount.toLocaleString()} el {format(new Date(String(p.date).length === 10 ? p.date + 'T00:00:00' : p.date), 'dd/MM/yyyy')} (pago total: ${p.total.toLocaleString()})
                             </p>
                           ))}
                           {event.totalPaid < event.data.total_amount && (
