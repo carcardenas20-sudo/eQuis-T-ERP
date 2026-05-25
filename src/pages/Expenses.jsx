@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Expense, Location, User } from "@/entities/all";
+import { Expense, Location, User, PayablePayment, AccountPayable } from "@/entities/all";
 import { Plus, Receipt, Filter, Building2 } from "lucide-react"; // Added Building2
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -145,44 +145,71 @@ export default function ExpensesPage() {
     setIsFormOpen(true);
   };
 
+  // Busca el abono en CxP vinculado a un gasto (si existe)
+  const findLinkedPayment = async (expenseId) => {
+    const payments = await PayablePayment.filter({ expense_id: expenseId });
+    return payments?.[0] || null;
+  };
+
+  // Recalcula y actualiza el saldo de una CxP dado el cambio de monto
+  const syncAccountPayable = async (payableId, amountDiff) => {
+    const payable = await AccountPayable.get(payableId);
+    if (!payable) return;
+    const newPaid = (payable.paid_amount || 0) + amountDiff;
+    const newPending = payable.total_amount - newPaid;
+    const newStatus = newPending <= 0 ? 'paid' : newPaid > 0 ? 'partial' : 'pending';
+    await AccountPayable.update(payableId, {
+      paid_amount: Math.max(0, newPaid),
+      pending_amount: Math.max(0, newPending),
+      status: newStatus,
+    });
+  };
+
   const handleSaveExpense = async (expenseData) => {
     try {
-      console.log("💾 Guardando gasto:", expenseData);
-      
       if (editingExpense) {
-        console.log("✏️ Actualizando gasto ID:", editingExpense.id);
+        // Si el gasto está vinculado a un abono de CxP, propagar cambio de monto
+        const linked = await findLinkedPayment(editingExpense.id);
+        if (linked) {
+          const oldAmount = linked.amount;
+          const newAmount = expenseData.amount;
+          if (oldAmount !== newAmount) {
+            await PayablePayment.update(linked.id, { amount: newAmount });
+            await syncAccountPayable(linked.payable_id, newAmount - oldAmount);
+          }
+        }
         await Expense.update(editingExpense.id, expenseData);
       } else {
-        console.log("➕ Creando nuevo gasto");
         await Expense.create(expenseData);
       }
-      
+
       setIsFormOpen(false);
       setEditingExpense(null);
       await loadExpenses();
-      
-      console.log("✅ Gasto guardado exitosamente");
     } catch (error) {
-      console.error("❌ Error saving expense:", error);
+      console.error("Error saving expense:", error);
       alert("Error al guardar el gasto: " + error.message);
     }
   };
 
   const handleDeleteExpense = async (expense) => {
-    console.log("🗑️ Intentando eliminar gasto:", expense);
-    
-    if (window.confirm(`¿Estás seguro de eliminar el gasto "${expense.description}"?`)) {
+    const linked = await findLinkedPayment(expense.id);
+    const msg = linked
+      ? `Este gasto es un abono a una cuenta por pagar. Al eliminarlo también se revertirá el abono y el saldo del proveedor.\n\n¿Confirmas?`
+      : `¿Estás seguro de eliminar el gasto "${expense.description}"?`;
+
+    if (window.confirm(msg)) {
       try {
-        console.log("🗑️ Eliminando gasto ID:", expense.id);
+        if (linked) {
+          await syncAccountPayable(linked.payable_id, -linked.amount);
+          await PayablePayment.delete(linked.id);
+        }
         await Expense.delete(expense.id);
         await loadExpenses();
-        console.log("✅ Gasto eliminado exitosamente");
       } catch (error) {
-        console.error("❌ Error deleting expense:", error);
+        console.error("Error deleting expense:", error);
         alert("Error al eliminar el gasto: " + error.message);
       }
-    } else {
-      console.log("❌ Eliminación cancelada por el usuario");
     }
   };
 
