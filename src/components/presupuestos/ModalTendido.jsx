@@ -33,7 +33,14 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
   }, [filas, coloresTendido, productos]);
 
   const canGoNext = filasValidas.length > 0 && coloresValidos.length > 0;
-  const allMapped = pairsToMap.every(pair => mapeos[pair.key]);
+  const allMapped = pairsToMap.every(pair => {
+    if (mapeos[pair.key]) return true;
+    // Si no hay combinaciones compatibles, no se puede mapear → no bloquear el botón
+    const compatibles = (pair.producto.combinaciones_predefinidas || []).filter(
+      predef => isCompatibleCombination(pair.producto, predef, pair.color.color_id)
+    );
+    return compatibles.length === 0;
+  });
 
   const addFila = () => setFilas(prev => [...prev, { id: `f_${Date.now()}`, producto_id: '', talla: '', cant_hoja: 1 }]);
   const removeFila = (id) => setFilas(prev => prev.filter(f => f.id !== id));
@@ -42,6 +49,36 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
   const addColor = () => setColoresTendido(prev => [...prev, { id: `c_${Date.now()}`, nombre: '', hojas: 10 }]);
   const removeColor = (id) => setColoresTendido(prev => prev.filter(c => c.id !== id));
   const updateColor = (id, field, value) => setColoresTendido(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
+
+  // Secciones que vienen de tendidos complementarios — no se validan contra el tendido principal
+  const SECCIONES_COMPLEMENTARIAS = new Set(['forro', 'central']);
+
+  const isCompatibleCombination = (producto, predef, tendidoColorId) => {
+    const tendidoColorIds = new Set(coloresValidos.map(c => c.color_id));
+    const esPorSecciones = producto?.tipo_diseno === 'por_secciones';
+
+    const coloresVariables = (predef.colores_por_material || []).filter(cm => {
+      if (!cm.color_id) return false;
+      const mat = producto?.materiales_requeridos?.find(m => m.row_id === cm.row_id);
+      const mp = mpMap.get(mat?.materia_prima_id);
+      if (mp?.color_fijo && !mat?.color_independiente) return false;
+      if (mat?.seccion === 'color_propio' && !mat?.color_independiente) return false;
+      // Para por_secciones: ignorar secciones complementarias en la validación
+      if (esPorSecciones && SECCIONES_COMPLEMENTARIAS.has(mat?.seccion)) return false;
+      return true;
+    });
+
+    if (coloresVariables.length === 0) return true;
+
+    if (esPorSecciones) {
+      // Al menos una sección exterior debe coincidir con el color del tendido específico
+      return coloresVariables.some(cm => cm.color_id === tendidoColorId) &&
+        coloresVariables.every(cm => tendidoColorIds.has(cm.color_id));
+    } else {
+      // Fondo entero: todos los colores variables deben estar en los colores del tendido
+      return coloresVariables.every(cm => tendidoColorIds.has(cm.color_id));
+    }
+  };
 
   const renderCombColors = (producto, predef) => {
     const secLabels = { superior: 'S', central: 'C', inferior: 'I', forro: 'F', contraste: 'K', fondo_entero: 'FE' };
@@ -293,25 +330,35 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
                   </div>
                   <p className="text-xs text-slate-500 mb-2">¿Cuál combinación corresponde a este color?</p>
                   <div className="space-y-1.5">
-                    {(pair.producto.combinaciones_predefinidas || []).map((predef, idx) => {
-                      const isSelected = mapeos[pair.key] === predef.id;
-                      return (
-                        <div key={predef.id}
-                          onClick={() => setMapeos(prev => ({ ...prev, [pair.key]: predef.id }))}
-                          className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all ${
-                            isSelected ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                            isSelected ? 'border-indigo-500' : 'border-slate-300'
-                          }`}>
-                            {isSelected && <div className="w-2 h-2 rounded-full bg-indigo-500" />}
-                          </div>
-                          <span className="text-xs text-slate-400 w-5 shrink-0">#{idx + 1}</span>
-                          {renderCombColors(pair.producto, predef)}
-                        </div>
+                    {(() => {
+                      const compatibles = (pair.producto.combinaciones_predefinidas || []).filter(
+                        predef => isCompatibleCombination(pair.producto, predef, pair.color.color_id)
                       );
-                    })}
+                      if (compatibles.length === 0) return (
+                        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                          Sin combinaciones compatibles con los colores del tendido. Revisa las combinaciones predefinidas del producto.
+                        </p>
+                      );
+                      return compatibles.map((predef, idx) => {
+                        const isSelected = mapeos[pair.key] === predef.id;
+                        return (
+                          <div key={predef.id}
+                            onClick={() => setMapeos(prev => ({ ...prev, [pair.key]: predef.id }))}
+                            className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                              isSelected ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                              isSelected ? 'border-indigo-500' : 'border-slate-300'
+                            }`}>
+                              {isSelected && <div className="w-2 h-2 rounded-full bg-indigo-500" />}
+                            </div>
+                            <span className="text-xs text-slate-400 w-5 shrink-0">#{idx + 1}</span>
+                            {renderCombColors(pair.producto, predef)}
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               ))}
