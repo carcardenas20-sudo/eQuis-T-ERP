@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, Plus, Trash2, Shirt, Package, Palette, Copy } from "lucide-react";
+import { X, Plus, Trash2, Shirt, Package, Palette, Copy, ChevronUp, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import GestorCombinacionesPredefinidas from './GestorCombinacionesPredefinidas';
@@ -127,6 +127,16 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
       ...prev,
       materiales_requeridos: prev.materiales_requeridos.map((m, i) => i === index ? { ...m, [campo]: valor } : m)
     }));
+  };
+
+  const moverMaterial = (index, direccion) => {
+    setFormData(prev => {
+      const arr = [...prev.materiales_requeridos];
+      const destino = index + direccion;
+      if (destino < 0 || destino >= arr.length) return prev;
+      [arr[index], arr[destino]] = [arr[destino], arr[index]];
+      return { ...prev, materiales_requeridos: arr };
+    });
   };
 
   const handleSubmit = (e) => {
@@ -522,6 +532,20 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                                     className="h-8 text-xs mt-1" />
                                 </div>
                                 <div className="text-xs text-slate-500 pb-1">${costo.toFixed(2)}</div>
+                                <div className="flex flex-col shrink-0">
+                                  <Button type="button" variant="ghost" size="icon"
+                                    onClick={() => moverMaterial(index, -1)}
+                                    disabled={index === 0}
+                                    className="h-4 w-8 text-slate-400 hover:text-slate-700 disabled:opacity-20">
+                                    <ChevronUp className="w-3 h-3" />
+                                  </Button>
+                                  <Button type="button" variant="ghost" size="icon"
+                                    onClick={() => moverMaterial(index, 1)}
+                                    disabled={index === formData.materiales_requeridos.length - 1}
+                                    className="h-4 w-8 text-slate-400 hover:text-slate-700 disabled:opacity-20">
+                                    <ChevronDown className="w-3 h-3" />
+                                  </Button>
+                                </div>
                                 <Button type="button" variant="ghost" size="icon"
                                   onClick={() => removerMaterial(index)}
                                   className="text-red-400 hover:bg-red-50 h-8 w-8 shrink-0">
