@@ -11,7 +11,6 @@ import _ from 'lodash';
 import FormularioPresupuesto from "../components/presupuestos/FormularioPresupuesto";
 import TarjetaPresupuesto from "../components/presupuestos/TarjetaPresupuesto";
 import ModalTendido from "../components/presupuestos/ModalTendido";
-import AsignacionesIndividuales from "../components/remisiones/AsignacionesIndividuales"; // Importar nuevo componente
 
 export default function Presupuestos() {
   const [presupuestos, setPresupuestos] = useState([]);
@@ -24,9 +23,7 @@ export default function Presupuestos() {
   const [showForm, setShowForm] = useState(false);
   const [editingPresupuesto, setEditingPresupuesto] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showAsignaciones, setShowAsignaciones] = useState(false);
-  const [presupuestoParaAsignar, setPresupuestoParaAsignar] = useState(null);
-  const [showSugerencias, setShowSugerencias] = useState(false);
+const [showSugerencias, setShowSugerencias] = useState(false);
   const [showTendido, setShowTendido] = useState(false);
 
   useEffect(() => {
@@ -148,23 +145,6 @@ export default function Presupuestos() {
       loadData();
     } catch (err) {
       alert('Error al guardar el presupuesto: ' + err.message);
-    }
-  };
-
-  const handleAsignacionIndividual = (presupuesto) => {
-    setPresupuestoParaAsignar(presupuesto);
-    setShowAsignaciones(true);
-  };
-
-  const handleGuardarAsignaciones = async (remisiones) => {
-     try {
-      await Promise.all(remisiones.map(remision => Remision.create(remision)));
-      alert(`${remisiones.length} asignaciones individuales creadas exitosamente.`);
-      setShowAsignaciones(false);
-      setPresupuestoParaAsignar(null);
-    } catch (error) {
-      console.error('Error guardando asignaciones individuales:', error);
-      alert('Error al guardar las asignaciones: ' + error.message);
     }
   };
 
@@ -297,26 +277,6 @@ export default function Presupuestos() {
           />
         )}
 
-        {/* Form Modal Asignaciones Individuales */}
-        {showAsignaciones && presupuestoParaAsignar && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full h-full flex flex-col">
-              <AsignacionesIndividuales
-                presupuesto={presupuestoParaAsignar}
-                productos={productos}
-                materiasPrimas={materiasPrimas}
-                colores={colores}
-                operaciones={operaciones}
-                onGuardar={handleGuardarAsignaciones}
-                onCancelar={() => {
-                  setShowAsignaciones(false);
-                  setPresupuestoParaAsignar(null);
-                }}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Historial de referencias y tallas */}
         {(() => {
           // producto_id → { tallas: Set, ultimoPresupuesto: string }
@@ -443,7 +403,6 @@ export default function Presupuestos() {
                 onEdit={() => handleEdit(presupuesto)}
                 onCopy={() => handleCopy(presupuesto)}
                 onDelete={handleDelete}
-                onAsignacionIndividual={() => handleAsignacionIndividual(presupuesto)} // Pasa la nueva prop
               />
             ))
           )}

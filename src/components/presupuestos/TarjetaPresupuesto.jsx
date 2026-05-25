@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, User, Calendar, DollarSign, Trash2, Download, FileSpreadsheet, Copy, LayoutGrid, Users, MoreVertical } from "lucide-react"; // Añadir MoreVertical
+import { Edit, User, Calendar, DollarSign, Trash2, Download, FileSpreadsheet, Copy, LayoutGrid, MoreVertical } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -25,7 +25,7 @@ const getStatusColor = (estado) => {
   return colors[estado] || colors.borrador;
 };
 
-function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, onAsignacionIndividual }) {
+function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy }) {
   const totalUnidades = presupuesto.productos?.reduce((sum, producto) => {
     const unidadesProducto = (producto.combinaciones || []).reduce((combSum, comb) => {
       const unidadesCombinacion = (comb.tallas_cantidades || []).reduce((tallaSum, talla) => tallaSum + (talla.cantidad || 0), 0);
@@ -269,9 +269,6 @@ function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, 
                       <Link to={`${createPageUrl('PlanificacionRemisiones')}?presupuesto=${presupuesto.id}`}>
                         <LayoutGrid className="w-4 h-4 mr-2" /> Planificador General
                       </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onAsignacionIndividual(presupuesto)}>
-                      <Users className="w-4 h-4 mr-2" /> Asignación Individual
                     </DropdownMenuItem>
                   </>
                 )}
