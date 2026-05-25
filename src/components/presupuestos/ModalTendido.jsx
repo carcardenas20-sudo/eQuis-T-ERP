@@ -5,14 +5,14 @@ import { X, Plus, Trash2, ChevronRight, Layers } from "lucide-react";
 export default function ModalTendido({ productos, colores, materiasPrimas, onGenerate, onCancel }) {
   const [paso, setPaso] = useState(1);
   const [filas, setFilas] = useState([{ id: `f_${Date.now()}`, producto_id: '', talla: '', cant_hoja: 1 }]);
-  const [coloresTendido, setColoresTendido] = useState([{ id: `c_${Date.now()}`, nombre: '', hojas: 10 }]);
+  const [coloresTendido, setColoresTendido] = useState([{ id: `c_${Date.now()}`, color_id: '', hojas: 10 }]);
   const [mapeos, setMapeos] = useState({});
 
   const coloresMap = useMemo(() => new Map((colores || []).map(c => [c.id, c])), [colores]);
   const mpMap = useMemo(() => new Map((materiasPrimas || []).map(mp => [mp.id, mp])), [materiasPrimas]);
 
   const filasValidas = filas.filter(f => f.producto_id && f.talla);
-  const coloresValidos = coloresTendido.filter(c => c.nombre && c.hojas > 0);
+  const coloresValidos = coloresTendido.filter(c => c.color_id && c.hojas > 0);
 
   // Unique (producto, color) pairs that need combination mapping
   const pairsToMap = useMemo(() => {
@@ -217,29 +217,40 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
               <div>
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">Colores del Tendido</h3>
                 <div className="space-y-2">
-                  {coloresTendido.map((ct, idx) => (
-                    <div key={ct.id} className="flex items-center gap-1.5">
-                      <span className="text-xs text-slate-400 w-4 shrink-0">{idx + 1}</span>
-                      <input
-                        className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        placeholder="Nombre del color..."
-                        value={ct.nombre}
-                        onChange={e => updateColor(ct.id, 'nombre', e.target.value)}
-                      />
-                      <input
-                        type="number" min="1"
-                        title="Cantidad de hojas"
-                        className="w-16 text-sm border border-slate-200 rounded-lg px-1 py-1.5 text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        value={ct.hojas}
-                        onChange={e => updateColor(ct.id, 'hojas', Math.max(1, parseInt(e.target.value) || 1))}
-                      />
-                      <span className="text-xs text-slate-400 shrink-0">h.</span>
-                      <button onClick={() => removeColor(ct.id)} disabled={coloresTendido.length === 1}
-                        className="p-1 text-slate-300 hover:text-red-500 disabled:opacity-30">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                  {coloresTendido.map((ct, idx) => {
+                    const colorObj = coloresMap.get(ct.color_id);
+                    return (
+                      <div key={ct.id} className="flex items-center gap-1.5">
+                        <span className="text-xs text-slate-400 w-4 shrink-0">{idx + 1}</span>
+                        {colorObj && (
+                          <div className="w-5 h-5 rounded-full border border-slate-300 shrink-0"
+                            style={{ backgroundColor: colorObj.codigo_hex }} />
+                        )}
+                        <select
+                          className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          value={ct.color_id}
+                          onChange={e => updateColor(ct.id, 'color_id', e.target.value)}
+                        >
+                          <option value="">Color...</option>
+                          {(colores || []).map(c => (
+                            <option key={c.id} value={c.id}>{c.nombre}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number" min="1"
+                          title="Cantidad de hojas"
+                          className="w-16 text-sm border border-slate-200 rounded-lg px-1 py-1.5 text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          value={ct.hojas}
+                          onChange={e => updateColor(ct.id, 'hojas', Math.max(1, parseInt(e.target.value) || 1))}
+                        />
+                        <span className="text-xs text-slate-400 shrink-0">h.</span>
+                        <button onClick={() => removeColor(ct.id)} disabled={coloresTendido.length === 1}
+                          className="p-1 text-slate-300 hover:text-red-500 disabled:opacity-30">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
                   <button onClick={addColor} className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 mt-1">
                     <Plus className="w-3.5 h-3.5" /> Agregar color
                   </button>
@@ -256,7 +267,7 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
                       </div>
                     ))}
                     <p className="text-xs text-indigo-500 mt-1.5">
-                      En {coloresValidos.length} color(es): {coloresValidos.map(c => `${c.nombre} (${c.hojas}h)`).join(', ')}
+                      En {coloresValidos.length} color(es): {coloresValidos.map(c => `${coloresMap.get(c.color_id)?.nombre || '?'} (${c.hojas}h)`).join(', ')}
                     </p>
                   </div>
                 )}
@@ -269,8 +280,12 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
                 <div key={pair.key} className="border border-slate-200 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="font-semibold text-slate-800 text-sm">{pair.producto.nombre}</span>
-                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                      Tendido {pair.color.nombre} · {pair.color.hojas} hojas
+                    <span className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                      {coloresMap.get(pair.color.color_id)?.codigo_hex && (
+                        <span className="w-3 h-3 rounded-full border border-slate-300 inline-block shrink-0"
+                          style={{ backgroundColor: coloresMap.get(pair.color.color_id)?.codigo_hex }} />
+                      )}
+                      Tendido {coloresMap.get(pair.color.color_id)?.nombre || '?'} · {pair.color.hojas} hojas
                     </span>
                     {mapeos[pair.key] && (
                       <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full ml-auto">✓ Asignada</span>
