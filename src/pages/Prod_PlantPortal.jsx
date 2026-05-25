@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Remision, OrdenServicio, Operacion, Presupuesto, Producto } from "@/api/publicEntities";
-import { Factory, Package, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, Play, Check, ClipboardList } from "lucide-react";
+import { Factory, Package, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, Play, Check, ClipboardList, Layers } from "lucide-react";
 
 const ESTADO_CFG = {
   pendiente:  { label: "Pendiente",  color: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -241,12 +241,124 @@ function OrdenCard({ orden, onUpdate }) {
   );
 }
 
+// ─── Tarjeta de tendido ───────────────────────────────────────────────────────
+function TendidoCard({ tendido, presupuesto, onUpdate }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const isListo = tendido.estado === "listo";
+  const isEnProceso = tendido.estado === "en_proceso";
+
+  const cambiarEstado = async () => {
+    if (isListo) return;
+    const siguiente = tendido.estado === "pendiente" ? "en_proceso" : "listo";
+    setLoading(true);
+    try {
+      await Remision.update(tendido.id, { estado: siguiente });
+      onUpdate();
+    } catch (e) {
+      alert("Error al actualizar: " + e.message);
+    }
+    setLoading(false);
+  };
+
+  const totalHojas = (tendido.colores_tendido || []).reduce((s, c) => s + (c.hojas || 0), 0);
+
+  return (
+    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isListo ? "border-green-200" : "border-indigo-200"}`}>
+      <div className="flex items-center justify-between px-4 py-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex-shrink-0">
+            {isListo
+              ? <CheckCircle2 className="w-5 h-5 text-green-500" />
+              : <Layers className="w-5 h-5 text-indigo-500" />}
+          </div>
+          <div className="min-w-0">
+            <p className="font-bold text-slate-800 text-sm truncate">
+              {tendido.presupuesto_numero || presupuesto?.numero_presupuesto || tendido.id?.slice(-8)}
+            </p>
+            <p className="text-xs text-slate-500">
+              {(tendido.filas || []).length > 0
+                ? `${(tendido.filas || []).length} referencias · ${(tendido.colores_tendido || []).length} colores · ${totalHojas} hojas`
+                : "Tendido de planta"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <EstadoBadge estado={tendido.estado || "pendiente"} />
+          {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </div>
+      </div>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
+
+          {/* Filas de referencias */}
+          {(tendido.filas || []).length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Referencias a cortar</p>
+              <div className="space-y-1">
+                {tendido.filas.map((f, i) => (
+                  <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{f.producto_nombre}</p>
+                      <p className="text-xs text-slate-400">Talla {f.talla}</p>
+                    </div>
+                    <span className="text-sm font-bold text-slate-700">{f.cant_hoja} × hoja</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Colores del tendido */}
+          {(tendido.colores_tendido || []).length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Colores y hojas</p>
+              <div className="space-y-1.5">
+                {tendido.colores_tendido.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2.5 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                    <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0"
+                      style={{ backgroundColor: c.codigo_hex || '#ccc' }} />
+                    <span className="flex-1 text-sm font-medium text-slate-800">{c.color_nombre}</span>
+                    <span className="text-sm font-bold text-slate-700">{c.hojas} hojas</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Acción */}
+          {!isListo && (
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={cambiarEstado}
+                disabled={loading}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50
+                  ${!isEnProceso
+                    ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}`}
+              >
+                {loading
+                  ? <RefreshCw className="w-3 h-3 animate-spin" />
+                  : !isEnProceso ? <Play className="w-3 h-3" /> : <Check className="w-3 h-3" />}
+                {!isEnProceso ? "Iniciar tendido" : "Marcar listo"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Portal principal ─────────────────────────────────────────────────────────
 export default function PlantPortal() {
   const [operaciones, setOperaciones] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
   const [productos, setProductos] = useState([]);
   const [remisiones, setRemisiones] = useState([]);
+  const [tendidos, setTendidos] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tabId, setTabId] = useState(null);
@@ -255,20 +367,22 @@ export default function PlantPortal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [opsData, presData, prodData, remData, ordData] = await Promise.all([
+      const [opsData, presData, prodData, remData, ordData, tendidosData] = await Promise.all([
         Operacion.list("orden_procesamiento"),
         Presupuesto.filter({ estado: "aprobado" }),
         Producto.list(),
         Remision.filter({ tipo_remision: "asignacion_despacho" }),
         OrdenServicio.list("-fecha_orden"),
+        Remision.filter({ tipo_remision: "tendido" }),
       ]);
       const activas = (opsData || []).filter(o => o.activa !== false);
       setOperaciones(activas);
       setPresupuestos(presData || []);
       setProductos(prodData || []);
       setRemisiones(remData || []);
+      setTendidos(tendidosData || []);
       setOrdenes(ordData || []);
-      setTabId(prev => prev ?? (activas[0]?.id || "servicios"));
+      setTabId(prev => prev ?? (activas[0]?.id || "tendidos"));
     } catch (e) {
       console.error("Error cargando datos:", e);
     }
@@ -319,8 +433,10 @@ export default function PlantPortal() {
     }).length;
 
   const pendOrdenes = ordenes.filter(o => o.estado === "pendiente" || o.estado === "en_proceso").length;
+  const pendTendidos = tendidos.filter(t => t.estado !== "listo").length;
 
   const tabs = [
+    { id: "tendidos", label: "Tendidos", Icon: Layers, count: pendTendidos },
     ...operaciones.map(op => ({ id: op.id, label: op.nombre, Icon: Factory, count: pendDeOp(op.id) })),
     { id: "servicios", label: "Servicios", Icon: Wrench, count: pendOrdenes },
   ];
@@ -333,7 +449,16 @@ export default function PlantPortal() {
       })
     : [];
 
-  const lotesActuales = tabId && tabId !== "servicios" ? filtrarLotes(lotesDeOp(tabId), tabId) : [];
+  const tendidosFiltrados = tabId === "tendidos"
+    ? tendidos.filter(t => {
+        const e = t.estado || "pendiente";
+        if (filtroEstado === "activos") return e !== "listo";
+        if (filtroEstado === "listos") return e === "listo";
+        return true;
+      })
+    : [];
+
+  const lotesActuales = tabId && tabId !== "servicios" && tabId !== "tendidos" ? filtrarLotes(lotesDeOp(tabId), tabId) : [];
   const grupos = agruparPorPresupuesto(lotesActuales);
   const grupoEntries = Object.entries(grupos)
     .map(([pid, lotes]) => ({ pid, lotes, presupuesto: presMap[pid] || null }))
@@ -411,6 +536,20 @@ export default function PlantPortal() {
           <div className="flex justify-center py-16">
             <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
           </div>
+        ) : tabId === "tendidos" ? (
+          tendidosFiltrados.length === 0 ? (
+            <div className="text-center py-16 text-slate-400">
+              <Layers className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No hay tendidos {filtroEstado === "activos" ? "activos" : filtroEstado}</p>
+              {filtroEstado === "activos" && (
+                <p className="text-xs mt-2">Los tendidos aparecen al aprobar un presupuesto</p>
+              )}
+            </div>
+          ) : (
+            tendidosFiltrados.map(t => (
+              <TendidoCard key={t.id} tendido={t} presupuesto={presMap[t.presupuesto_id] || null} onUpdate={loadData} />
+            ))
+          )
         ) : tabId === "servicios" ? (
           ordFiltradas.length === 0 ? (
             <div className="text-center py-16 text-slate-400">

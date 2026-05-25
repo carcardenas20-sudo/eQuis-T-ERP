@@ -124,6 +124,25 @@ export default function Presupuestos() {
         }
       }
 
+      // Al aprobar: crear remisión de tendido para el portal de planta
+      if (wasApproved || isNewApproved) {
+        try {
+          const tendidoData = {
+            tipo_remision: 'tendido',
+            presupuesto_id: presupuestoActualizado.id,
+            presupuesto_numero: data.numero_presupuesto || presupuestoActualizado.numero_presupuesto || '',
+            estado: 'pendiente',
+          };
+          if (data.tendido_config) {
+            tendidoData.filas = data.tendido_config.filas;
+            tendidoData.colores_tendido = data.tendido_config.colores;
+          }
+          await Remision.create(tendidoData);
+        } catch (err) {
+          console.error("Error creando remisión de tendido:", err);
+        }
+      }
+
       setShowForm(false);
       setEditingPresupuesto(null);
       loadData();
@@ -169,7 +188,7 @@ export default function Presupuestos() {
     setShowForm(true);
   };
 
-  const handleGenerarDesdeTendido = (productosGenerados) => {
+  const handleGenerarDesdeTendido = (productosGenerados, tendidoConfig) => {
     const numero = `PRES-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 900) + 100)}`;
     setEditingPresupuesto({
       numero_presupuesto: numero,
@@ -184,6 +203,7 @@ export default function Presupuestos() {
       total_materiales: 0,
       total_mano_obra: 0,
       total_general: 0,
+      tendido_config: tendidoConfig || null,
     });
     setShowTendido(false);
     setShowForm(true);

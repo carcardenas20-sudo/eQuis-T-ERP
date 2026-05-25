@@ -199,7 +199,20 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
         (productoGroups[fila.producto_id].objetivo_por_talla[fila.talla] || 0) + totalQty;
     }
 
-    onGenerate(Object.values(productoGroups));
+    const tendidoConfig = {
+      filas: filasValidas.map(f => ({
+        producto_id: f.producto_id,
+        producto_nombre: productos.find(p => p.id === f.producto_id)?.nombre || '?',
+        talla: f.talla,
+        cant_hoja: f.cant_hoja || 1,
+      })),
+      colores: coloresValidos.map(ct => {
+        const c = coloresMap.get(ct.color_id);
+        return { color_id: ct.color_id, color_nombre: c?.nombre || '?', codigo_hex: c?.codigo_hex || '#ccc', hojas: ct.hojas };
+      }),
+    };
+
+    onGenerate(Object.values(productoGroups), tendidoConfig);
   };
 
   const handleNext = () => pairsToMap.length > 0 ? setPaso(2) : handleGenerate();
