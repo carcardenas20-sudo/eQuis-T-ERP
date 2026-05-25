@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Plus, ChevronDown, ChevronUp, RefreshCw,
-  CheckCircle2, AlertCircle, PackageCheck, X, Scissors, Eye, Printer, Trash2
+  CheckCircle2, AlertCircle, PackageCheck, X, Scissors, Eye, Printer, Trash2, Zap
 } from "lucide-react";
 
 // Calcula materiales proporcionales para un lote
@@ -84,10 +84,12 @@ export default function Asignaciones() {
   const [colores, setColores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(null); // combo key que se está auto-dividiendo
   const [expanded, setExpanded] = useState({});
   const [viewingLote, setViewingLote] = useState(null);
   const [deletingLoteId, setDeletingLoteId] = useState(null);
   const [recalculating, setRecalculating] = useState(false);
+  const [tamanoLotePorCombo, setTamanoLotePorCombo] = useState({});
 
   // Form
   const [showForm, setShowForm] = useState(false);
@@ -275,6 +277,77 @@ export default function Asignaciones() {
   };
 
   const totalForm = Object.values(formTallas).reduce((s, v) => s + (Number(v) || 0), 0);
+
+  const handleAutoDividir = async (item, combo, comboIdx) => {
+    const key = comboKey(item.id, { ...combo, _idx: comboIdx });
+    const lote = Math.max(1, tamanoLotePorCombo[key] || item.unidades_por_asignacion || 24);
+
+    // Calcular pendientes por talla
+    const pendientePorTalla = {};
+    (combo.tallas_cantidades || []).forEach(tc => {
+      const asig = getAsignadoPorTalla(key, tc.talla);
+      const pend = (Number(tc.cantidad) || 0) - asig;
+      if (pend > 0) pendientePorTalla[tc.talla] = pend;
+    });
+
+    const totalPendiente = Object.values(pendientePorTalla).reduce((s, v) => s + v, 0);
+    if (totalPendiente === 0) return;
+
+    const numLotes = Math.ceil(totalPendiente / lote);
+    const restante = { ...pendientePorTalla };
+    const nuevosLotes = [];
+
+    for (let i = 0; i < numLotes; i++) {
+      const esUltimo = i === numLotes - 1;
+      const corteTallas = Object.entries(pendientePorTalla).map(([talla, totalTalla]) => {
+        if (esUltimo) {
+          const qty = restante[talla] || 0;
+          restante[talla] = 0;
+          return { talla, cantidad: qty };
+        }
+        const proporcion = totalTalla / totalPendiente;
+        const cant = Math.min(Math.round(lote * proporcion), restante[talla] || 0);
+        restante[talla] = Math.max(0, (restante[talla] || 0) - cant);
+        return { talla, cantidad: cant };
+      }).filter(t => t.cantidad > 0);
+
+      if (corteTallas.reduce((s, t) => s + t.cantidad, 0) === 0) continue;
+      nuevosLotes.push(corteTallas);
+    }
+
+    if (nuevosLotes.length === 0) return;
+
+    setAutoSaving(key);
+    try {
+      let productoInfo;
+      try { productoInfo = await Producto.get(item.producto_id); }
+      catch (_) { productoInfo = productos.find(p => p.id === item.producto_id); }
+
+      await Promise.all(nuevosLotes.map(async (tallasCorte, i) => {
+        const materiales = calcularMateriales(productoInfo, combo, tallasCorte, materiasPrimas, colores);
+        const ts = Date.now() + i;
+        const numRem = `REM-${(selectedPresupuesto.numero_presupuesto || "").replace(/[^a-zA-Z0-9]/g, "")}-${ts}`.substring(0, 32);
+        await Remision.create({
+          numero_remision: numRem,
+          tipo_remision: "asignacion_despacho",
+          presupuesto_id: selectedId,
+          combo_key: key,
+          combinacion_nombre: nombreCombo(combo, productoInfo),
+          tallas_cantidades: tallasCorte,
+          materiales_calculados: materiales,
+          estado: "pendiente",
+          producto_nombre: productoInfo?.nombre || item.producto_id,
+          producto_reference: productoInfo?.reference || "",
+          producto_id: item.producto_id,
+        });
+      }));
+
+      await refreshLotes();
+    } catch (err) {
+      alert("Error al auto-dividir: " + err.message);
+    }
+    setAutoSaving(null);
+  };
 
   const handleSave = async () => {
     if (totalForm === 0) { alert("Ingresa al menos una unidad."); return; }
@@ -468,21 +541,42 @@ export default function Asignaciones() {
                                   : <Scissors className="w-4 h-4 text-slate-400" />}
                                 <span className="text-sm font-semibold text-slate-800">{nombreCombo(combo, productoInfo)}</span>
                               </div>
-                              <div className="flex items-center gap-3 text-xs text-slate-500">
+                              <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap justify-end">
                                 <span>{totalAsignado}/{totalCombo} uds · {pct}%</span>
                                 {!completo && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                                    onClick={() => openForm(
-                                      { ...item, id: item.id || itemIdx },
-                                      combo,
-                                      comboIdx
-                                    )}
-                                  >
-                                    <Plus className="w-3 h-3 mr-1" /> Nuevo lote
-                                  </Button>
+                                  <>
+                                    <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1">
+                                      <span className="text-slate-400">lote:</span>
+                                      <input
+                                        type="number" min="1"
+                                        value={tamanoLotePorCombo[key] ?? (item.unidades_por_asignacion || 24)}
+                                        onChange={e => setTamanoLotePorCombo(prev => ({ ...prev, [key]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                        onClick={e => e.stopPropagation()}
+                                        className="w-12 text-xs text-center border-0 outline-none bg-transparent font-semibold"
+                                      />
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      className="h-7 text-xs bg-amber-500 hover:bg-amber-600 gap-1"
+                                      disabled={autoSaving === key}
+                                      onClick={e => { e.stopPropagation(); handleAutoDividir({ ...item, id: item.id || itemIdx }, combo, comboIdx); }}
+                                    >
+                                      <Zap className="w-3 h-3" />
+                                      {autoSaving === key ? "Creando..." : "Auto"}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                      onClick={() => openForm(
+                                        { ...item, id: item.id || itemIdx },
+                                        combo,
+                                        comboIdx
+                                      )}
+                                    >
+                                      <Plus className="w-3 h-3 mr-1" /> Nuevo lote
+                                    </Button>
+                                  </>
                                 )}
                               </div>
                             </div>
