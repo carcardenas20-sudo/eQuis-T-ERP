@@ -32,21 +32,11 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
     return pairs;
   }, [filas, coloresTendido, productos]);
 
-  const canGoNext = filasValidas.length > 0 && coloresValidos.length > 0;
-  const allMapped = pairsToMap.every(pair => {
-    if (mapeos[pair.key]) return true;
-    // Si no hay combinaciones compatibles, no se puede mapear → no bloquear el botón
-    const compatibles = (pair.producto.combinaciones_predefinidas || []).filter(
-      predef => isCompatibleCombination(pair.producto, predef, pair.color.color_id)
-    );
-    return compatibles.length === 0;
-  });
-
   const addFila = () => setFilas(prev => [...prev, { id: `f_${Date.now()}`, producto_id: '', talla: '', cant_hoja: 1 }]);
   const removeFila = (id) => setFilas(prev => prev.filter(f => f.id !== id));
   const updateFila = (id, field, value) => setFilas(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
 
-  const addColor = () => setColoresTendido(prev => [...prev, { id: `c_${Date.now()}`, nombre: '', hojas: 10 }]);
+  const addColor = () => setColoresTendido(prev => [...prev, { id: `c_${Date.now()}`, color_id: '', hojas: 10 }]);
   const removeColor = (id) => setColoresTendido(prev => prev.filter(c => c.id !== id));
   const updateColor = (id, field, value) => setColoresTendido(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
 
@@ -79,6 +69,15 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
       return coloresVariables.every(cm => tendidoColorIds.has(cm.color_id));
     }
   };
+
+  const canGoNext = filasValidas.length > 0 && coloresValidos.length > 0;
+  const allMapped = pairsToMap.every(pair => {
+    if (mapeos[pair.key]) return true;
+    const compatibles = (pair.producto.combinaciones_predefinidas || []).filter(
+      predef => isCompatibleCombination(pair.producto, predef, pair.color.color_id)
+    );
+    return compatibles.length === 0;
+  });
 
   const renderCombColors = (producto, predef) => {
     const secLabels = { superior: 'S', central: 'C', inferior: 'I', forro: 'F', contraste: 'K', fondo_entero: 'FE' };
