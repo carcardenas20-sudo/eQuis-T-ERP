@@ -37,67 +37,64 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
   const removeColor = (id) => setColoresTendido(prev => prev.filter(c => c.id !== id));
   const updateColor = (id, field, value) => setColoresTendido(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
 
-  // Secciones que vienen de tendidos complementarios — no se validan ni cuentan
-  const SECCIONES_COMPLEMENTARIAS = new Set(['forro', 'central']);
+  // Secciones que no vienen de ESTE tendido de tela:
+  // - forro/central: tendidos complementarios (piezas internas)
+  // - contraste: material de acento (hilo, vivo, cinta) — viene de bobina aparte, no del tendido
+  const SECCIONES_NO_TENDIDO = new Set(['forro', 'central', 'contraste']);
 
-  // Colores variables de una combinación (excluye fijos y complementarios)
-  const getVariableColors = (producto, predef) => {
+  // Para capacidad y compatibilidad: solo colores del tejido principal
+  const getCapacityColors = (producto, predef) => {
     return (predef.colores_por_material || []).filter(cm => {
       if (!cm.color_id) return false;
       const mat = producto?.materiales_requeridos?.find(m => m.row_id === cm.row_id);
       const mp = mpMap.get(mat?.materia_prima_id);
       if (mp?.color_fijo && !mat?.color_independiente) return false;
       if (mat?.seccion === 'color_propio' && !mat?.color_independiente) return false;
-      if (producto?.tipo_diseno === 'por_secciones' && SECCIONES_COMPLEMENTARIAS.has(mat?.seccion)) return false;
+      if (SECCIONES_NO_TENDIDO.has(mat?.seccion)) return false;
       return true;
     });
   };
 
-  // Hojas consumidas por color: 1 hoja por unidad de cada combinación que usa ese color
-  // Una hoja da todas las secciones de ese color → cada color distinto cuesta 1 hoja/unidad
-  const hojasPorColorRestantes = useMemo(() => {
-    const consumed = {};
-    for (const ct of coloresValidos) consumed[ct.color_id] = 0;
-
-    for (const pair of pairsToMap) {
-      for (const predef of (pair.producto.combinaciones_predefinidas || [])) {
-        const qty = cantidades[`${pair.key}::${predef.id}`] || 0;
-        if (qty <= 0) continue;
-        const distinctColors = new Set(getVariableColors(pair.producto, predef).map(cm => cm.color_id));
-        for (const cid of distinctColors) {
-          consumed[cid] = (consumed[cid] || 0) + qty;
-        }
-      }
-    }
-
-    const remaining = {};
-    for (const ct of coloresValidos) {
-      remaining[ct.color_id] = Math.max(0, ct.hojas - (consumed[ct.color_id] || 0));
-    }
-    return remaining;
-  }, [cantidades, pairsToMap, coloresValidos]);
-
-  // Combinación compatible si todos sus colores están en el tendido
-  const isCompatibleCombination = (producto, predef) => {
-    const tendidoColorIds = new Set(coloresValidos.map(c => c.color_id));
-    const varColors = getVariableColors(producto, predef);
-    if (varColors.length === 0) return true;
-    return varColors.every(cm => tendidoColorIds.has(cm.color_id));
+  // Para mostrar en pantalla: incluye contraste (referencia visual), oculta forro/central
+  const getDisplayColors = (producto, predef) => {
+    return (predef.colores_por_material || []).filter(cm => {
+      if (!cm.color_id) return false;
+      const mat = producto?.materiales_requeridos?.find(m => m.row_id === cm.row_id);
+      const mp = mpMap.get(mat?.materia_prima_id);
+      if (mp?.color_fijo && !mat?.color_independiente) return false;
+      if (mat?.seccion === 'color_propio' && !mat?.color_independiente) return false;
+      if (['forro', 'central'].includes(mat?.seccion)) return false;
+      return true;
+    });
   };
 
-  // Máximo que se puede poner en una combinación dado el estado actual
-  // = min(restante[color] + qty_actual_de_este_combo) para cada color distinto
+  // Capacidad disponible por color = hojas totales (los productos se cortan simultáneamente,
+  // no compiten entre sí por las hojas)
+  const hojasPorColor = useMemo(() => {
+    const map = {};
+    for (const ct of coloresValidos) map[ct.color_id] = ct.hojas;
+    return map;
+  }, [coloresValidos]);
+
+  // Combinación compatible si todos sus colores de capacidad están en el tendido
+  const isCompatibleCombination = (producto, predef) => {
+    const tendidoColorIds = new Set(coloresValidos.map(c => c.color_id));
+    const capColors = getCapacityColors(producto, predef);
+    if (capColors.length === 0) return true;
+    return capColors.every(cm => tendidoColorIds.has(cm.color_id));
+  };
+
+  // Máximo de esta combinación = min(hojas de cada color distinto de capacidad)
+  // El contraste NO cuenta: viene de bobina aparte
   const getMaxUnits = (productoId, predef, producto) => {
-    const varColors = getVariableColors(producto, predef);
-    const distinctColors = new Set(varColors.map(cm => cm.color_id));
+    const capColors = getCapacityColors(producto, predef);
+    const distinctColors = new Set(capColors.map(cm => cm.color_id));
     if (distinctColors.size === 0) return 0;
-    const currentQty = cantidades[`${productoId}::${predef.id}`] || 0;
     let max = Infinity;
     for (const cid of distinctColors) {
-      const available = (hojasPorColorRestantes[cid] ?? 0) + currentQty;
-      max = Math.min(max, available);
+      max = Math.min(max, hojasPorColor[cid] ?? 0);
     }
-    return Math.max(0, max === Infinity ? 0 : max);
+    return max === Infinity ? 0 : max;
   };
 
   const canGoNext = filasValidas.length > 0 && coloresValidos.length > 0;
@@ -111,7 +108,7 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
 
   const renderCombColors = (producto, predef) => {
     const secLabels = { superior: 'Sup', central: 'Cen', inferior: 'Inf', forro: 'Fo', contraste: 'K', fondo_entero: 'FE' };
-    const activos = getVariableColors(producto, predef);
+    const activos = getDisplayColors(producto, predef);
     if (activos.length === 0) return <span className="text-xs text-slate-400 italic">Sin colores definidos</span>;
     return (
       <div className="flex items-center gap-1.5 flex-wrap">
@@ -119,11 +116,15 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
           const c = coloresMap.get(cm.color_id);
           const mat = producto?.materiales_requeridos?.find(m => m.row_id === cm.row_id);
           const sec = secLabels[mat?.seccion] || '';
+          const esContraste = mat?.seccion === 'contraste';
           if (!c) return null;
           return (
             <div key={cm.row_id} className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full border border-slate-200 shrink-0" style={{ backgroundColor: c.codigo_hex }} />
-              <span className="text-xs text-slate-600">{c.nombre}{sec ? ` (${sec})` : ''}</span>
+              <div className={`w-3 h-3 rounded-full border shrink-0 ${esContraste ? 'border-dashed border-slate-400' : 'border-slate-200'}`}
+                style={{ backgroundColor: c.codigo_hex }} />
+              <span className={`text-xs ${esContraste ? 'text-slate-400' : 'text-slate-600'}`}>
+                {c.nombre}{sec ? ` (${sec})` : ''}
+              </span>
             </div>
           );
         })}
@@ -352,33 +353,32 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
             /* ── Paso 2: cantidades por combinación ── */
             <div className="space-y-5">
 
-              {/* Barra de capacidad restante por color */}
+              {/* Referencia de hojas por color */}
               <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
                 <p className="text-xs font-semibold text-slate-600 mb-2">Hojas disponibles por color</p>
                 <div className="space-y-1.5">
                   {coloresValidos.map(ct => {
                     const colorObj = coloresMap.get(ct.color_id);
-                    const restantes = hojasPorColorRestantes[ct.color_id] ?? ct.hojas;
-                    const pct = Math.round((restantes / ct.hojas) * 100);
-                    const barColor = pct === 0 ? 'bg-red-400' : pct < 25 ? 'bg-amber-400' : 'bg-emerald-400';
                     return (
                       <div key={ct.id} className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: colorObj?.codigo_hex || '#ccc' }} />
                         <span className="text-xs text-slate-700 w-24 truncate">{colorObj?.nombre || '?'}</span>
-                        <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                        <div className="flex-1 h-2 bg-emerald-200 rounded-full overflow-hidden">
+                          <div className="h-full w-full bg-emerald-400 rounded-full" />
                         </div>
-                        <span className={`text-xs font-semibold w-16 text-right ${pct === 0 ? 'text-red-500' : 'text-slate-600'}`}>
-                          {restantes}/{ct.hojas} h.
+                        <span className="text-xs font-semibold w-16 text-right text-emerald-700">
+                          {ct.hojas} hojas
                         </span>
                       </div>
                     );
                   })}
                 </div>
+                <p className="text-xs text-slate-400 mt-2">Cada hoja produce 1 pieza de cada referencia y talla del tendido</p>
               </div>
 
               {/* Cards por producto */}
               {pairsToMap.map(pair => {
+                const filasProducto = filasValidas.filter(f => f.producto_id === pair.producto_id);
                 const compatibles = (pair.producto.combinaciones_predefinidas || []).filter(
                   predef => isCompatibleCombination(pair.producto, predef)
                 );
@@ -388,10 +388,19 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
 
                 return (
                   <div key={pair.key} className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
-                      <span className="font-semibold text-slate-800 text-sm">{pair.producto.nombre}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${totalSel > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
-                        {totalSel > 0 ? `${totalSel} uds seleccionadas` : 'Sin selección'}
+                    <div className="flex items-start justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+                      <div>
+                        <span className="font-semibold text-slate-800 text-sm">{pair.producto.nombre}</span>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {filasProducto.map((f, i) => (
+                            <span key={i} className="text-xs bg-white border border-slate-200 rounded px-1.5 py-0.5 text-slate-600">
+                              {f.talla} ×{f.cant_hoja}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${totalSel > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
+                        {totalSel > 0 ? `${totalSel} hojas sel.` : 'Sin selección'}
                       </span>
                     </div>
 
@@ -404,39 +413,54 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
                         const key = `${pair.key}::${predef.id}`;
                         const qty = cantidades[key] || 0;
                         const maxUnits = getMaxUnits(pair.producto_id, predef, pair.producto);
-                        const agotado = maxUnits === 0 && qty === 0;
+                        const agotado = maxUnits === 0;
                         const excedido = qty > maxUnits;
+                        const piezasPorTalla = filasProducto.map(f => ({
+                          talla: f.talla,
+                          cantidad: qty * (f.cant_hoja || 1),
+                        }));
 
                         return (
                           <div key={predef.id}
-                            className={`flex items-center gap-3 p-2.5 rounded-lg border ${
+                            className={`p-2.5 rounded-lg border ${
                               qty > 0 ? 'border-indigo-300 bg-indigo-50/40'
                               : agotado ? 'border-slate-100 bg-slate-50 opacity-50'
                               : 'border-slate-200 bg-white'
                             }`}>
-                            <span className="text-xs text-slate-400 w-5 shrink-0">#{idx + 1}</span>
-                            <div className="flex-1 min-w-0">
-                              {renderCombColors(pair.producto, predef)}
-                              <p className={`text-xs mt-0.5 ${agotado ? 'text-red-400' : 'text-slate-400'}`}>
-                                Máx: {maxUnits} uds disponibles
-                              </p>
+                            <div className="flex items-start gap-3">
+                              <span className="text-xs text-slate-400 w-5 shrink-0 mt-0.5">#{idx + 1}</span>
+                              <div className="flex-1 min-w-0">
+                                {renderCombColors(pair.producto, predef)}
+                                <p className={`text-xs mt-0.5 ${agotado ? 'text-red-400' : 'text-slate-400'}`}>
+                                  Máx: {maxUnits} hojas disponibles
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <input
+                                  type="number" min="0"
+                                  className={`w-16 text-sm border rounded-lg px-1.5 py-1 text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+                                    excedido ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-200'
+                                  }`}
+                                  value={qty || ''}
+                                  placeholder="0"
+                                  disabled={agotado}
+                                  onChange={e => {
+                                    const v = Math.max(0, parseInt(e.target.value) || 0);
+                                    setCantidades(prev => ({ ...prev, [key]: v }));
+                                  }}
+                                />
+                                <span className="text-xs text-slate-400">h.</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <input
-                                type="number" min="0"
-                                className={`w-16 text-sm border rounded-lg px-1.5 py-1 text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
-                                  excedido ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-200'
-                                }`}
-                                value={qty || ''}
-                                placeholder="0"
-                                disabled={agotado}
-                                onChange={e => {
-                                  const v = Math.max(0, parseInt(e.target.value) || 0);
-                                  setCantidades(prev => ({ ...prev, [key]: v }));
-                                }}
-                              />
-                              <span className="text-xs text-slate-400">uds</span>
-                            </div>
+                            {qty > 0 && (
+                              <div className="mt-2 ml-8 flex flex-wrap gap-1.5">
+                                {piezasPorTalla.map((pt, i) => (
+                                  <span key={i} className="text-xs bg-indigo-100 text-indigo-700 rounded px-1.5 py-0.5 font-medium">
+                                    {pt.cantidad} {pt.talla}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
