@@ -209,6 +209,7 @@ export default function Asignaciones() {
     try {
       // Buscar el item del presupuesto para este lote
       const item = (selectedPresupuesto?.productos || []).find(it =>
+        it.producto_id === lote.producto_id ||
         lotes.filter(l => l.combo_key?.startsWith(String(it.id))).some(l => l.id === lote.id)
       );
       if (!item) { alert("No se encontró el producto del presupuesto."); return; }
@@ -233,8 +234,9 @@ export default function Asignaciones() {
       alert("Materiales actualizados correctamente.");
     } catch (err) {
       alert("Error al recalcular: " + err.message);
+    } finally {
+      setRecalculating(false);
     }
-    setRecalculating(false);
   };
 
   const handleDeleteLote = async (lote) => {
