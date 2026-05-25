@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Printer, X, ChevronDown, ChevronUp, EyeOff, Eye, Settings2 } from "lucide-react";
+import { Plus, Trash2, Printer, X, ChevronDown, ChevronUp, EyeOff, Eye, Settings2, Zap } from "lucide-react";
 
 const TIPOS_MATERIAL_ORDEN = ['tela', 'forro', 'cremallera', 'boton', 'hilo', 'lana', 'accesorio', 'otro'];
 
@@ -185,9 +185,10 @@ function TarjetaCorte({ corte, index, productoInfo, combinacion, materiasPrimas,
 }
 
 // Componente para una combinación con sus cortes
-function PanelCombinacion({ combIndex, presupuestoItem, combinacion, productoInfo, materiasPrimas, colores, materialesOcultos, cortes, onActualizarCortes }) {
+function PanelCombinacion({ combIndex, presupuestoItem, combinacion, productoInfo, materiasPrimas, colores, materialesOcultos, cortes, onActualizarCortes, unidadesPorAsignacion }) {
   const tallas = productoInfo?.tallas || [];
   const resumenColores = getResumenColores(combinacion, productoInfo, materiasPrimas, colores);
+  const [tamanoLote, setTamanoLote] = useState(unidadesPorAsignacion || 20);
 
   // Total disponible por talla en esta combinación
   const totalPorTalla = {};
@@ -208,6 +209,42 @@ function PanelCombinacion({ combIndex, presupuestoItem, combinacion, productoInf
 
   const totalDisponible = Object.values(disponiblePorTalla).reduce((s, v) => s + v, 0);
   const totalTotal = Object.values(totalPorTalla).reduce((s, v) => s + v, 0);
+
+  const autoDividir = () => {
+    const lote = Math.max(1, tamanoLote);
+    const totalUnidades = Object.values(totalPorTalla).reduce((s, v) => s + v, 0);
+    if (totalUnidades === 0) return;
+
+    const numLotes = Math.ceil(totalUnidades / lote);
+    const nuevosCortes = [];
+    const restante = { ...totalPorTalla };
+
+    for (let i = 0; i < numLotes; i++) {
+      const esUltimo = i === numLotes - 1;
+      const corteTallas = Object.entries(totalPorTalla).map(([talla, totalTalla]) => {
+        if (esUltimo) {
+          const qty = restante[talla] || 0;
+          restante[talla] = 0;
+          return { talla, cantidad: qty };
+        }
+        const proporcion = totalTalla / totalUnidades;
+        const cant = Math.min(Math.round(lote * proporcion), restante[talla] || 0);
+        restante[talla] = Math.max(0, (restante[talla] || 0) - cant);
+        return { talla, cantidad: cant };
+      });
+
+      const totalCorte = corteTallas.reduce((s, t) => s + t.cantidad, 0);
+      if (totalCorte === 0) continue;
+
+      nuevosCortes.push({
+        id: `corte_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`,
+        tallas: corteTallas,
+        observacion: ''
+      });
+    }
+
+    onActualizarCortes(nuevosCortes);
+  };
 
   const agregarCorte = () => {
     const nuevoCorte = {
@@ -261,10 +298,25 @@ function PanelCombinacion({ combIndex, presupuestoItem, combinacion, productoInf
               })}
             </div>
           </div>
-          <Button type="button" size="sm" onClick={agregarCorte}
-            className="bg-indigo-600 hover:bg-indigo-700 text-xs shrink-0">
-            <Plus className="w-3 h-3 mr-1" /> Corte
-          </Button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1">
+              <span className="text-xs text-slate-400">lote:</span>
+              <input
+                type="number" min="1"
+                value={tamanoLote}
+                onChange={e => setTamanoLote(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-12 text-xs text-center border-0 outline-none bg-transparent font-semibold"
+              />
+            </div>
+            <Button type="button" size="sm" onClick={autoDividir}
+              className="bg-amber-500 hover:bg-amber-600 text-xs gap-1">
+              <Zap className="w-3 h-3" /> Auto
+            </Button>
+            <Button type="button" size="sm" onClick={agregarCorte}
+              className="bg-indigo-600 hover:bg-indigo-700 text-xs">
+              <Plus className="w-3 h-3" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-3 space-y-2">
@@ -427,7 +479,8 @@ export default function AsignacionesIndividuales({ presupuesto, productos, mater
           combIndex: combIdx,
           combinacion: comb,
           productoInfo,
-          totalUnidades
+          totalUnidades,
+          unidadesPorAsignacion: item.unidades_por_asignacion || 20,
         });
       });
     });
@@ -589,7 +642,7 @@ export default function AsignacionesIndividuales({ presupuesto, productos, mater
             <p className="text-xs mt-1">Ve al presupuesto y agrega combinaciones con cantidades por talla.</p>
           </div>
         ) : (
-          combinaciones.map(({ key, combIndex, combinacion, productoInfo }) => (
+          combinaciones.map(({ key, combIndex, combinacion, productoInfo, unidadesPorAsignacion }) => (
             <PanelCombinacion
               key={key}
               combIndex={combIndex}
@@ -601,6 +654,7 @@ export default function AsignacionesIndividuales({ presupuesto, productos, mater
               materialesOcultos={materialesOcultosLocal}
               cortes={cortesPorCombinacion[key] || []}
               onActualizarCortes={(cortes) => actualizarCortes(key, cortes)}
+              unidadesPorAsignacion={unidadesPorAsignacion}
             />
           ))
         )}
