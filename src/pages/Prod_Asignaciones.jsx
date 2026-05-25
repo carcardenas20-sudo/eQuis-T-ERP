@@ -27,6 +27,16 @@ function calcularMateriales(productoInfo, combinacion, tallasCorte, materiasPrim
       const ce = (combinacion.colores_por_material || []).find(cm => cm.row_id === mat.row_id);
       if (ce?.color_nombre) colorNombre = ce.color_nombre;
       else if (ce?.color_id) colorNombre = colores.find(c => c.id === ce.color_id)?.nombre || "?";
+      else {
+        // Material nuevo no tiene entrada en colores_por_material — buscar por sección
+        const otrosDeLaSeccion = (productoInfo?.materiales_requeridos || [])
+          .filter(m => m.seccion === mat.seccion && m.row_id !== mat.row_id);
+        for (const otro of otrosDeLaSeccion) {
+          const entrada = (combinacion.colores_por_material || []).find(cm => cm.row_id === otro.row_id);
+          if (entrada?.color_nombre) { colorNombre = entrada.color_nombre; break; }
+          if (entrada?.color_id) { colorNombre = colores.find(c => c.id === entrada.color_id)?.nombre || "?"; break; }
+        }
+      }
     }
     const cantidad = calcularCantidadRemision(mat, totalUnidades);
     result.push({
