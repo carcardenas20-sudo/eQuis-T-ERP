@@ -5,11 +5,12 @@ import { Inventory, StockMovement } from "@/entities/all";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Calculator, Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Search, Calculator, Lightbulb, ChevronDown, ChevronUp, Layers } from "lucide-react";
 import _ from 'lodash';
 
 import FormularioPresupuesto from "../components/presupuestos/FormularioPresupuesto";
 import TarjetaPresupuesto from "../components/presupuestos/TarjetaPresupuesto";
+import ModalTendido from "../components/presupuestos/ModalTendido";
 import AsignacionesIndividuales from "../components/remisiones/AsignacionesIndividuales"; // Importar nuevo componente
 
 export default function Presupuestos() {
@@ -26,6 +27,7 @@ export default function Presupuestos() {
   const [showAsignaciones, setShowAsignaciones] = useState(false);
   const [presupuestoParaAsignar, setPresupuestoParaAsignar] = useState(null);
   const [showSugerencias, setShowSugerencias] = useState(false);
+  const [showTendido, setShowTendido] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -167,6 +169,26 @@ export default function Presupuestos() {
     setShowForm(true);
   };
 
+  const handleGenerarDesdeTendido = (productosGenerados) => {
+    const numero = `PRES-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 900) + 100)}`;
+    setEditingPresupuesto({
+      numero_presupuesto: numero,
+      cliente: '',
+      fecha_entrega: '',
+      estado: 'borrador',
+      observaciones: '',
+      productos: productosGenerados,
+      materiales_calculados: [],
+      materiales_ocultos: [],
+      margen_ganancia: 30,
+      total_materiales: 0,
+      total_mano_obra: 0,
+      total_general: 0,
+    });
+    setShowTendido(false);
+    setShowForm(true);
+  };
+
   const handleDelete = async (presupuestoId) => {
     try {
       await Presupuesto.delete(presupuestoId);
@@ -195,13 +217,23 @@ export default function Presupuestos() {
             <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 mb-2">Presupuestos</h1>
             <p className="text-slate-600 text-sm sm:text-lg">Crea y gestiona presupuestos detallados de fabricación</p>
           </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-medium px-6 py-3 shadow-lg w-full md:w-auto"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Nuevo Presupuesto
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => setShowTendido(true)}
+              className="gap-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+            >
+              <Layers className="w-4 h-4" />
+              Desde Tendido
+            </Button>
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-medium px-6 py-3 shadow-lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Nuevo Presupuesto
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
@@ -218,6 +250,17 @@ export default function Presupuestos() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal asistente de tendido */}
+        {showTendido && (
+          <ModalTendido
+            productos={productos}
+            colores={colores}
+            materiasPrimas={materiasPrimas}
+            onGenerate={handleGenerarDesdeTendido}
+            onCancel={() => setShowTendido(false)}
+          />
+        )}
 
         {/* Form Modal Presupuesto */}
         {showForm && (
