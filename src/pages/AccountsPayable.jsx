@@ -419,7 +419,7 @@ function MaterialPendienteRow({ item, onComprar }) {
 }
 
 // ─── Tarjeta de item en vista unificada (con historial de abonos) ────────────
-function PendienteCard({ item, onPayment, onDelete, abonos = [] }) {
+function PendienteCard({ item, onPayment, onDelete, abonos = [], onEditAbono, onDeleteAbono }) {
   const [expanded, setExpanded] = useState(false);
   const urgency = URGENCY(item.due_date);
   const uStyle = URGENCY_STYLES[urgency];
@@ -509,7 +509,21 @@ function PendienteCard({ item, onPayment, onDelete, abonos = [] }) {
                 <span className="text-slate-400">{METHOD_LABELS[a.method] || a.method || ''}</span>
                 {a.reference && <span className="text-slate-300">· {a.reference}</span>}
               </div>
-              <span className="font-semibold text-slate-800">{fmtMoney(a.amount)}</span>
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-slate-800">{fmtMoney(a.amount)}</span>
+                {onEditAbono && (
+                  <button onClick={() => onEditAbono(a, item, null)}
+                    className="p-1 rounded hover:bg-blue-50 text-slate-300 hover:text-blue-500">
+                    <Edit2 size={11} />
+                  </button>
+                )}
+                {onDeleteAbono && (
+                  <button onClick={() => onDeleteAbono(a, item, null)}
+                    className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500">
+                    <Trash2 size={11} />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
           <div className="border-t mt-1 pt-1 flex justify-between text-xs font-semibold">
@@ -730,6 +744,55 @@ export default function AccountsPayablePage() {
     } catch (err) {
       console.error("Error processing payment:", err);
       alert("Error al procesar el pago");
+    }
+  };
+
+  // ── Editar / eliminar un abono individual ─────────────────────────────────
+
+  const recalcPayable = async (payableId, amountDiff) => {
+    const payable = await AccountPayable.get(payableId);
+    if (!payable) return;
+    const newPaid = Math.max(0, (payable.paid_amount || 0) + amountDiff);
+    const newPending = Math.max(0, payable.total_amount - newPaid);
+    const newStatus = newPending <= 0 ? 'paid' : newPaid > 0 ? 'partial' : 'pending';
+    await AccountPayable.update(payableId, { paid_amount: newPaid, pending_amount: newPending, status: newStatus });
+  };
+
+  const handleEditAbono = async (payment, payable, refreshHistory) => {
+    const input = window.prompt(
+      `Nuevo monto para el abono del ${new Date(payment.payment_date).toLocaleDateString('es-CO')}:`,
+      payment.amount
+    );
+    if (input === null) return;
+    const newAmount = parseFloat(input);
+    if (isNaN(newAmount) || newAmount <= 0) { alert('Monto inválido'); return; }
+    try {
+      const diff = newAmount - payment.amount;
+      await PayablePayment.update(payment.id, { amount: newAmount });
+      if (payment.expense_id) await Expense.update(payment.expense_id, { amount: newAmount });
+      await recalcPayable(payable.id, diff);
+      await loadData();
+      refreshHistory?.();
+    } catch (err) {
+      console.error(err);
+      alert('Error al editar el abono');
+    }
+  };
+
+  const handleDeleteAbono = async (payment, payable, refreshHistory) => {
+    const msg = payment.expense_id
+      ? `¿Eliminar este abono de $${payment.amount?.toLocaleString()}? También se eliminará el gasto en efectivo vinculado y se revertirá el saldo.`
+      : `¿Eliminar este abono de $${payment.amount?.toLocaleString()}? El saldo del proveedor se revertirá.`;
+    if (!window.confirm(msg)) return;
+    try {
+      if (payment.expense_id) await Expense.delete(payment.expense_id);
+      await PayablePayment.delete(payment.id);
+      await recalcPayable(payable.id, -payment.amount);
+      await loadData();
+      refreshHistory?.();
+    } catch (err) {
+      console.error(err);
+      alert('Error al eliminar el abono');
     }
   };
 
@@ -1178,6 +1241,7 @@ export default function AccountsPayablePage() {
                                 key={item.id} item={item} onPayment={setPaymentModalData}
                                 onDelete={handleDeleteOperarioPayment}
                                 abonos={allAbonos.filter(a => a.payable_id === item.id)}
+                                onEditAbono={handleEditAbono} onDeleteAbono={handleDeleteAbono}
                               />
                             ))}
                           </div>
@@ -1304,7 +1368,8 @@ export default function AccountsPayablePage() {
                     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
                     .map(p => (
                       <PendienteCard key={p.id} item={p} onPayment={setPaymentModalData}
-                        abonos={allAbonos.filter(a => a.payable_id === p.id)} />
+                        abonos={allAbonos.filter(a => a.payable_id === p.id)}
+                        onEditAbono={handleEditAbono} onDeleteAbono={handleDeleteAbono} />
                     ))}
                 </div>
               </div>
@@ -1320,7 +1385,7 @@ export default function AccountsPayablePage() {
               </div>
             ) : supplierBalances.map(sup => (
               <SupplierBalanceCard key={sup.name} supplier={sup} onPayment={setPaymentModalData}
-                allAbonos={allAbonos} />
+                allAbonos={allAbonos} onEditAbono={handleEditAbono} onDeleteAbono={handleDeleteAbono} />
             ))}
           </TabsContent>
 
@@ -1336,6 +1401,8 @@ export default function AccountsPayablePage() {
               }}
               onPayment={setPaymentModalData}
               onManageInstallments={setInstallmentsFor}
+              onEditPayment={handleEditAbono}
+              onDeletePayment={handleDeleteAbono}
             />
           </TabsContent>
         </Tabs>
@@ -1369,7 +1436,7 @@ export default function AccountsPayablePage() {
 }
 
 // ─── Tarjeta balance por proveedor ────────────────────────────────────────────
-function SupplierBalanceCard({ supplier, onPayment, allAbonos = [] }) {
+function SupplierBalanceCard({ supplier, onPayment, allAbonos = [], onEditAbono, onDeleteAbono }) {
   const [expanded, setExpanded] = useState(false);
   const totalAbonado = supplier.items.reduce((s, item) => {
     return s + allAbonos.filter(a => a.payable_id === item.id).reduce((ss, a) => ss + (a.amount || 0), 0);
@@ -1419,9 +1486,23 @@ function SupplierBalanceCard({ supplier, onPayment, allAbonos = [] }) {
                 {itemAbonos.length > 0 && (
                   <div className="border-t pt-1 space-y-0.5">
                     {itemAbonos.map((a, i) => (
-                      <div key={i} className="flex justify-between text-xs text-slate-500">
+                      <div key={i} className="flex items-center justify-between text-xs text-slate-500">
                         <span>{fmtDate(a.payment_date)} · {a.method || ''}</span>
-                        <span className="font-medium">{fmtMoney(a.amount)}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">{fmtMoney(a.amount)}</span>
+                          {onEditAbono && (
+                            <button onClick={() => onEditAbono(a, item, null)}
+                              className="p-1 rounded hover:bg-blue-50 text-slate-300 hover:text-blue-500">
+                              <Edit2 size={11} />
+                            </button>
+                          )}
+                          {onDeleteAbono && (
+                            <button onClick={() => onDeleteAbono(a, item, null)}
+                              className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500">
+                              <Trash2 size={11} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -6,7 +6,7 @@ import { Edit, Trash2, DollarSign, Calendar, AlertCircle, ChevronDown, ChevronUp
 import { format } from "date-fns";
 import { PayablePayment } from "@/entities/PayablePayment";
 
-export default function PayableList({ payables, locations, onEdit, onDelete, onPayment, onManageInstallments }) {
+export default function PayableList({ payables, locations, onEdit, onDelete, onPayment, onManageInstallments, onDeletePayment, onEditPayment }) {
   const [expandedPayable, setExpandedPayable] = useState(null);
   const [paymentHistories, setPaymentHistories] = useState({});
   const [loadingHistories, setLoadingHistories] = useState({});
@@ -218,7 +218,20 @@ export default function PayableList({ payables, locations, onEdit, onDelete, onP
                                     📅 {format(new Date(payment.payment_date), 'dd/MM/yyyy HH:mm')}
                                   </p>
                                 </div>
-                                <span className="text-xs text-slate-400">#{idx + 1}</span>
+                                <div className="flex gap-1">
+                                  {onEditPayment && (
+                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-500 hover:bg-blue-50"
+                                      onClick={() => onEditPayment(payment, payable, () => loadPaymentHistory(payable.id))}>
+                                      <Edit className="w-3.5 h-3.5" />
+                                    </Button>
+                                  )}
+                                  {onDeletePayment && (
+                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:bg-red-50"
+                                      onClick={() => onDeletePayment(payment, payable, () => loadPaymentHistory(payable.id))}>
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                               <div className="space-y-1 text-xs">
                                 {payment.reference && (
