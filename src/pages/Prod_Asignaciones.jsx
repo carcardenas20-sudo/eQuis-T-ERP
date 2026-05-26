@@ -185,7 +185,7 @@ export default function Asignaciones() {
     .mats-header { font-size: 9px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px; }
     .mat-row { display: flex; align-items: center; border-bottom: 1px dotted #e5e5e5; padding: 2px 0; gap: 4px; }
     .mat-nombre { flex: 1; font-size: 11.5px; color: #222; }
-    .mat-color { color: #888; font-size: 10px; margin-left: 2px; }
+    .mat-color { color: #333; font-size: 10px; margin-left: 2px; font-weight: 700; }
     .mat-mid { font-size: 11.5px; font-weight: 700; color: #000; white-space: nowrap; flex-shrink: 0; }
     .mat-etiqueta { font-weight: 400; font-size: 10px; color: #666; margin-left: 1px; }
     .chk { display: inline-block; width: 4.5mm; height: 4.5mm; border: 1px solid #777; border-radius: 1px; flex-shrink: 0; }
@@ -834,7 +834,7 @@ export default function Asignaciones() {
                         <div>
                           <p className="text-sm font-semibold text-slate-800">{mat.nombre}</p>
                           {mat.color && mat.color !== "Sin definir" && (
-                            <p className="text-xs text-slate-400">{mat.color}</p>
+                            <p className="text-xs font-bold text-slate-700">{mat.color}</p>
                           )}
                         </div>
                         <div className="text-right">
