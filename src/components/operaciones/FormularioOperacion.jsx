@@ -21,16 +21,28 @@ const TIPOS_MATERIALES = [
   { value: 'otro', label: 'Otro', color: 'bg-gray-100 text-gray-800' }
 ];
 
+const SECCIONES_PRODUCTO = [
+  'superior', 'inferior', 'central', 'fondo_entero',
+  'forro', 'cremallera', 'cordon', 'contraste',
+  'lana', 'tejido', 'accesorio', 'otro'
+];
+
 export default function FormularioOperacion({ operacion, materiasPrimas, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(operacion || {
     nombre: "",
     descripcion: "",
+    secciones: [],
     tipos_materiales_requeridos: [],
     materiales_especificos: [],
     condicion_logica: "cualquiera",
     activa: true,
     orden_procesamiento: 0
   });
+
+  const toggleSeccion = (sec) => {
+    const current = formData.secciones || [];
+    setFormData({ ...formData, secciones: current.includes(sec) ? current.filter(s => s !== sec) : [...current, sec] });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -40,8 +52,8 @@ export default function FormularioOperacion({ operacion, materiasPrimas, onSubmi
       return;
     }
     
-    if (formData.tipos_materiales_requeridos.length === 0 && formData.materiales_especificos.length === 0) {
-      alert("Debe seleccionar al menos un tipo de material o material específico.");
+    if ((formData.secciones || []).length === 0 && formData.tipos_materiales_requeridos.length === 0 && formData.materiales_especificos.length === 0) {
+      alert("Debe configurar al menos una sección o tipo de material.");
       return;
     }
     
@@ -150,6 +162,35 @@ export default function FormularioOperacion({ operacion, materiasPrimas, onSubmi
                     rows={3}
                     className="border-slate-200 focus:ring-2 focus:ring-amber-500"
                   />
+                </div>
+              </div>
+
+              {/* Secciones vinculadas */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">
+                  Secciones del producto que pertenecen a esta operación
+                </h3>
+                <p className="text-sm text-slate-500">
+                  Solo los materiales cuya sección esté marcada aquí aparecerán en esta pestaña del portal de planta.
+                </p>
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                  {SECCIONES_PRODUCTO.map(sec => {
+                    const activa = (formData.secciones || []).includes(sec);
+                    return (
+                      <button
+                        key={sec}
+                        type="button"
+                        onClick={() => toggleSeccion(sec)}
+                        className={`px-3 py-2 rounded-lg border text-sm font-medium capitalize transition-all ${
+                          activa
+                            ? 'bg-amber-500 border-amber-500 text-white'
+                            : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'
+                        }`}
+                      >
+                        {sec}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

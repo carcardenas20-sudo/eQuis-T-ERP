@@ -20,7 +20,7 @@ function EstadoBadge({ estado }) {
 }
 
 // ─── Tarjeta de lote (remisión individual) ────────────────────────────────────
-function LoteCard({ remision, operacionId, onUpdate }) {
+function LoteCard({ remision, operacionId, secciones, getSeccionMat, onUpdate }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -74,15 +74,20 @@ function LoteCard({ remision, operacionId, onUpdate }) {
           </div>
 
           {/* Materiales */}
-          {(remision.materiales_calculados || []).length > 0 && (
+          {(() => {
+            const mats = secciones?.length
+              ? (remision.materiales_calculados || []).filter(m => secciones.includes(getSeccionMat(m, remision.producto_id)))
+              : (remision.materiales_calculados || []);
+            if (!mats.length) return null;
+            return (
             <div className="space-y-1">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Materiales</p>
-              {remision.materiales_calculados.map((mat, i) => (
+              {mats.map((mat, i) => (
                 <div key={i} className="flex items-center justify-between bg-slate-50 rounded px-2.5 py-1.5 border border-slate-100">
                   <div>
                     <p className="text-xs font-medium text-slate-800">{mat.nombre}</p>
                     {mat.color && mat.color !== "Sin definir" && (
-                      <p className="text-xs text-slate-400">{mat.color}</p>
+                      <p className="text-xs font-bold text-slate-700">{mat.color}</p>
                     )}
                   </div>
                   <span className="text-sm font-bold text-slate-700">
@@ -92,7 +97,8 @@ function LoteCard({ remision, operacionId, onUpdate }) {
                 </div>
               ))}
             </div>
-          )}
+            );
+          })()}
 
           {/* Acción */}
           {!isListo && (
@@ -119,7 +125,7 @@ function LoteCard({ remision, operacionId, onUpdate }) {
 }
 
 // ─── Tarjeta de presupuesto (agrupa lotes) ────────────────────────────────────
-function PresupuestoCard({ presupuesto, lotes, operacionId, onUpdate }) {
+function PresupuestoCard({ presupuesto, lotes, operacionId, secciones, getSeccionMat, onUpdate }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -211,7 +217,7 @@ function PresupuestoCard({ presupuesto, lotes, operacionId, onUpdate }) {
       {open && (
         <div className="px-3 pb-3 space-y-2 border-t border-slate-100 pt-2">
           {lotes.map(r => (
-            <LoteCard key={r.id} remision={r} operacionId={operacionId} onUpdate={onUpdate} />
+            <LoteCard key={r.id} remision={r} operacionId={operacionId} secciones={secciones} getSeccionMat={getSeccionMat} onUpdate={onUpdate} />
           ))}
         </div>
       )}
@@ -443,17 +449,36 @@ export default function PlantPortal() {
 
   useEffect(() => { loadData(); }, []);
 
-  // Mapa producto_id → operaciones_requeridas
-  const productoOps = Object.fromEntries(
-    productos.map(p => [p.id, p.operaciones_requeridas || []])
-  );
-
   // Mapa presupuesto_id → presupuesto
   const presMap = Object.fromEntries(presupuestos.map(p => [p.id, p]));
 
-  // Para una operación, filtra lotes cuyo producto requiere esa operación
-  const lotesDeOp = (opId) =>
-    remisiones.filter(r => r.producto_id && (productoOps[r.producto_id] || []).includes(opId));
+  // Mapa producto_id → materiales_requeridos (para fallback de seccion)
+  const productoMats = Object.fromEntries(
+    productos.map(p => [p.id, p.materiales_requeridos || []])
+  );
+
+  // Obtiene la sección de un material calculado: usa la guardada o busca en el producto
+  const getSeccionMat = (mat, productoId) => {
+    if (mat.seccion) return mat.seccion;
+    const mats = productoMats[productoId] || [];
+    return mats.find(m => m.materia_prima_id === mat.materia_prima_id)?.seccion || "";
+  };
+
+  // Filtra los materiales de un lote según las secciones de la operación
+  const getMaterialesDeOp = (lote, secciones) => {
+    if (!secciones || secciones.length === 0) return lote.materiales_calculados || [];
+    return (lote.materiales_calculados || []).filter(mat =>
+      secciones.includes(getSeccionMat(mat, lote.producto_id))
+    );
+  };
+
+  // Para una operación, filtra lotes que tengan al menos un material en sus secciones
+  const lotesDeOp = (opId) => {
+    const op = operaciones.find(o => o.id === opId);
+    const secciones = op?.secciones || [];
+    if (secciones.length === 0) return remisiones;
+    return remisiones.filter(r => getMaterialesDeOp(r, secciones).length > 0);
+  };
 
   // Agrupa lotes por presupuesto
   const agruparPorPresupuesto = (lotes) => {
@@ -626,6 +651,8 @@ export default function PlantPortal() {
               presupuesto={presupuesto || { id: pid, numero_presupuesto: pid.slice(-8) }}
               lotes={lotes}
               operacionId={tabId}
+              secciones={operaciones.find(o => o.id === tabId)?.secciones || []}
+              getSeccionMat={getSeccionMat}
               onUpdate={loadData}
             />
           ))

@@ -46,6 +46,7 @@ function calcularMateriales(productoInfo, combinacion, tallasCorte, materiasPrim
       cantidad,
       etiqueta: mat.unidad_remision || mat.etiqueta_cantidad || mp.unidad_medida || "unidades",
       tipo: mp.tipo_material || "otro",
+      seccion: mat.seccion || "",
     });
   });
   return result;
