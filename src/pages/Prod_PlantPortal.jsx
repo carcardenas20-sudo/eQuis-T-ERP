@@ -121,38 +121,90 @@ function LoteCard({ remision, operacionId, onUpdate }) {
 // ─── Tarjeta de presupuesto (agrupa lotes) ────────────────────────────────────
 function PresupuestoCard({ presupuesto, lotes, operacionId, onUpdate }) {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const total = lotes.length;
-  const listos = lotes.filter(r => ((r.procesos_estado || {})[operacionId] || "pendiente") === "listo").length;
-  const pendientes = total - listos;
+  const porEstado = lotes.reduce((acc, r) => {
+    const e = (r.procesos_estado || {})[operacionId] || "pendiente";
+    acc[e] = (acc[e] || 0) + 1;
+    return acc;
+  }, {});
+  const listos = porEstado.listo || 0;
+  const enProceso = porEstado.en_proceso || 0;
   const todosListos = total > 0 && listos === total;
+  const algunoSinIniciar = (porEstado.pendiente || 0) > 0;
   const totalUds = lotes.reduce((s, r) =>
     s + (r.tallas_cantidades || []).reduce((ss, t) => ss + (Number(t.cantidad) || 0), 0), 0);
 
+  const avanzarTodos = async (nuevoEstado) => {
+    setLoading(true);
+    try {
+      const lotesAActualizar = lotes.filter(r => {
+        const e = (r.procesos_estado || {})[operacionId] || "pendiente";
+        return e !== "listo" && (nuevoEstado === "listo" || e === "pendiente");
+      });
+      await Promise.all(lotesAActualizar.map(r =>
+        Remision.update(r.id, {
+          procesos_estado: { ...(r.procesos_estado || {}), [operacionId]: nuevoEstado }
+        })
+      ));
+      onUpdate();
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+    setLoading(false);
+  };
+
   return (
     <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${todosListos ? "border-green-200" : "border-slate-200"}`}>
-      <div className="flex items-center justify-between px-4 py-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex-shrink-0">
-            {todosListos
-              ? <CheckCircle2 className="w-5 h-5 text-green-500" />
-              : <ClipboardList className="w-5 h-5 text-emerald-600" />}
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0 cursor-pointer flex-1" onClick={() => setOpen(o => !o)}>
+            <div className="flex-shrink-0">
+              {todosListos
+                ? <CheckCircle2 className="w-5 h-5 text-green-500" />
+                : <ClipboardList className="w-5 h-5 text-emerald-600" />}
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-slate-800 text-sm truncate">
+                {presupuesto.numero_presupuesto || presupuesto.id?.slice(-8)}
+              </p>
+              <p className="text-xs text-slate-500">
+                {total} lotes · {totalUds} uds
+                {!todosListos && <span className="ml-1 text-amber-600 font-semibold">· {listos}/{total} listos</span>}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="font-bold text-slate-800 text-sm truncate">
-              {presupuesto.numero_presupuesto || presupuesto.id?.slice(-8)}
-            </p>
-            <p className="text-xs text-slate-500">
-              {total} lotes · {totalUds} uds
-              {pendientes > 0 && <span className="ml-1 text-amber-600 font-semibold">· {pendientes} pendientes</span>}
-            </p>
+
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {todosListos ? (
+              <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                ✓ Completo
+              </span>
+            ) : (
+              <>
+                {algunoSinIniciar && (
+                  <button
+                    onClick={() => avanzarTodos("en_proceso")}
+                    disabled={loading}
+                    className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    <Play className="w-3 h-3" /> Iniciar
+                  </button>
+                )}
+                <button
+                  onClick={() => avanzarTodos("listo")}
+                  disabled={loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 disabled:opacity-50"
+                >
+                  <Check className="w-3 h-3" /> Listo
+                </button>
+              </>
+            )}
+            <button onClick={() => setOpen(o => !o)} className="p-1 text-slate-400">
+              {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {todosListos
-            ? <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">Completo</span>
-            : <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">{listos}/{total}</span>}
-          {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
 
