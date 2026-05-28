@@ -27,6 +27,9 @@ import Transfers from './pages/Transfers';
 import Users from './pages/Users';
 import MerchandiseAssignment from './pages/MerchandiseAssignment';
 
+// ── MÓDULO ANÁLISIS ───────────────────────────────────────────
+import Fin_Rentabilidad from './pages/Fin_Rentabilidad';
+
 // ── MÓDULO PRODUCCIÓN / CHAQUETAS (chaquetas-pro) ─────────────
 import Prod_Operaciones from './pages/Prod_Operaciones';
 import Prod_MateriasPrimas from './pages/Prod_MateriasPrimas';
@@ -116,6 +119,9 @@ export const PAGES = {
   "Op_EmployeeProfile": Op_EmployeeProfile,
   "Op_Empleado": Op_Empleado,
   "Op_MerchandiseEntry": Op_MerchandiseEntry,
+
+  // Análisis
+  "Fin_Rentabilidad": Fin_Rentabilidad,
 };
 
 export const pagesConfig = {

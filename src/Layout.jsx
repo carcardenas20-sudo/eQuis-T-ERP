@@ -13,7 +13,7 @@ import {
   FileText, Settings, Building2, UserCheck, CreditCard, Receipt, ShoppingBag,
   BookOpen, ArrowRightLeft, ArrowLeftRight, Sparkles, Wallet, BarChart3,
   ListChecks, Factory, Shirt, Palette, Wrench, Truck, Calculator,
-  PackageCheck, TruckIcon, Clock, Warehouse, Eye, Scissors
+  PackageCheck, TruckIcon, Clock, Warehouse, Eye, Scissors, TrendingUp
 } from "lucide-react";
 
 const comercialGroups = [
@@ -91,6 +91,14 @@ const serviciosGroups = [
   },
 ];
 
+const analisisGroups = [
+  {
+    title: "Análisis", items: [
+      { title: "Rentabilidad", url: createPageUrl("Fin_Rentabilidad"), icon: TrendingUp, permissions: ["produccion_view"] },
+    ]
+  },
+];
+
 const operariosGroups = [
   {
     title: "Operarios", items: [
@@ -120,12 +128,14 @@ const MODULE_ACCESS_PERMS = {
   comercial: ["pos_sales","sales_view","products_view","products_create","inventory_view","purchases_view","expenses_view","reports_basic","dashboard_view","dashboard_comercial","customers_view","credits_view","inventory_transfer","accounting_view_transactions","accounts_payable_view","users_view","locations_view","settings_system","agent_access"],
   produccion: ["produccion_view", "produccion_pipeline_view"],
   operarios: ["operarios_view","operarios_admin"],
+  analisis: ["produccion_view"],
 };
 
 const MODULE_META = {
   comercial: { label: "Comercial", icon: ShoppingCart, badgeCls: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", activeCls: "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300", groupCls: "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" },
   produccion: { label: "Producción", icon: Factory, badgeCls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", activeCls: "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300", groupCls: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" },
   operarios: { label: "Operarios", icon: Users, badgeCls: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300", activeCls: "bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300", groupCls: "bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300" },
+  analisis: { label: "Análisis", icon: TrendingUp, badgeCls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", activeCls: "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300", groupCls: "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" },
 };
 
 
@@ -174,6 +184,7 @@ function LayoutContent({ children }) {
     ...produccionGroups.map(g => ({ ...g, mk: "produccion" })),
     ...serviciosGroups.map(g => ({ ...g, mk: "produccion" })),
     ...operariosGroups.map(g => ({ ...g, mk: "operarios" })),
+    ...analisisGroups.map(g => ({ ...g, mk: "analisis" })),
   ];
 
   // Aplanar todos los items de cada módulo sin subgrupos
@@ -196,16 +207,19 @@ function LayoutContent({ children }) {
     comercial:  { bg: "rgba(99,102,241,0.18)", text: "#a5b4fc", icon: "#818cf8" },
     produccion: { bg: "rgba(16,185,129,0.15)", text: "#6ee7b7", icon: "#34d399" },
     operarios:  { bg: "rgba(167,139,250,0.15)", text: "#c4b5fd", icon: "#a78bfa" },
+    analisis:   { bg: "rgba(245,158,11,0.15)", text: "#fcd34d", icon: "#f59e0b" },
   };
   const mkGroupActive = {
     comercial:  "text-indigo-300",
     produccion: "text-emerald-300",
     operarios:  "text-violet-300",
+    analisis:   "text-amber-300",
   };
   const mkHeader = {
     comercial:  { dot: "#6366f1", text: "#6366f1" },
     produccion: { dot: "#10b981", text: "#10b981" },
     operarios:  { dot: "#a78bfa", text: "#a78bfa" },
+    analisis:   { dot: "#f59e0b", text: "#f59e0b" },
   };
 
   const bannerOffset = isRealAdmin ? "pt-7" : "";
@@ -326,7 +340,7 @@ function LayoutContent({ children }) {
               </p>
               <div className="flex gap-1 mt-0.5 flex-wrap">
                 {Object.keys(MODULE_META).filter(hasModuleAccess).map(mk => {
-                  const colors = { comercial: '#6366f1', produccion: '#10b981', operarios: '#a78bfa' };
+                  const colors = { comercial: '#6366f1', produccion: '#10b981', operarios: '#a78bfa', analisis: '#f59e0b' };
                   return <span key={mk} className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: colors[mk] }}>{MODULE_META[mk].label}</span>;
                 }).reduce((acc, el, i) => i === 0 ? [el] : [...acc, <span key={`sep-${i}`} className="text-[9px]" style={{color:'rgba(255,255,255,0.2)'}}>·</span>, el], [])}
               </div>
