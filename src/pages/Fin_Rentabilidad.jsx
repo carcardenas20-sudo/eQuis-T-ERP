@@ -8,9 +8,10 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Users, Percent, RefreshCw, Package, Repeat, ArrowUpRight } from "lucide-react";
 
-const SaleItem   = base44.entities.SaleItem;
-const Producto   = base44.entities.Producto;
-const Employee   = base44.entities.Employee;
+const SaleItem       = base44.entities.SaleItem;
+const Producto       = base44.entities.Producto;
+const ProductoPOS    = base44.entities.Product;   // productos del POS (sku → id)
+const Employee       = base44.entities.Employee;
 const AccountPayable = base44.entities.AccountPayable;
 
 const MESES_LABEL = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -78,6 +79,7 @@ export default function Rentabilidad() {
   const [sales, setSales] = useState([]);
   const [saleItems, setSaleItems] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [productosPOS, setProductosPOS] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
   const [gastos, setGastos] = useState([]);
@@ -87,10 +89,11 @@ export default function Rentabilidad() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [salesData, saleItemsData, productosData, employeesData, presupuestosData, gastosData] = await Promise.all([
+      const [salesData, saleItemsData, productosData, productosPOSData, employeesData, presupuestosData, gastosData] = await Promise.all([
         Sale.list("-sale_date"),
         SaleItem.list(),
         Producto.list(),
+        ProductoPOS.list(),
         Employee.list(),
         Presupuesto.list("-created_date"),
         AccountPayable.list("-created_date", 1000),
@@ -98,6 +101,7 @@ export default function Rentabilidad() {
       setSales(salesData || []);
       setSaleItems(saleItemsData || []);
       setProductos(productosData || []);
+      setProductosPOS(productosPOSData || []);
       setEmployees(employeesData || []);
       setPresupuestos((presupuestosData || []).filter(p => p.estado !== "rechazado"));
       setGastos(gastosData || []);
@@ -109,7 +113,12 @@ export default function Rentabilidad() {
 
   useEffect(() => { loadData(); }, []);
 
-  // familia_id → promedio de costo_mano_obra de sus productos hijos
+  // sku del POS → id del POS (para hacer el puente con familia_id)
+  const skuToIdPOS = useMemo(() =>
+    Object.fromEntries(productosPOS.map(p => [p.sku, p.id]).filter(([k]) => k)),
+  [productosPOS]);
+
+  // familia_id (id del POS) → promedio de costo_mano_obra de sus hijos de manufactura
   const familiaAvgMO = useMemo(() => {
     const map = {};
     productos.forEach(p => {
@@ -141,13 +150,15 @@ export default function Rentabilidad() {
     });
 
     // Mano de obra destajo: cantidad vendida × promedio costo_mano_obra de la familia
+    // SaleItem.product_id = sku del POS; Producto.familia_id = id del POS → necesitamos el puente
     saleItems.forEach(item => {
       const sale = saleById[item.sale_id];
       if (!sale) return;
       const mes = getMesKey(sale.sale_date || sale.created_date);
       if (!mes) return;
       init(mes);
-      const avgMO = familiaAvgMO[item.product_id] || 0;
+      const familiaId = skuToIdPOS[item.product_id] || item.product_id;
+      const avgMO = familiaAvgMO[familiaId] || 0;
       meses[mes].costoManoObra += avgMO * (item.quantity || 0);
     });
 
@@ -205,7 +216,7 @@ export default function Rentabilidad() {
           utilidadPct: d.ingreso > 0 ? (utilidad / d.ingreso * 100) : 0,
         };
       });
-  }, [sales, saleItems, familiaAvgMO, employees, presupuestos, gastos, saleById]);
+  }, [sales, saleItems, familiaAvgMO, skuToIdPOS, employees, presupuestos, gastos, saleById]);
 
   const datosRecientes = useMemo(() => datosPorMes.slice(-mesesAtras), [datosPorMes, mesesAtras]);
 
