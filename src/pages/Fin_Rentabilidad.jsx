@@ -8,8 +8,9 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Users, Percent, RefreshCw, Package, Repeat, ArrowUpRight } from "lucide-react";
 
-const Delivery = base44.entities.Delivery;
-const Employee = base44.entities.Employee;
+const SaleItem   = base44.entities.SaleItem;
+const Producto   = base44.entities.Producto;
+const Employee   = base44.entities.Employee;
 const AccountPayable = base44.entities.AccountPayable;
 
 const MESES_LABEL = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -75,7 +76,8 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function Rentabilidad() {
   const [sales, setSales] = useState([]);
-  const [deliveries, setDeliveries] = useState([]);
+  const [saleItems, setSaleItems] = useState([]);
+  const [productos, setProductos] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
   const [gastos, setGastos] = useState([]);
@@ -85,15 +87,17 @@ export default function Rentabilidad() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [salesData, deliveriesData, employeesData, presupuestosData, gastosData] = await Promise.all([
+      const [salesData, saleItemsData, productosData, employeesData, presupuestosData, gastosData] = await Promise.all([
         Sale.list("-sale_date"),
-        Delivery.list("-delivery_date"),
+        SaleItem.list(),
+        Producto.list(),
         Employee.list(),
         Presupuesto.list("-created_date"),
         AccountPayable.list("-created_date", 1000),
       ]);
       setSales(salesData || []);
-      setDeliveries(deliveriesData || []);
+      setSaleItems(saleItemsData || []);
+      setProductos(productosData || []);
       setEmployees(employeesData || []);
       setPresupuestos((presupuestosData || []).filter(p => p.estado !== "rechazado"));
       setGastos(gastosData || []);
@@ -104,6 +108,23 @@ export default function Rentabilidad() {
   };
 
   useEffect(() => { loadData(); }, []);
+
+  // familia_id → promedio de costo_mano_obra de sus productos hijos
+  const familiaAvgMO = useMemo(() => {
+    const map = {};
+    productos.forEach(p => {
+      if (!p.familia_id) return;
+      if (!map[p.familia_id]) map[p.familia_id] = { sum: 0, count: 0 };
+      map[p.familia_id].sum += (p.costo_mano_obra || 0);
+      map[p.familia_id].count += 1;
+    });
+    return Object.fromEntries(
+      Object.entries(map).map(([k, v]) => [k, v.count > 0 ? v.sum / v.count : 0])
+    );
+  }, [productos]);
+
+  // sale_id → sale
+  const saleById = useMemo(() => Object.fromEntries(sales.map(s => [s.id, s])), [sales]);
 
   const datosPorMes = useMemo(() => {
     const meses = {};
@@ -119,12 +140,15 @@ export default function Rentabilidad() {
       meses[mes].ingreso += (sale.total_amount || 0);
     });
 
-    // Mano de obra destajo: entregas de prendas
-    deliveries.forEach(d => {
-      const mes = getMesKey(d.delivery_date);
+    // Mano de obra destajo: cantidad vendida × promedio costo_mano_obra de la familia
+    saleItems.forEach(item => {
+      const sale = saleById[item.sale_id];
+      if (!sale) return;
+      const mes = getMesKey(sale.sale_date || sale.created_date);
       if (!mes) return;
       init(mes);
-      meses[mes].costoManoObra += (d.total_amount || 0);
+      const avgMO = familiaAvgMO[item.product_id] || 0;
+      meses[mes].costoManoObra += avgMO * (item.quantity || 0);
     });
 
     // Mano de obra fija: salario mensual operarios de planta
@@ -181,7 +205,7 @@ export default function Rentabilidad() {
           utilidadPct: d.ingreso > 0 ? (utilidad / d.ingreso * 100) : 0,
         };
       });
-  }, [sales, deliveries, employees, presupuestos, gastos]);
+  }, [sales, saleItems, familiaAvgMO, employees, presupuestos, gastos, saleById]);
 
   const datosRecientes = useMemo(() => datosPorMes.slice(-mesesAtras), [datosPorMes, mesesAtras]);
 
