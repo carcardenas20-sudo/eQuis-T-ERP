@@ -32,7 +32,9 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
       cedula: "",
       genero: "F",
       salario_certificado: "",
-      fecha_retiro: ""
+      fecha_retiro: "",
+      tipo_operario: "destajo",
+      salario_mensual: "",
     };
   });
   const [errors, setErrors] = useState({});
@@ -72,7 +74,9 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
     onSubmit({
       ...formData,
       salary_per_unit: formData.salary_per_unit ? parseFloat(formData.salary_per_unit) : undefined,
-      fecha_retiro: formData.fecha_retiro || undefined
+      fecha_retiro: formData.fecha_retiro || undefined,
+      tipo_operario: formData.tipo_operario || "destajo",
+      salario_mensual: formData.salario_mensual ? parseFloat(formData.salario_mensual) : undefined,
     });
   };
 
@@ -163,6 +167,34 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, existingEmp
                 placeholder="Ej: 1500"
               />
             </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="tipo_operario">Tipo de operario</Label>
+              <select
+                id="tipo_operario"
+                value={formData.tipo_operario || "destajo"}
+                onChange={(e) => handleInputChange('tipo_operario', e.target.value)}
+                className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
+              >
+                <option value="destajo">Destajo (por entregas)</option>
+                <option value="planta">Planta (salario fijo)</option>
+              </select>
+            </div>
+            {(formData.tipo_operario === "planta") && (
+              <div className="space-y-2">
+                <Label htmlFor="salario_mensual">Salario mensual ($)</Label>
+                <Input
+                  id="salario_mensual"
+                  type="number"
+                  step="1000"
+                  value={formData.salario_mensual || ""}
+                  onChange={(e) => handleInputChange('salario_mensual', e.target.value)}
+                  placeholder="Ej: 1500000"
+                />
+              </div>
+            )}
           </div>
 
           <div className="border-t pt-4 mt-2">

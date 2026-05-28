@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Sale } from "@/entities/Sale";
 import { Producto, MateriaPrima } from "@/api/entitiesChaquetas";
 import { base44 } from "@/api/base44Combined";
+// Delivery y Employee viven en el mismo backend (localClient)
+const Delivery = base44.entities.Delivery;
+const Employee = base44.entities.Employee;
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, ReferenceLine
@@ -73,23 +76,26 @@ export default function Rentabilidad() {
   const [sales, setSales] = useState([]);
   const [productos, setProductos] = useState([]);
   const [materiasPrimas, setMateriasPrimas] = useState([]);
-  const [payments, setPayments] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mesesAtras, setMesesAtras] = useState(6);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [salesData, prodData, mpData, payData] = await Promise.all([
+      const [salesData, prodData, mpData, deliveriesData, employeesData] = await Promise.all([
         Sale.list("-sale_date"),
         Producto.list(),
         MateriaPrima.list(),
-        base44.entities.Payment.list("-payment_date"),
+        Delivery.list("-delivery_date"),
+        Employee.list(),
       ]);
       setSales(salesData || []);
       setProductos(prodData || []);
       setMateriasPrimas(mpData || []);
-      setPayments(payData || []);
+      setDeliveries(deliveriesData || []);
+      setEmployees(employeesData || []);
     } catch (e) {
       console.error(e);
     }
@@ -124,12 +130,28 @@ export default function Rentabilidad() {
       meses[mes].ingreso += (sale.total_amount || 0);
     });
 
-    // Mano de obra: pagos a operarios
-    payments.forEach(pay => {
-      const mes = getMesKey(pay.payment_date);
+    // Mano de obra destajo: suma de entregas de prendas por operario
+    deliveries.forEach(d => {
+      const mes = getMesKey(d.delivery_date);
       if (!mes) return;
       if (!meses[mes]) meses[mes] = { ingreso: 0, costoManoObra: 0 };
-      meses[mes].costoManoObra += (pay.amount || 0);
+      meses[mes].costoManoObra += (d.total_amount || 0);
+    });
+
+    // Mano de obra fija: salario mensual de operarios de planta activos
+    const plantaEmpleados = employees.filter(
+      e => e.tipo_operario === "planta" && e.is_active && e.salario_mensual > 0
+    );
+    Object.keys(meses).forEach(mesKey => {
+      const [y, m] = mesKey.split("-").map(Number);
+      const mesDate = new Date(y, m - 1, 1);
+      plantaEmpleados.forEach(emp => {
+        const hireDate = emp.hire_date ? new Date(emp.hire_date + "T00:00:00") : null;
+        const retiroDate = emp.fecha_retiro ? new Date(emp.fecha_retiro + "T00:00:00") : null;
+        if (hireDate && mesDate < new Date(hireDate.getFullYear(), hireDate.getMonth(), 1)) return;
+        if (retiroDate && mesDate > new Date(retiroDate.getFullYear(), retiroDate.getMonth(), 1)) return;
+        meses[mesKey].costoManoObra += (emp.salario_mensual || 0);
+      });
     });
 
     return Object.entries(meses)
@@ -142,7 +164,7 @@ export default function Rentabilidad() {
         margen: Math.round(d.ingreso - d.costoManoObra),
         margenPct: d.ingreso > 0 ? ((d.ingreso - d.costoManoObra) / d.ingreso * 100) : 0,
       }));
-  }, [sales, payments]);
+  }, [sales, deliveries, employees]);
 
   const datosRecientes = useMemo(() => datosPorMes.slice(-mesesAtras), [datosPorMes, mesesAtras]);
 
@@ -201,7 +223,7 @@ export default function Rentabilidad() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Rentabilidad</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Ventas reales (todas las sucursales) · mano de obra operarios</p>
+          <p className="text-sm text-slate-500 mt-0.5">Ventas reales (todas las sucursales) · entregas destajo + salarios fijos planta</p>
         </div>
         <div className="flex items-center gap-2">
           <select
