@@ -25,3 +25,4 @@ export const Operacion      = p.Operacion;
 export const Presupuesto    = p.Presupuesto;
 export const Servicio       = p.Servicio;
 export const TareaPlanta    = p.TareaPlanta;
+export const AppConfig      = p.AppConfig;

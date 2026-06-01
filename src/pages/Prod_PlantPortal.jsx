@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio } from "@/api/publicEntities";
+import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
   Play, Check, Layers, Package } from "lucide-react";
 
@@ -19,14 +19,11 @@ function EstadoBadge({ estado }) {
 }
 
 // ─── Tarjeta de presupuesto bajo una operación ────────────────────────────────
-function PresupuestoOpCard({ presupuesto, opId, productoMap, onUpdate }) {
+function PresupuestoOpCard({ presupuesto, opId, estado, productoMap, onCambiarEstado }) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-
-  const estado = (presupuesto.procesos_planta_estado || {})[opId] || "pendiente";
   const isListo = estado === "listo";
 
-  // Productos de este presupuesto que requieren esta operación
   const prodsDeOp = (presupuesto.productos || [])
     .filter(item => (productoMap[item.producto_id]?.operaciones_requeridas || []).includes(opId));
 
@@ -36,14 +33,7 @@ function PresupuestoOpCard({ presupuesto, opId, productoMap, onUpdate }) {
 
   const cambiarEstado = async (nuevoEstado) => {
     setLoading(true);
-    try {
-      await Presupuesto.update(presupuesto.id, {
-        procesos_planta_estado: { ...(presupuesto.procesos_planta_estado || {}), [opId]: nuevoEstado }
-      });
-      onUpdate();
-    } catch (e) {
-      alert("Error: " + e.message);
-    }
+    await onCambiarEstado(presupuesto.id, opId, nuevoEstado);
     setLoading(false);
   };
 
@@ -308,6 +298,8 @@ export default function PlantPortal() {
   const [tendidos, setTendidos] = useState([]);
   const [servicios, setServicios] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
+  const [estadosMap, setEstadosMap] = useState({});   // { "presId_opId": estado }
+  const [estadoConfigId, setEstadoConfigId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tabId, setTabId] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState("activos");
@@ -315,11 +307,12 @@ export default function PlantPortal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [opsData, presData, prodData, tendData] = await Promise.all([
+      const [opsData, presData, prodData, tendData, cfgData] = await Promise.all([
         Operacion.list("orden_procesamiento"),
         Presupuesto.filter({ estado: "aprobado" }),
         Producto.list(),
         Remision.filter({ tipo_remision: "tendido" }),
+        AppConfig.filter({ key: "proceso_planta_estados" }),
       ]);
       const activas = (opsData || []).filter(o => o.activa !== false);
       setOperaciones(activas);
@@ -327,6 +320,10 @@ export default function PlantPortal() {
       setProductos(prodData || []);
       setTendidos(tendData || []);
       setTabId(prev => prev ?? (activas[0]?.id || "tendidos"));
+
+      const cfg = (cfgData || [])[0] || null;
+      setEstadoConfigId(cfg?.id || null);
+      try { setEstadosMap(cfg ? JSON.parse(cfg.value) : {}); } catch { setEstadosMap({}); }
     } catch (e) {
       console.error("Error cargando datos principales:", e);
     }
@@ -369,7 +366,22 @@ export default function PlantPortal() {
       (ord.items || []).some(item => servicioMap[item.servicio_id]?.operacion_id === opId)
     );
 
-  const getEstadoPres = (pres, opId) => (pres.procesos_planta_estado || {})[opId] || "pendiente";
+  const getEstadoPres = (pres, opId) => estadosMap[`${pres.id}_${opId}`] || "pendiente";
+
+  const cambiarEstadoPres = async (presId, opId, nuevoEstado) => {
+    const newMap = { ...estadosMap, [`${presId}_${opId}`]: nuevoEstado };
+    try {
+      if (estadoConfigId) {
+        await AppConfig.update(estadoConfigId, { value: JSON.stringify(newMap) });
+      } else {
+        const created = await AppConfig.create({ key: "proceso_planta_estados", value: JSON.stringify(newMap) });
+        setEstadoConfigId(created.id);
+      }
+      setEstadosMap(newMap);
+    } catch (e) {
+      alert("Error al guardar estado: " + e.message);
+    }
+  };
 
   const filtrar = (estado) => {
     if (filtroEstado === "activos") return estado !== "listo";
@@ -482,8 +494,9 @@ export default function PlantPortal() {
                     key={pres.id}
                     presupuesto={pres}
                     opId={tabId}
+                    estado={getEstadoPres(pres, tabId)}
                     productoMap={productoMap}
-                    onUpdate={loadData}
+                    onCambiarEstado={cambiarEstadoPres}
                   />
                 ))}
               </div>
