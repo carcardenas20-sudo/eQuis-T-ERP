@@ -292,22 +292,30 @@ export default function PlantPortal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [opsData, presData, prodData, tendData, svcData, ordData] = await Promise.all([
+      const [opsData, presData, prodData, tendData] = await Promise.all([
         Operacion.list("orden_procesamiento"),
         Presupuesto.filter({ estado: "aprobado" }),
         Producto.list(),
         Remision.filter({ tipo_remision: "tendido" }),
-        Servicio.list(),
-        OrdenServicio.list("-fecha_orden"),
       ]);
       const activas = (opsData || []).filter(o => o.activa !== false);
       setOperaciones(activas);
       setPresupuestos(presData || []);
       setProductos(prodData || []);
       setTendidos(tendData || []);
-      setServicios((svcData || []).filter(s => s.activo !== false));
-      setOrdenes((ordData || []).filter(o => !["pagada", "cancelada"].includes(o.estado)));
       setTabId(prev => prev ?? (activas[0]?.id || "tendidos"));
+
+      // Servicio y OrdenServicio son opcionales — si fallan no rompen el portal
+      try {
+        const [svcData, ordData] = await Promise.all([
+          Servicio.list(),
+          OrdenServicio.list("-fecha_orden"),
+        ]);
+        setServicios((svcData || []).filter(s => s.activo !== false));
+        setOrdenes((ordData || []).filter(o => !["pagada", "cancelada"].includes(o.estado)));
+      } catch (e) {
+        console.warn("Servicios/Ordenes no disponibles en portal:", e.message);
+      }
     } catch (e) {
       console.error("Error cargando datos:", e);
     }
