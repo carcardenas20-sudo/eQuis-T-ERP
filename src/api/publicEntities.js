@@ -23,3 +23,4 @@ export const Remision       = p.Remision;
 export const OrdenServicio  = p.OrdenServicio;
 export const Operacion      = p.Operacion;
 export const Presupuesto    = p.Presupuesto;
+export const Servicio       = p.Servicio;

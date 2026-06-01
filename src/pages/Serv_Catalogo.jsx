@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Servicio, MateriaPrima } from "@/entities/all";
+import { Operacion } from "@/api/entitiesChaquetas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ const EMPTY_FORM = {
   costo_manufactura: "",
   unidad_cobro: "unidad",
   activo: true,
+  operacion_id: "",
   materiales: [],            // [{ materia_prima_id, nombre, cantidad_por_unidad, unidad_medida }]
   precios_clientes: [],      // [{ cliente, precio }]
   piezas_predeterminadas: [], // [{ nombre, consumo_unidad }]
@@ -28,6 +30,7 @@ const EMPTY_FORM = {
 export default function Serv_Catalogo() {
   const [servicios, setServicios] = useState([]);
   const [materiasPrimas, setMateriasPrimas] = useState([]);
+  const [operaciones, setOperaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -38,9 +41,10 @@ export default function Serv_Catalogo() {
 
   const loadData = async () => {
     setLoading(true);
-    const [svcs, mps] = await Promise.all([Servicio.list(), MateriaPrima.list()]);
+    const [svcs, mps, ops] = await Promise.all([Servicio.list(), MateriaPrima.list(), Operacion.list()]);
     setServicios(svcs);
     setMateriasPrimas(mps);
+    setOperaciones((ops || []).filter(o => o.activa !== false));
     setLoading(false);
   };
 
@@ -59,6 +63,7 @@ export default function Serv_Catalogo() {
       costo_manufactura: svc.costo_manufactura || "",
       unidad_cobro: svc.unidad_cobro || "unidad",
       activo: svc.activo !== false,
+      operacion_id: svc.operacion_id || "",
       materiales: svc.materiales || [],
       precios_clientes: svc.precios_clientes || [],
       piezas_predeterminadas: svc.piezas_predeterminadas || [],
@@ -126,6 +131,7 @@ export default function Serv_Catalogo() {
       costo_manufactura: parseFloat(form.costo_manufactura) || 0,
       unidad_cobro: form.unidad_cobro || "unidad",
       activo: form.activo,
+      operacion_id: form.operacion_id || null,
       materiales: form.materiales.filter(m => m.materia_prima_id),
       precios_clientes: form.precios_clientes.filter(pc => pc.cliente.trim() && parseFloat(pc.precio) > 0)
         .map(pc => ({ cliente: pc.cliente.trim(), precio: parseFloat(pc.precio) })),
@@ -196,6 +202,17 @@ export default function Serv_Catalogo() {
                     {!UNIDADES.includes(form.unidad_cobro) && (
                       <Input value={form.unidad_cobro} onChange={e => setForm(f => ({ ...f, unidad_cobro: e.target.value }))} placeholder="ej. prenda, rollo..." className="mt-1" />
                     )}
+                  </div>
+                  <div>
+                    <Label>Operación de planta asociada</Label>
+                    <select
+                      value={form.operacion_id}
+                      onChange={e => setForm(f => ({ ...f, operacion_id: e.target.value }))}
+                      className="mt-1 w-full h-9 px-3 border border-slate-200 rounded text-sm"
+                    >
+                      <option value="">Sin operación asociada</option>
+                      {operaciones.map(op => <option key={op.id} value={op.id}>{op.nombre}</option>)}
+                    </select>
                   </div>
                   <div>
                     <Label>Precio base (por {form.unidad_cobro || "unidad"})</Label>

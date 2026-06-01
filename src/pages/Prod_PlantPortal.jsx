@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { Remision, OrdenServicio, Operacion, Presupuesto, Producto } from "@/api/publicEntities";
-import { Factory, Package, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2, Play, Check, ClipboardList, Layers } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio } from "@/api/publicEntities";
+import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
+  Play, Check, Layers, ClipboardList, Package } from "lucide-react";
 
 const ESTADO_CFG = {
   pendiente:  { label: "Pendiente",  color: "bg-amber-100 text-amber-700 border-amber-200" },
   en_proceso: { label: "En proceso", color: "bg-blue-100 text-blue-700 border-blue-200" },
   listo:      { label: "Listo",      color: "bg-green-100 text-green-700 border-green-200" },
-  despachado: { label: "Despachado", color: "bg-slate-100 text-slate-500 border-slate-200" },
-  entregado:  { label: "Entregado",  color: "bg-purple-100 text-purple-700 border-purple-200" },
+  confirmada: { label: "Confirmada", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  lista:      { label: "Lista",      color: "bg-green-100 text-green-700 border-green-200" },
 };
 
 function EstadoBadge({ estado }) {
@@ -19,141 +20,31 @@ function EstadoBadge({ estado }) {
   );
 }
 
-// ─── Tarjeta de lote (remisión individual) ────────────────────────────────────
-function LoteCard({ remision, operacionId, secciones, getSeccionMat, onUpdate }) {
-  const [open, setOpen] = useState(false);
+// ─── Tarjeta de presupuesto por operación ─────────────────────────────────────
+function PresupuestoOpCard({ presupuesto, opId, productoMap, onUpdate }) {
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  const estadoProceso = (remision.procesos_estado || {})[operacionId] || "pendiente";
-  const totalUds = (remision.tallas_cantidades || []).reduce((s, t) => s + (Number(t.cantidad) || 0), 0);
-  const isListo = estadoProceso === "listo";
+  const estado = (presupuesto.procesos_planta_estado || {})[opId] || "pendiente";
+  const isListo = estado === "listo";
 
-  const cambiarEstado = async () => {
-    if (isListo) return;
-    const siguiente = estadoProceso === "pendiente" ? "en_proceso" : "listo";
+  const prodsDeOp = useMemo(() => (presupuesto.productos || [])
+    .filter(item => (productoMap[item.producto_id]?.operaciones_requeridas || []).includes(opId))
+    .map(item => {
+      const prod = productoMap[item.producto_id];
+      const totalUds = (item.combinaciones || []).reduce((s, comb) =>
+        s + (comb.tallas_cantidades || []).reduce((ss, tc) => ss + (Number(tc.cantidad) || 0), 0), 0);
+      return { nombre: prod?.nombre || "—", totalUds };
+    }), [presupuesto, opId, productoMap]);
+
+  const totalUds = prodsDeOp.reduce((s, p) => s + p.totalUds, 0);
+
+  const cambiarEstado = async (nuevoEstado) => {
     setLoading(true);
     try {
-      await Remision.update(remision.id, {
-        procesos_estado: { ...(remision.procesos_estado || {}), [operacionId]: siguiente }
+      await Presupuesto.update(presupuesto.id, {
+        procesos_planta_estado: { ...(presupuesto.procesos_planta_estado || {}), [opId]: nuevoEstado }
       });
-      onUpdate();
-    } catch (e) {
-      alert("Error al actualizar: " + e.message);
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div className={`rounded-lg border ${isListo ? "border-green-200 bg-green-50/30" : "border-slate-200 bg-white"}`}>
-      <div className="flex items-center justify-between px-3 py-2.5 cursor-pointer" onClick={() => setOpen(o => !o)}>
-        <div className="flex items-center gap-2 min-w-0">
-          {isListo
-            ? <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-            : <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex-shrink-0" />}
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-800 truncate">{remision.combinacion_nombre || "—"}</p>
-            <p className="text-xs text-slate-400">{totalUds} uds</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <EstadoBadge estado={estadoProceso} />
-          {open ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
-        </div>
-      </div>
-
-      {open && (
-        <div className="px-3 pb-3 space-y-2.5 border-t border-slate-100">
-          {/* Tallas */}
-          <div className="flex flex-wrap gap-1.5 pt-2.5">
-            {(remision.tallas_cantidades || []).map(tc => (
-              <div key={tc.talla} className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-center min-w-[40px]">
-                <p className="text-xs text-slate-400">{tc.talla}</p>
-                <p className="text-base font-bold text-slate-800">{tc.cantidad}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Materiales */}
-          {(() => {
-            const mats = secciones?.length
-              ? (remision.materiales_calculados || []).filter(m => secciones.includes(getSeccionMat(m, remision.producto_id)))
-              : (remision.materiales_calculados || []);
-            if (!mats.length) return null;
-            return (
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Materiales</p>
-              {mats.map((mat, i) => (
-                <div key={i} className="flex items-center justify-between bg-slate-50 rounded px-2.5 py-1.5 border border-slate-100">
-                  <div>
-                    <p className="text-xs font-medium text-slate-800">{mat.nombre}</p>
-                    {mat.color && mat.color !== "Sin definir" && (
-                      <p className="text-xs font-bold text-slate-700">{mat.color}</p>
-                    )}
-                  </div>
-                  <span className="text-sm font-bold text-slate-700">
-                    {mat.cantidad == null ? "—" : Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, "")}
-                    <span className="text-xs font-normal text-slate-400 ml-1">{mat.etiqueta}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-            );
-          })()}
-
-          {/* Acción */}
-          {!isListo && (
-            <div className="flex justify-end pt-0.5">
-              <button
-                onClick={cambiarEstado}
-                disabled={loading}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50
-                  ${estadoProceso === "pendiente"
-                    ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                    : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}`}
-              >
-                {loading
-                  ? <RefreshCw className="w-3 h-3 animate-spin" />
-                  : estadoProceso === "pendiente" ? <Play className="w-3 h-3" /> : <Check className="w-3 h-3" />}
-                {estadoProceso === "pendiente" ? "Iniciar" : "Marcar listo"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Tarjeta de presupuesto (agrupa lotes) ────────────────────────────────────
-function PresupuestoCard({ presupuesto, lotes, operacionId, secciones, getSeccionMat, onUpdate }) {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const total = lotes.length;
-  const porEstado = lotes.reduce((acc, r) => {
-    const e = (r.procesos_estado || {})[operacionId] || "pendiente";
-    acc[e] = (acc[e] || 0) + 1;
-    return acc;
-  }, {});
-  const listos = porEstado.listo || 0;
-  const enProceso = porEstado.en_proceso || 0;
-  const todosListos = total > 0 && listos === total;
-  const algunoSinIniciar = (porEstado.pendiente || 0) > 0;
-  const totalUds = lotes.reduce((s, r) =>
-    s + (r.tallas_cantidades || []).reduce((ss, t) => ss + (Number(t.cantidad) || 0), 0), 0);
-
-  const avanzarTodos = async (nuevoEstado) => {
-    setLoading(true);
-    try {
-      const lotesAActualizar = lotes.filter(r => {
-        const e = (r.procesos_estado || {})[operacionId] || "pendiente";
-        return e !== "listo" && (nuevoEstado === "listo" || e === "pendiente");
-      });
-      await Promise.all(lotesAActualizar.map(r =>
-        Remision.update(r.id, {
-          procesos_estado: { ...(r.procesos_estado || {}), [operacionId]: nuevoEstado }
-        })
-      ));
       onUpdate();
     } catch (e) {
       alert("Error: " + e.message);
@@ -162,47 +53,30 @@ function PresupuestoCard({ presupuesto, lotes, operacionId, secciones, getSeccio
   };
 
   return (
-    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${todosListos ? "border-green-200" : "border-slate-200"}`}>
+    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isListo ? "border-green-200" : "border-slate-200"}`}>
       <div className="px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0 cursor-pointer flex-1" onClick={() => setOpen(o => !o)}>
-            <div className="flex-shrink-0">
-              {todosListos
-                ? <CheckCircle2 className="w-5 h-5 text-green-500" />
-                : <ClipboardList className="w-5 h-5 text-emerald-600" />}
-            </div>
+          <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => setOpen(o => !o)}>
+            {isListo
+              ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+              : <ClipboardList className="w-5 h-5 text-emerald-600 shrink-0" />}
             <div className="min-w-0">
-              <p className="font-bold text-slate-800 text-sm truncate">
-                {presupuesto.numero_presupuesto || presupuesto.id?.slice(-8)}
-              </p>
-              <p className="text-xs text-slate-500">
-                {total} lotes · {totalUds} uds
-                {!todosListos && <span className="ml-1 text-amber-600 font-semibold">· {listos}/{total} listos</span>}
-              </p>
+              <p className="font-bold text-slate-800 text-sm">{presupuesto.numero_presupuesto}</p>
+              <p className="text-xs text-slate-500">{totalUds} uds · {prodsDeOp.map(p => p.nombre).join(", ")}</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {todosListos ? (
-              <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-                ✓ Completo
-              </span>
-            ) : (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <EstadoBadge estado={estado} />
+            {!isListo && (
               <>
-                {algunoSinIniciar && (
-                  <button
-                    onClick={() => avanzarTodos("en_proceso")}
-                    disabled={loading}
-                    className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
-                  >
+                {estado === "pendiente" && (
+                  <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
+                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-50">
                     <Play className="w-3 h-3" /> Iniciar
                   </button>
                 )}
-                <button
-                  onClick={() => avanzarTodos("listo")}
-                  disabled={loading}
-                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 disabled:opacity-50"
-                >
+                <button onClick={() => cambiarEstado("listo")} disabled={loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 disabled:opacity-50">
                   <Check className="w-3 h-3" /> Listo
                 </button>
               </>
@@ -215,9 +89,12 @@ function PresupuestoCard({ presupuesto, lotes, operacionId, secciones, getSeccio
       </div>
 
       {open && (
-        <div className="px-3 pb-3 space-y-2 border-t border-slate-100 pt-2">
-          {lotes.map(r => (
-            <LoteCard key={r.id} remision={r} operacionId={operacionId} secciones={secciones} getSeccionMat={getSeccionMat} onUpdate={onUpdate} />
+        <div className="px-4 pb-3 border-t border-slate-100 pt-2 space-y-1.5">
+          {prodsDeOp.map((p, i) => (
+            <div key={i} className="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-1.5 text-xs">
+              <span className="font-medium text-slate-700">{p.nombre}</span>
+              <span className="font-bold text-slate-800">{p.totalUds} uds</span>
+            </div>
           ))}
         </div>
       )}
@@ -225,73 +102,80 @@ function PresupuestoCard({ presupuesto, lotes, operacionId, secciones, getSeccio
   );
 }
 
-// ─── Tarjeta de orden de servicio ─────────────────────────────────────────────
-function OrdenCard({ orden, onUpdate }) {
-  const [open, setOpen] = useState(false);
+// ─── Tarjeta de orden de servicio externa por operación ───────────────────────
+function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  const cambiarEstado = async () => {
-    const siguiente = orden.estado === "pendiente" ? "en_proceso" : "listo";
+  const isListo = orden.estado === "listo" || orden.estado === "lista";
+  const estadoNorm = orden.estado === "lista" ? "listo" : orden.estado;
+
+  const itemsDeOp = (orden.items || []).filter(item =>
+    servicioMap[item.servicio_id]?.operacion_id === opId
+  );
+
+  const cambiarEstado = async (nuevoEstado) => {
     setLoading(true);
     try {
-      await OrdenServicio.update(orden.id, { estado: siguiente });
+      await OrdenServicio.update(orden.id, { estado: nuevoEstado });
       onUpdate();
     } catch (e) {
-      alert("Error al actualizar: " + e.message);
+      alert("Error: " + e.message);
     }
     setLoading(false);
   };
 
   return (
-    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${orden.estado === "listo" ? "border-green-200" : "border-slate-200"}`}>
-      <div className="flex items-center justify-between px-4 py-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex-shrink-0">
-            {orden.estado === "listo"
-              ? <CheckCircle2 className="w-5 h-5 text-green-500" />
-              : <Wrench className="w-5 h-5 text-purple-500" />}
+    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isListo ? "border-green-200" : "border-indigo-200"}`}>
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => setOpen(o => !o)}>
+            <Wrench className={`w-5 h-5 shrink-0 ${isListo ? "text-green-500" : "text-indigo-500"}`} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="font-bold text-slate-800 text-sm">{orden.numero_orden}</p>
+                <span className="text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-semibold">Externo</span>
+              </div>
+              <p className="text-xs text-slate-500 truncate">{orden.cliente_nombre}</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="font-bold text-slate-800 text-sm truncate">{orden.numero_orden || "—"}</p>
-            <p className="text-xs text-slate-500 truncate">{orden.cliente || "Sin cliente"}</p>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <EstadoBadge estado={estadoNorm} />
+            {!isListo && (
+              <>
+                {(orden.estado === "confirmada" || orden.estado === "borrador") && (
+                  <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
+                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-50">
+                    <Play className="w-3 h-3" /> Iniciar
+                  </button>
+                )}
+                <button onClick={() => cambiarEstado("lista")} disabled={loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 disabled:opacity-50">
+                  <Check className="w-3 h-3" /> Listo
+                </button>
+              </>
+            )}
+            <button onClick={() => setOpen(o => !o)} className="p-1 text-slate-400">
+              {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <EstadoBadge estado={orden.estado} />
-          {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
 
       {open && (
-        <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
-          {(orden.items || []).length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Servicios</p>
-              {orden.items.map((item, i) => (
-                <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                  <p className="text-sm font-medium text-slate-800">{item.servicio_nombre || item.servicio_id}</p>
-                  <span className="text-sm font-bold text-slate-700">{item.cantidad} {item.unidad || ""}</span>
-                </div>
-              ))}
+        <div className="px-4 pb-3 border-t border-slate-100 pt-2 space-y-1.5">
+          {itemsDeOp.map((item, i) => (
+            <div key={i} className="flex justify-between items-center bg-indigo-50 rounded-lg px-3 py-1.5 text-xs">
+              <span className="font-medium text-slate-700">{item.nombre}</span>
+              <span className="font-bold text-indigo-700">
+                {item.pieza_nombre
+                  ? `${item.cantidad_piezas} piezas (${item.pieza_nombre})`
+                  : `${Number(item.cantidad).toLocaleString("es-CO")} ${item.unidad}`}
+              </span>
             </div>
-          )}
+          ))}
           {orden.notas && (
-            <p className="text-xs text-slate-500 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">{orden.notas}</p>
-          )}
-          {orden.estado !== "listo" && orden.estado !== "entregado" && (
-            <div className="flex justify-end pt-1">
-              <button
-                onClick={cambiarEstado}
-                disabled={loading}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50
-                  ${orden.estado === "pendiente"
-                    ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                    : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}`}
-              >
-                {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : orden.estado === "pendiente" ? <Play className="w-3 h-3" /> : <Check className="w-3 h-3" />}
-                {orden.estado === "pendiente" ? "Iniciar" : "Marcar listo"}
-              </button>
-            </div>
+            <p className="text-xs text-slate-400 italic px-1">{orden.notas}</p>
           )}
         </div>
       )}
@@ -326,11 +210,9 @@ function TendidoCard({ tendido, presupuesto, onUpdate }) {
     <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isListo ? "border-green-200" : "border-indigo-200"}`}>
       <div className="flex items-center justify-between px-4 py-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex-shrink-0">
-            {isListo
-              ? <CheckCircle2 className="w-5 h-5 text-green-500" />
-              : <Layers className="w-5 h-5 text-indigo-500" />}
-          </div>
+          {isListo
+            ? <CheckCircle2 className="w-5 h-5 text-green-500" />
+            : <Layers className="w-5 h-5 text-indigo-500" />}
           <div className="min-w-0">
             <p className="font-bold text-slate-800 text-sm truncate">
               {tendido.presupuesto_numero || presupuesto?.numero_presupuesto || tendido.id?.slice(-8)}
@@ -344,14 +226,20 @@ function TendidoCard({ tendido, presupuesto, onUpdate }) {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <EstadoBadge estado={tendido.estado || "pendiente"} />
+          {!isListo && (
+            <button onClick={e => { e.stopPropagation(); cambiarEstado(); }} disabled={loading}
+              className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50
+                ${!isEnProceso ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}`}>
+              {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : !isEnProceso ? <Play className="w-3 h-3" /> : <Check className="w-3 h-3" />}
+              {!isEnProceso ? "Iniciar" : "Listo"}
+            </button>
+          )}
           {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
 
       {open && (
         <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
-
-          {/* Filas de referencias */}
           {(tendido.filas || []).length > 0 && (
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Referencias a cortar</p>
@@ -368,8 +256,6 @@ function TendidoCard({ tendido, presupuesto, onUpdate }) {
               </div>
             </div>
           )}
-
-          {/* Colores del tendido */}
           {(tendido.colores_tendido || []).length > 0 && (
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Colores y hojas</p>
@@ -385,25 +271,6 @@ function TendidoCard({ tendido, presupuesto, onUpdate }) {
               </div>
             </div>
           )}
-
-          {/* Acción */}
-          {!isListo && (
-            <div className="flex justify-end pt-1">
-              <button
-                onClick={cambiarEstado}
-                disabled={loading}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50
-                  ${!isEnProceso
-                    ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                    : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}`}
-              >
-                {loading
-                  ? <RefreshCw className="w-3 h-3 animate-spin" />
-                  : !isEnProceso ? <Play className="w-3 h-3" /> : <Check className="w-3 h-3" />}
-                {!isEnProceso ? "Iniciar tendido" : "Marcar listo"}
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -415,8 +282,8 @@ export default function PlantPortal() {
   const [operaciones, setOperaciones] = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
   const [productos, setProductos] = useState([]);
-  const [remisiones, setRemisiones] = useState([]);
   const [tendidos, setTendidos] = useState([]);
+  const [servicios, setServicios] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tabId, setTabId] = useState(null);
@@ -425,21 +292,21 @@ export default function PlantPortal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [opsData, presData, prodData, remData, ordData, tendidosData] = await Promise.all([
+      const [opsData, presData, prodData, tendData, svcData, ordData] = await Promise.all([
         Operacion.list("orden_procesamiento"),
         Presupuesto.filter({ estado: "aprobado" }),
         Producto.list(),
-        Remision.filter({ tipo_remision: "asignacion_despacho" }),
-        OrdenServicio.list("-fecha_orden"),
         Remision.filter({ tipo_remision: "tendido" }),
+        Servicio.list(),
+        OrdenServicio.list("-fecha_orden"),
       ]);
       const activas = (opsData || []).filter(o => o.activa !== false);
       setOperaciones(activas);
       setPresupuestos(presData || []);
       setProductos(prodData || []);
-      setRemisiones(remData || []);
-      setTendidos(tendidosData || []);
-      setOrdenes(ordData || []);
+      setTendidos(tendData || []);
+      setServicios((svcData || []).filter(s => s.activo !== false));
+      setOrdenes((ordData || []).filter(o => !["pagada", "cancelada"].includes(o.estado)));
       setTabId(prev => prev ?? (activas[0]?.id || "tendidos"));
     } catch (e) {
       console.error("Error cargando datos:", e);
@@ -449,101 +316,74 @@ export default function PlantPortal() {
 
   useEffect(() => { loadData(); }, []);
 
-  // Mapa presupuesto_id → presupuesto
-  const presMap = Object.fromEntries(presupuestos.map(p => [p.id, p]));
+  const productoMap = useMemo(() =>
+    Object.fromEntries(productos.map(p => [p.id, p])), [productos]);
 
-  // Mapa producto_id → materiales_requeridos (para fallback de seccion)
-  const productoMats = Object.fromEntries(
-    productos.map(p => [p.id, p.materiales_requeridos || []])
-  );
+  const servicioMap = useMemo(() =>
+    Object.fromEntries(servicios.map(s => [s.id, s])), [servicios]);
 
-  // Obtiene la sección de un material calculado: usa la guardada o busca en el producto
-  const getSeccionMat = (mat, productoId) => {
-    if (mat.seccion) return mat.seccion;
-    const mats = productoMats[productoId] || [];
-    return mats.find(m => m.materia_prima_id === mat.materia_prima_id)?.seccion || "";
-  };
+  const presMap = useMemo(() =>
+    Object.fromEntries(presupuestos.map(p => [p.id, p])), [presupuestos]);
 
-  // Filtra los materiales de un lote según las secciones de la operación
-  const getMaterialesDeOp = (lote, secciones) => {
-    if (!secciones || secciones.length === 0) return lote.materiales_calculados || [];
-    return (lote.materiales_calculados || []).filter(mat =>
-      secciones.includes(getSeccionMat(mat, lote.producto_id))
+  // Presupuestos que tienen al menos un producto con esta operación requerida
+  const presupuestosDeOp = (opId) =>
+    presupuestos.filter(pres =>
+      (pres.productos || []).some(item =>
+        (productoMap[item.producto_id]?.operaciones_requeridas || []).includes(opId)
+      )
     );
+
+  // Órdenes de servicio con items asociados a esta operación
+  const ordenesDeOp = (opId) =>
+    ordenes.filter(ord =>
+      (ord.items || []).some(item => servicioMap[item.servicio_id]?.operacion_id === opId)
+    );
+
+  const getEstadoPres = (pres, opId) => (pres.procesos_planta_estado || {})[opId] || "pendiente";
+
+  const isActivoPres = (pres, opId) => {
+    const e = getEstadoPres(pres, opId);
+    if (filtroEstado === "activos") return e !== "listo";
+    if (filtroEstado === "listos") return e === "listo";
+    return true;
   };
 
-  // Para una operación, filtra lotes que tengan al menos un material en sus secciones
-  const lotesDeOp = (opId) => {
-    const op = operaciones.find(o => o.id === opId);
-    const secciones = op?.secciones || [];
-    if (secciones.length === 0) return remisiones;
-    return remisiones.filter(r => getMaterialesDeOp(r, secciones).length > 0);
+  const isActivoOrden = (ord) => {
+    const e = ord.estado === "lista" ? "listo" : ord.estado;
+    if (filtroEstado === "activos") return e !== "listo";
+    if (filtroEstado === "listos") return e === "listo";
+    return true;
   };
 
-  // Agrupa lotes por presupuesto
-  const agruparPorPresupuesto = (lotes) => {
-    const grupos = {};
-    lotes.forEach(r => {
-      const pid = r.presupuesto_id || "__sin_presupuesto";
-      if (!grupos[pid]) grupos[pid] = [];
-      grupos[pid].push(r);
-    });
-    return grupos;
+  const isActivoTendido = (t) => {
+    if (filtroEstado === "activos") return t.estado !== "listo";
+    if (filtroEstado === "listos") return t.estado === "listo";
+    return true;
   };
 
-  // Filtro de estado por proceso
-  const filtrarLotes = (lotes, opId) => {
-    if (filtroEstado === "todos") return lotes;
-    return lotes.filter(r => {
-      const e = (r.procesos_estado || {})[opId] || "pendiente";
-      if (filtroEstado === "activos") return e !== "listo" && e !== "despachado" && e !== "entregado";
-      if (filtroEstado === "listos") return e === "listo";
-      return true;
-    });
+  // Conteo de pendientes por operación (para badge)
+  const countPendOp = (opId) => {
+    const presPend = presupuestosDeOp(opId).filter(p => getEstadoPres(p, opId) !== "listo").length;
+    const ordPend = ordenesDeOp(opId).filter(o => o.estado !== "listo" && o.estado !== "lista").length;
+    return presPend + ordPend;
   };
 
-  // Conteo de pendientes por operación (para badge en tab)
-  const pendDeOp = (opId) =>
-    lotesDeOp(opId).filter(r => {
-      const e = (r.procesos_estado || {})[opId] || "pendiente";
-      return e === "pendiente" || e === "en_proceso";
-    }).length;
-
-  const pendOrdenes = ordenes.filter(o => o.estado === "pendiente" || o.estado === "en_proceso").length;
   const pendTendidos = tendidos.filter(t => t.estado !== "listo").length;
 
   const tabs = [
     { id: "tendidos", label: "Tendidos", Icon: Layers, count: pendTendidos },
-    ...operaciones.map(op => ({ id: op.id, label: op.nombre, Icon: Factory, count: pendDeOp(op.id) })),
-    { id: "servicios", label: "Servicios", Icon: Wrench, count: pendOrdenes },
+    ...operaciones.map(op => ({ id: op.id, label: op.nombre, Icon: Factory, count: countPendOp(op.id) })),
   ];
 
-  const ordFiltradas = tabId === "servicios"
-    ? ordenes.filter(o => {
-        if (filtroEstado === "activos") return o.estado !== "entregado" && o.estado !== "cancelado" && o.estado !== "listo";
-        if (filtroEstado === "listos") return o.estado === "listo";
-        return true;
-      })
-    : [];
+  const tendidosFiltrados = tendidos.filter(isActivoTendido);
 
-  const tendidosFiltrados = tabId === "tendidos"
-    ? tendidos.filter(t => {
-        const e = t.estado || "pendiente";
-        if (filtroEstado === "activos") return e !== "listo";
-        if (filtroEstado === "listos") return e === "listo";
-        return true;
-      })
-    : [];
+  const presFiltrados = tabId && tabId !== "tendidos"
+    ? presupuestosDeOp(tabId).filter(p => isActivoPres(p, tabId)) : [];
 
-  const lotesActuales = tabId && tabId !== "servicios" && tabId !== "tendidos" ? filtrarLotes(lotesDeOp(tabId), tabId) : [];
-  const grupos = agruparPorPresupuesto(lotesActuales);
-  const grupoEntries = Object.entries(grupos)
-    .map(([pid, lotes]) => ({ pid, lotes, presupuesto: presMap[pid] || null }))
-    .sort((a, b) => {
-      const na = a.presupuesto?.numero_presupuesto || a.pid;
-      const nb = b.presupuesto?.numero_presupuesto || b.pid;
-      return na.localeCompare(nb);
-    });
+  const ordFiltradas = tabId && tabId !== "tendidos"
+    ? ordenesDeOp(tabId).filter(isActivoOrden) : [];
+
+  const hayContenido = presFiltrados.length > 0 || ordFiltradas.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -559,23 +399,18 @@ export default function PlantPortal() {
               <p className="text-xs text-slate-500">Procesos · eQuis-T</p>
             </div>
           </div>
-          <button
-            onClick={loadData}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-          >
+          <button onClick={loadData}
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
             <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
-        {/* Tabs de procesos */}
+        {/* Tabs */}
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
           {tabs.map(({ id, label, Icon, count }) => (
-            <button
-              key={id}
-              onClick={() => setTabId(id)}
+            <button key={id} onClick={() => setTabId(id)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0
-                ${tabId === id ? "bg-emerald-600 text-white shadow" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-            >
+                ${tabId === id ? "bg-emerald-600 text-white shadow" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
               <Icon className="w-3.5 h-3.5" />
               {label}
               {count > 0 && (
@@ -590,17 +425,10 @@ export default function PlantPortal() {
 
         {/* Filtro estado */}
         <div className="flex gap-1.5 mt-2">
-          {[
-            { id: "activos", label: "Activos" },
-            { id: "listos",  label: "Listos" },
-            { id: "todos",   label: "Todos" },
-          ].map(f => (
-            <button
-              key={f.id}
-              onClick={() => setFiltroEstado(f.id)}
+          {[{ id: "activos", label: "Activos" }, { id: "listos", label: "Listos" }, { id: "todos", label: "Todos" }].map(f => (
+            <button key={f.id} onClick={() => setFiltroEstado(f.id)}
               className={`text-xs px-3 py-1 rounded-full border font-medium transition-all
-                ${filtroEstado === f.id ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"}`}
-            >
+                ${filtroEstado === f.id ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"}`}>
               {f.label}
             </button>
           ))}
@@ -613,49 +441,59 @@ export default function PlantPortal() {
           <div className="flex justify-center py-16">
             <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
           </div>
+
         ) : tabId === "tendidos" ? (
           tendidosFiltrados.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
               <Layers className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">No hay tendidos {filtroEstado === "activos" ? "activos" : filtroEstado}</p>
-              {filtroEstado === "activos" && (
-                <p className="text-xs mt-2">Los tendidos aparecen al aprobar un presupuesto</p>
-              )}
             </div>
-          ) : (
-            tendidosFiltrados.map(t => (
-              <TendidoCard key={t.id} tendido={t} presupuesto={presMap[t.presupuesto_id] || null} onUpdate={loadData} />
-            ))
-          )
-        ) : tabId === "servicios" ? (
-          ordFiltradas.length === 0 ? (
-            <div className="text-center py-16 text-slate-400">
-              <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No hay órdenes {filtroEstado === "activos" ? "activas" : filtroEstado}</p>
-            </div>
-          ) : (
-            ordFiltradas.map(o => <OrdenCard key={o.id} orden={o} onUpdate={loadData} />)
-          )
-        ) : grupoEntries.length === 0 ? (
+          ) : tendidosFiltrados.map(t => (
+            <TendidoCard key={t.id} tendido={t} presupuesto={presMap[t.presupuesto_id] || null} onUpdate={loadData} />
+          ))
+
+        ) : !hayContenido ? (
           <div className="text-center py-16 text-slate-400">
             <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No hay lotes {filtroEstado === "activos" ? "activos" : filtroEstado}</p>
-            {filtroEstado === "activos" && lotesDeOp(tabId).length === 0 && (
-              <p className="text-xs mt-2">Configura las operaciones requeridas en cada producto</p>
+            <p className="font-medium">No hay trabajo {filtroEstado === "activos" ? "activo" : filtroEstado}</p>
+            {filtroEstado === "activos" && presupuestosDeOp(tabId).length === 0 && ordenesDeOp(tabId).length === 0 && (
+              <p className="text-xs mt-2">Los presupuestos aprobados y órdenes de servicio aparecen aquí</p>
             )}
           </div>
         ) : (
-          grupoEntries.map(({ pid, lotes, presupuesto }) => (
-            <PresupuestoCard
-              key={pid}
-              presupuesto={presupuesto || { id: pid, numero_presupuesto: pid.slice(-8) }}
-              lotes={lotes}
-              operacionId={tabId}
-              secciones={operaciones.find(o => o.id === tabId)?.secciones || []}
-              getSeccionMat={getSeccionMat}
-              onUpdate={loadData}
-            />
-          ))
+          <>
+            {/* Trabajo interno: presupuestos */}
+            {presFiltrados.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">Producción interna</p>
+                {presFiltrados.map(pres => (
+                  <PresupuestoOpCard
+                    key={pres.id}
+                    presupuesto={pres}
+                    opId={tabId}
+                    productoMap={productoMap}
+                    onUpdate={loadData}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Trabajo externo: órdenes de servicio */}
+            {ordFiltradas.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">Servicios externos</p>
+                {ordFiltradas.map(ord => (
+                  <OrdenOpCard
+                    key={ord.id}
+                    orden={ord}
+                    opId={tabId}
+                    servicioMap={servicioMap}
+                    onUpdate={loadData}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
