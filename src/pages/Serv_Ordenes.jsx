@@ -85,7 +85,7 @@ export default function Serv_Ordenes() {
   };
 
   const addItem = () => {
-    setForm(f => ({ ...f, items: [...f.items, { servicio_id: "", nombre: "", cantidad: 1, unidad: "unidad", precio_unitario: 0, subtotal: 0 }] }));
+    setForm(f => ({ ...f, items: [...f.items, { servicio_id: "", nombre: "", pieza_nombre: "", consumo_por_pieza: 0, cantidad_piezas: "", cantidad: 1, unidad: "unidad", precio_unitario: 0, subtotal: 0 }] }));
   };
 
   // Busca precio especial para el cliente actual (comparación case-insensitive)
@@ -100,14 +100,39 @@ export default function Serv_Ordenes() {
     setForm(f => {
       const items = [...f.items];
       items[idx] = { ...items[idx], [field]: value };
+
       if (field === "servicio_id") {
         const svc = servicios.find(s => s.id === value);
         if (svc) {
           items[idx].nombre = svc.nombre;
           items[idx].unidad = svc.unidad_cobro || "unidad";
           items[idx].precio_unitario = getPrecioParaCliente(svc, f.cliente_nombre);
+          // Resetear pieza al cambiar servicio
+          items[idx].pieza_nombre = "";
+          items[idx].consumo_por_pieza = 0;
+          items[idx].cantidad_piezas = "";
+          items[idx].cantidad = 1;
         }
       }
+
+      if (field === "pieza_nombre") {
+        const svc = servicios.find(s => s.id === items[idx].servicio_id);
+        const pieza = (svc?.piezas_predeterminadas || []).find(p => p.nombre === value);
+        if (pieza) {
+          items[idx].consumo_por_pieza = pieza.consumo_unidad;
+          const cantPiezas = Number(items[idx].cantidad_piezas) || 0;
+          items[idx].cantidad = cantPiezas * pieza.consumo_unidad;
+        } else {
+          items[idx].consumo_por_pieza = 0;
+          items[idx].cantidad = 0;
+        }
+      }
+
+      if (field === "cantidad_piezas") {
+        const consumo = Number(items[idx].consumo_por_pieza) || 0;
+        items[idx].cantidad = (Number(value) || 0) * consumo;
+      }
+
       const cant = Number(items[idx].cantidad) || 0;
       const precio = Number(items[idx].precio_unitario) || 0;
       items[idx].subtotal = cant * precio;
@@ -235,28 +260,71 @@ export default function Serv_Ordenes() {
                   </div>
                   {form.items.length === 0 && <p className="text-xs text-slate-400 text-center py-3 border border-dashed rounded-lg">Sin servicios agregados</p>}
                   <div className="space-y-2">
-                    {form.items.map((item, idx) => (
-                      <div key={idx} className="bg-slate-50 rounded-lg p-2 space-y-1.5">
-                        <div className="flex gap-2 items-center">
-                          <select value={item.servicio_id} onChange={e => updateItem(idx, "servicio_id", e.target.value)} className="flex-1 h-8 text-xs px-2 border border-slate-200 rounded">
-                            <option value="">Seleccionar servicio</option>
-                            {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                          </select>
-                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => removeItem(idx)}><X className="w-3.5 h-3.5" /></Button>
-                        </div>
-                        <div className="flex gap-2 items-center">
-                          <div className="flex items-center gap-1 flex-1">
-                            <Input type="number" min="0" step="any" value={item.cantidad} onChange={e => updateItem(idx, "cantidad", e.target.value)} className="w-24 h-8 text-xs" placeholder="Cantidad" />
-                            <span className="text-xs text-slate-500 shrink-0">{item.unidad || "unidad"}</span>
+                    {form.items.map((item, idx) => {
+                      const svc = servicios.find(s => s.id === item.servicio_id);
+                      const piezas = svc?.piezas_predeterminadas || [];
+                      const usaPiezas = piezas.length > 0;
+                      return (
+                        <div key={idx} className="bg-slate-50 rounded-lg p-2 space-y-1.5">
+                          {/* Servicio */}
+                          <div className="flex gap-2 items-center">
+                            <select value={item.servicio_id} onChange={e => updateItem(idx, "servicio_id", e.target.value)} className="flex-1 h-8 text-xs px-2 border border-slate-200 rounded">
+                              <option value="">Seleccionar servicio</option>
+                              {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                            </select>
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => removeItem(idx)}><X className="w-3.5 h-3.5" /></Button>
                           </div>
-                          <div className="flex items-center gap-1 flex-1">
-                            <span className="text-xs text-slate-400 shrink-0">$</span>
-                            <Input type="number" min="0" step="any" value={item.precio_unitario} onChange={e => updateItem(idx, "precio_unitario", e.target.value)} className="flex-1 h-8 text-xs" placeholder={`Precio/${item.unidad || "unidad"}`} />
+
+                          {/* Pieza predeterminada (si el servicio las tiene) */}
+                          {usaPiezas && (
+                            <div className="flex gap-2 items-center">
+                              <select
+                                value={item.pieza_nombre}
+                                onChange={e => updateItem(idx, "pieza_nombre", e.target.value)}
+                                className="flex-1 h-8 text-xs px-2 border border-indigo-200 rounded bg-indigo-50"
+                              >
+                                <option value="">Seleccionar pieza</option>
+                                {piezas.map(p => (
+                                  <option key={p.nombre} value={p.nombre}>{p.nombre} ({p.consumo_unidad} {item.unidad}/pieza)</option>
+                                ))}
+                              </select>
+                              <Input
+                                type="number" min="0" step="1"
+                                value={item.cantidad_piezas}
+                                onChange={e => updateItem(idx, "cantidad_piezas", e.target.value)}
+                                className="w-24 h-8 text-xs"
+                                placeholder="# piezas"
+                              />
+                              <span className="text-xs text-slate-400 shrink-0">piezas</span>
+                            </div>
+                          )}
+
+                          {/* Cantidad calculada + precio */}
+                          <div className="flex gap-2 items-center">
+                            <div className="flex items-center gap-1 flex-1">
+                              {usaPiezas ? (
+                                <span className="text-xs text-indigo-700 font-semibold bg-indigo-50 border border-indigo-200 rounded px-2 py-1 w-full">
+                                  {Number(item.cantidad).toLocaleString("es-CO")} {item.unidad || "u"}
+                                  {item.cantidad_piezas && item.consumo_por_pieza > 0 && (
+                                    <span className="text-indigo-400 font-normal ml-1">({item.cantidad_piezas} × {item.consumo_por_pieza})</span>
+                                  )}
+                                </span>
+                              ) : (
+                                <>
+                                  <Input type="number" min="0" step="any" value={item.cantidad} onChange={e => updateItem(idx, "cantidad", e.target.value)} className="w-24 h-8 text-xs" placeholder="Cantidad" />
+                                  <span className="text-xs text-slate-500 shrink-0">{item.unidad || "unidad"}</span>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 flex-1">
+                              <span className="text-xs text-slate-400 shrink-0">$</span>
+                              <Input type="number" min="0" step="any" value={item.precio_unitario} onChange={e => updateItem(idx, "precio_unitario", e.target.value)} className="flex-1 h-8 text-xs" placeholder={`Precio/${item.unidad || "unidad"}`} />
+                            </div>
+                            <span className="text-xs text-emerald-700 font-bold w-20 text-right shrink-0">{fmtCOP(item.subtotal)}</span>
                           </div>
-                          <span className="text-xs text-emerald-700 font-bold w-20 text-right shrink-0">{fmtCOP(item.subtotal)}</span>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   {form.items.length > 0 && (
                     <div className="flex justify-end mt-2 px-2">
@@ -364,7 +432,13 @@ export default function Serv_Ordenes() {
                             <div key={i} className="flex justify-between py-1.5 text-sm">
                               <span className="text-slate-700">
                                 {item.nombre}
-                                <span className="text-slate-400"> · {Number(item.cantidad).toLocaleString("es-CO")} {item.unidad || "unid"} × {fmtCOP(item.precio_unitario)}</span>
+                                {item.pieza_nombre && item.consumo_por_pieza > 0 ? (
+                                  <span className="text-slate-400">
+                                    {" · "}{item.cantidad_piezas} piezas ({item.pieza_nombre}) × {item.consumo_por_pieza} {item.unidad} × {fmtCOP(item.precio_unitario)}/{item.unidad}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400"> · {Number(item.cantidad).toLocaleString("es-CO")} {item.unidad || "unid"} × {fmtCOP(item.precio_unitario)}</span>
+                                )}
                               </span>
                               <span className="font-medium">{fmtCOP(item.subtotal)}</span>
                             </div>

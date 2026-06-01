@@ -20,8 +20,9 @@ const EMPTY_FORM = {
   costo_manufactura: "",
   unidad_cobro: "unidad",
   activo: true,
-  materiales: [],       // [{ materia_prima_id, nombre, cantidad_por_unidad, unidad_medida }]
-  precios_clientes: [], // [{ cliente, precio }]
+  materiales: [],            // [{ materia_prima_id, nombre, cantidad_por_unidad, unidad_medida }]
+  precios_clientes: [],      // [{ cliente, precio }]
+  piezas_predeterminadas: [], // [{ nombre, consumo_unidad }]
 };
 
 export default function Serv_Catalogo() {
@@ -60,6 +61,7 @@ export default function Serv_Catalogo() {
       activo: svc.activo !== false,
       materiales: svc.materiales || [],
       precios_clientes: svc.precios_clientes || [],
+      piezas_predeterminadas: svc.piezas_predeterminadas || [],
     });
     setShowForm(true);
   };
@@ -86,6 +88,19 @@ export default function Serv_Catalogo() {
     });
   };
   const removeMaterial = (idx) => setForm(f => ({ ...f, materiales: f.materiales.filter((_, i) => i !== idx) }));
+
+  // ── Piezas predeterminadas ──────────────────────────────────────
+  const addPieza = () => {
+    setForm(f => ({ ...f, piezas_predeterminadas: [...f.piezas_predeterminadas, { nombre: "", consumo_unidad: "" }] }));
+  };
+  const updatePieza = (idx, field, value) => {
+    setForm(f => {
+      const piezas = [...f.piezas_predeterminadas];
+      piezas[idx] = { ...piezas[idx], [field]: value };
+      return { ...f, piezas_predeterminadas: piezas };
+    });
+  };
+  const removePieza = (idx) => setForm(f => ({ ...f, piezas_predeterminadas: f.piezas_predeterminadas.filter((_, i) => i !== idx) }));
 
   // ── Precios por cliente ─────────────────────────────────────────
   const addPrecioCliente = () => {
@@ -114,6 +129,8 @@ export default function Serv_Catalogo() {
       materiales: form.materiales.filter(m => m.materia_prima_id),
       precios_clientes: form.precios_clientes.filter(pc => pc.cliente.trim() && parseFloat(pc.precio) > 0)
         .map(pc => ({ cliente: pc.cliente.trim(), precio: parseFloat(pc.precio) })),
+      piezas_predeterminadas: form.piezas_predeterminadas.filter(p => p.nombre.trim() && parseFloat(p.consumo_unidad) > 0)
+        .map(p => ({ nombre: p.nombre.trim(), consumo_unidad: parseFloat(p.consumo_unidad) })),
     };
     if (editingId) {
       const updated = await Servicio.update(editingId, data);
@@ -218,6 +235,45 @@ export default function Serv_Catalogo() {
                           className="w-28 h-8 text-xs"
                         />
                         <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => removePrecioCliente(idx)}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Piezas predeterminadas */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <Label>Piezas predeterminadas</Label>
+                      <p className="text-xs text-slate-400 mt-0.5">Al crear órdenes, seleccionas la pieza y el sistema calcula los {form.unidad_cobro || "unidades"} automáticamente</p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={addPieza}>
+                      <Plus className="w-3 h-3 mr-1" /> Agregar
+                    </Button>
+                  </div>
+                  {form.piezas_predeterminadas.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-3 border border-dashed rounded-lg">Sin piezas — se ingresará cantidad directamente</p>
+                  )}
+                  <div className="space-y-2">
+                    {form.piezas_predeterminadas.map((pieza, idx) => (
+                      <div key={idx} className="flex gap-2 items-center bg-indigo-50 rounded-lg p-2">
+                        <Input
+                          value={pieza.nombre}
+                          onChange={e => updatePieza(idx, "nombre", e.target.value)}
+                          placeholder="Nombre pieza (ej. Rayas)"
+                          className="flex-1 h-8 text-xs"
+                        />
+                        <Input
+                          type="number" min="0" step="any"
+                          value={pieza.consumo_unidad}
+                          onChange={e => updatePieza(idx, "consumo_unidad", e.target.value)}
+                          placeholder={`${form.unidad_cobro || "unidades"} por pieza`}
+                          className="w-36 h-8 text-xs"
+                        />
+                        <span className="text-xs text-slate-400 shrink-0">{form.unidad_cobro || "u"}/pieza</span>
+                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => removePieza(idx)}>
                           <X className="w-3.5 h-3.5" />
                         </Button>
                       </div>
@@ -336,6 +392,17 @@ export default function Serv_Catalogo() {
                           <div key={i} className="flex justify-between text-xs">
                             <span className="text-slate-600 truncate">{pc.cliente}</span>
                             <span className="font-semibold text-blue-700">{fmtCOP(pc.precio)}/{unidad}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(svc.piezas_predeterminadas || []).length > 0 && (
+                      <div className="border-t pt-2 space-y-1">
+                        <p className="text-xs text-slate-400">Piezas predeterminadas</p>
+                        {svc.piezas_predeterminadas.map((p, i) => (
+                          <div key={i} className="flex justify-between text-xs">
+                            <span className="text-slate-600">{p.nombre}</span>
+                            <span className="font-semibold text-indigo-700">{p.consumo_unidad} {unidad}/pieza</span>
                           </div>
                         ))}
                       </div>
