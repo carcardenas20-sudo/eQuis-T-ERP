@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { Presupuesto, Producto, MateriaPrima, Color, Remision, Operacion } from "@/api/entitiesChaquetas";
 import { Inventory, StockMovement } from "@/entities/all";
+import { base44 } from "@/api/base44Combined";
+const TareaPlanta = base44.entities.TareaPlanta;
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +139,43 @@ const [showSugerencias, setShowSugerencias] = useState(false);
           await Remision.create(tendidoData);
         } catch (err) {
           console.error("Error creando remisión de tendido:", err);
+        }
+      }
+
+      // Al aprobar: crear tareas de planta por combinación × operación requerida
+      if (wasApproved || isNewApproved) {
+        try {
+          const presNumero = data.numero_presupuesto || presupuestoActualizado.numero_presupuesto;
+          // Evitar duplicados si ya existen tareas para este presupuesto
+          const existentes = await TareaPlanta.filter({ presupuesto_id: presupuestoActualizado.id });
+          if (!existentes || existentes.length === 0) {
+            for (const productoItem of (data.productos || [])) {
+              const producto = productos.find(p => p.id === productoItem.producto_id);
+              if (!producto) continue;
+              const ops = producto.operaciones_requeridas || [];
+              if (ops.length === 0) continue;
+              const combinaciones = productoItem.combinaciones || [];
+              for (const comb of combinaciones) {
+                const totalUds = (comb.tallas_cantidades || []).reduce((s, tc) => s + (Number(tc.cantidad) || 0), 0);
+                if (totalUds <= 0) continue;
+                for (const opId of ops) {
+                  await TareaPlanta.create({
+                    presupuesto_id: presupuestoActualizado.id,
+                    presupuesto_numero: presNumero,
+                    operacion_id: opId,
+                    producto_nombre: producto.nombre,
+                    combinacion_nombre: comb.nombre || comb.combinacion_nombre || "",
+                    tallas_cantidades: comb.tallas_cantidades || [],
+                    total_unidades: totalUds,
+                    materiales: (data.materiales_calculados || []),
+                    estado: "pendiente",
+                  });
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error creando tareas de planta:", err);
         }
       }
 

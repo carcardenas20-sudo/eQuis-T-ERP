@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio } from "@/api/publicEntities";
+import { Remision, Operacion, TareaPlanta, Servicio, OrdenServicio } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
-  Play, Check, Layers, ClipboardList, Package } from "lucide-react";
+  Play, Check, Layers, Package } from "lucide-react";
 
 const ESTADO_CFG = {
   pendiente:  { label: "Pendiente",  color: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -20,31 +20,16 @@ function EstadoBadge({ estado }) {
   );
 }
 
-// ─── Tarjeta de presupuesto por operación ─────────────────────────────────────
-function PresupuestoOpCard({ presupuesto, opId, productoMap, onUpdate }) {
+// ─── Tarjeta de tarea de planta ───────────────────────────────────────────────
+function TareaCard({ tarea, onUpdate }) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-
-  const estado = (presupuesto.procesos_planta_estado || {})[opId] || "pendiente";
-  const isListo = estado === "listo";
-
-  const prodsDeOp = useMemo(() => (presupuesto.productos || [])
-    .filter(item => (productoMap[item.producto_id]?.operaciones_requeridas || []).includes(opId))
-    .map(item => {
-      const prod = productoMap[item.producto_id];
-      const totalUds = (item.combinaciones || []).reduce((s, comb) =>
-        s + (comb.tallas_cantidades || []).reduce((ss, tc) => ss + (Number(tc.cantidad) || 0), 0), 0);
-      return { nombre: prod?.nombre || "—", totalUds };
-    }), [presupuesto, opId, productoMap]);
-
-  const totalUds = prodsDeOp.reduce((s, p) => s + p.totalUds, 0);
+  const isListo = tarea.estado === "listo";
 
   const cambiarEstado = async (nuevoEstado) => {
     setLoading(true);
     try {
-      await Presupuesto.update(presupuesto.id, {
-        procesos_planta_estado: { ...(presupuesto.procesos_planta_estado || {}), [opId]: nuevoEstado }
-      });
+      await TareaPlanta.update(tarea.id, { estado: nuevoEstado });
       onUpdate();
     } catch (e) {
       alert("Error: " + e.message);
@@ -59,17 +44,26 @@ function PresupuestoOpCard({ presupuesto, opId, productoMap, onUpdate }) {
           <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => setOpen(o => !o)}>
             {isListo
               ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-              : <ClipboardList className="w-5 h-5 text-emerald-600 shrink-0" />}
+              : <div className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />}
             <div className="min-w-0">
-              <p className="font-bold text-slate-800 text-sm">{presupuesto.numero_presupuesto}</p>
-              <p className="text-xs text-slate-500">{totalUds} uds · {prodsDeOp.map(p => p.nombre).join(", ")}</p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="font-bold text-slate-800 text-sm">{tarea.presupuesto_numero}</p>
+                {tarea.combinacion_nombre && (
+                  <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">
+                    {tarea.combinacion_nombre}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {tarea.producto_nombre} · {tarea.total_unidades} uds
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <EstadoBadge estado={estado} />
+            <EstadoBadge estado={tarea.estado || "pendiente"} />
             {!isListo && (
               <>
-                {estado === "pendiente" && (
+                {(!tarea.estado || tarea.estado === "pendiente") && (
                   <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
                     className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-50">
                     <Play className="w-3 h-3" /> Iniciar
@@ -89,24 +83,48 @@ function PresupuestoOpCard({ presupuesto, opId, productoMap, onUpdate }) {
       </div>
 
       {open && (
-        <div className="px-4 pb-3 border-t border-slate-100 pt-2 space-y-1.5">
-          {prodsDeOp.map((p, i) => (
-            <div key={i} className="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-1.5 text-xs">
-              <span className="font-medium text-slate-700">{p.nombre}</span>
-              <span className="font-bold text-slate-800">{p.totalUds} uds</span>
+        <div className="px-4 pb-3 border-t border-slate-100 pt-2 space-y-2">
+          {/* Tallas */}
+          {(tarea.tallas_cantidades || []).length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {tarea.tallas_cantidades.map((tc, i) => (
+                <div key={i} className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-center min-w-[40px]">
+                  <p className="text-xs text-slate-400">{tc.talla}</p>
+                  <p className="text-sm font-bold text-slate-800">{tc.cantidad}</p>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+          {/* Materiales */}
+          {(tarea.materiales || []).length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Materiales</p>
+              {tarea.materiales.map((mat, i) => (
+                <div key={i} className="flex items-center justify-between bg-slate-50 rounded px-2.5 py-1.5 border border-slate-100">
+                  <div>
+                    <p className="text-xs font-medium text-slate-800">{mat.nombre}</p>
+                    {mat.color && mat.color !== "Sin definir" && (
+                      <p className="text-xs text-slate-500">{mat.color}</p>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-slate-700">
+                    {mat.cantidad != null ? Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, "") : "—"}
+                    <span className="text-slate-400 font-normal ml-1">{mat.etiqueta}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Tarjeta de orden de servicio externa por operación ───────────────────────
+// ─── Tarjeta de orden de servicio externa ────────────────────────────────────
 function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-
   const isListo = orden.estado === "listo" || orden.estado === "lista";
   const estadoNorm = orden.estado === "lista" ? "listo" : orden.estado;
 
@@ -132,7 +150,7 @@ function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
           <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => setOpen(o => !o)}>
             <Wrench className={`w-5 h-5 shrink-0 ${isListo ? "text-green-500" : "text-indigo-500"}`} />
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex items-center gap-1.5">
                 <p className="font-bold text-slate-800 text-sm">{orden.numero_orden}</p>
                 <span className="text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-semibold">Externo</span>
               </div>
@@ -161,7 +179,6 @@ function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
           </div>
         </div>
       </div>
-
       {open && (
         <div className="px-4 pb-3 border-t border-slate-100 pt-2 space-y-1.5">
           {itemsDeOp.map((item, i) => (
@@ -174,9 +191,7 @@ function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
               </span>
             </div>
           ))}
-          {orden.notas && (
-            <p className="text-xs text-slate-400 italic px-1">{orden.notas}</p>
-          )}
+          {orden.notas && <p className="text-xs text-slate-400 italic px-1">{orden.notas}</p>}
         </div>
       )}
     </div>
@@ -184,10 +199,9 @@ function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
 }
 
 // ─── Tarjeta de tendido ───────────────────────────────────────────────────────
-function TendidoCard({ tendido, presupuesto, onUpdate }) {
+function TendidoCard({ tendido, presNumero, onUpdate }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const isListo = tendido.estado === "listo";
   const isEnProceso = tendido.estado === "en_proceso";
 
@@ -199,7 +213,7 @@ function TendidoCard({ tendido, presupuesto, onUpdate }) {
       await Remision.update(tendido.id, { estado: siguiente });
       onUpdate();
     } catch (e) {
-      alert("Error al actualizar: " + e.message);
+      alert("Error: " + e.message);
     }
     setLoading(false);
   };
@@ -215,20 +229,20 @@ function TendidoCard({ tendido, presupuesto, onUpdate }) {
             : <Layers className="w-5 h-5 text-indigo-500" />}
           <div className="min-w-0">
             <p className="font-bold text-slate-800 text-sm truncate">
-              {tendido.presupuesto_numero || presupuesto?.numero_presupuesto || tendido.id?.slice(-8)}
+              {tendido.presupuesto_numero || presNumero || tendido.id?.slice(-8)}
             </p>
             <p className="text-xs text-slate-500">
               {(tendido.filas || []).length > 0
-                ? `${(tendido.filas || []).length} referencias · ${(tendido.colores_tendido || []).length} colores · ${totalHojas} hojas`
+                ? `${(tendido.filas || []).length} referencias · ${totalHojas} hojas`
                 : "Tendido de planta"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <EstadoBadge estado={tendido.estado || "pendiente"} />
           {!isListo && (
             <button onClick={e => { e.stopPropagation(); cambiarEstado(); }} disabled={loading}
-              className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50
+              className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50
                 ${!isEnProceso ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}`}>
               {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : !isEnProceso ? <Play className="w-3 h-3" /> : <Check className="w-3 h-3" />}
               {!isEnProceso ? "Iniciar" : "Listo"}
@@ -237,38 +251,31 @@ function TendidoCard({ tendido, presupuesto, onUpdate }) {
           {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
-
       {open && (
         <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
           {(tendido.filas || []).length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Referencias a cortar</p>
-              <div className="space-y-1">
-                {tendido.filas.map((f, i) => (
-                  <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">{f.producto_nombre}</p>
-                      <p className="text-xs text-slate-400">Talla {f.talla}</p>
-                    </div>
-                    <span className="text-sm font-bold text-slate-700">{f.cant_hoja} × hoja</span>
+            <div className="space-y-1">
+              {tendido.filas.map((f, i) => (
+                <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{f.producto_nombre}</p>
+                    <p className="text-xs text-slate-400">Talla {f.talla}</p>
                   </div>
-                ))}
-              </div>
+                  <span className="text-sm font-bold text-slate-700">{f.cant_hoja} × hoja</span>
+                </div>
+              ))}
             </div>
           )}
           {(tendido.colores_tendido || []).length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Colores y hojas</p>
-              <div className="space-y-1.5">
-                {tendido.colores_tendido.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2.5 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                    <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0"
-                      style={{ backgroundColor: c.codigo_hex || '#ccc' }} />
-                    <span className="flex-1 text-sm font-medium text-slate-800">{c.color_nombre}</span>
-                    <span className="text-sm font-bold text-slate-700">{c.hojas} hojas</span>
-                  </div>
-                ))}
-              </div>
+            <div className="space-y-1.5">
+              {tendido.colores_tendido.map((c, i) => (
+                <div key={i} className="flex items-center gap-2.5 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                  <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0"
+                    style={{ backgroundColor: c.codigo_hex || '#ccc' }} />
+                  <span className="flex-1 text-sm font-medium text-slate-800">{c.color_nombre}</span>
+                  <span className="text-sm font-bold text-slate-700">{c.hojas} hojas</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -280,8 +287,7 @@ function TendidoCard({ tendido, presupuesto, onUpdate }) {
 // ─── Portal principal ─────────────────────────────────────────────────────────
 export default function PlantPortal() {
   const [operaciones, setOperaciones] = useState([]);
-  const [presupuestos, setPresupuestos] = useState([]);
-  const [productos, setProductos] = useState([]);
+  const [tareas, setTareas] = useState([]);
   const [tendidos, setTendidos] = useState([]);
   const [servicios, setServicios] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
@@ -292,20 +298,17 @@ export default function PlantPortal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [opsData, presData, prodData, tendData] = await Promise.all([
+      const [opsData, tareasData, tendData] = await Promise.all([
         Operacion.list("orden_procesamiento"),
-        Presupuesto.filter({ estado: "aprobado" }),
-        Producto.list(),
+        TareaPlanta.list("-created_date"),
         Remision.filter({ tipo_remision: "tendido" }),
       ]);
       const activas = (opsData || []).filter(o => o.activa !== false);
       setOperaciones(activas);
-      setPresupuestos(presData || []);
-      setProductos(prodData || []);
+      setTareas(tareasData || []);
       setTendidos(tendData || []);
       setTabId(prev => prev ?? (activas[0]?.id || "tendidos"));
 
-      // Servicio y OrdenServicio son opcionales — si fallan no rompen el portal
       try {
         const [svcData, ordData] = await Promise.all([
           Servicio.list(),
@@ -314,7 +317,7 @@ export default function PlantPortal() {
         setServicios((svcData || []).filter(s => s.activo !== false));
         setOrdenes((ordData || []).filter(o => !["pagada", "cancelada"].includes(o.estado)));
       } catch (e) {
-        console.warn("Servicios/Ordenes no disponibles en portal:", e.message);
+        console.warn("Servicios/Ordenes no disponibles:", e.message);
       }
     } catch (e) {
       console.error("Error cargando datos:", e);
@@ -324,56 +327,24 @@ export default function PlantPortal() {
 
   useEffect(() => { loadData(); }, []);
 
-  const productoMap = useMemo(() =>
-    Object.fromEntries(productos.map(p => [p.id, p])), [productos]);
-
   const servicioMap = useMemo(() =>
     Object.fromEntries(servicios.map(s => [s.id, s])), [servicios]);
 
-  const presMap = useMemo(() =>
-    Object.fromEntries(presupuestos.map(p => [p.id, p])), [presupuestos]);
+  const tareasDeOp = (opId) => tareas.filter(t => t.operacion_id === opId);
+  const ordenesDeOp = (opId) => ordenes.filter(ord =>
+    (ord.items || []).some(item => servicioMap[item.servicio_id]?.operacion_id === opId)
+  );
 
-  // Presupuestos que tienen al menos un producto con esta operación requerida
-  const presupuestosDeOp = (opId) =>
-    presupuestos.filter(pres =>
-      (pres.productos || []).some(item =>
-        (productoMap[item.producto_id]?.operaciones_requeridas || []).includes(opId)
-      )
-    );
-
-  // Órdenes de servicio con items asociados a esta operación
-  const ordenesDeOp = (opId) =>
-    ordenes.filter(ord =>
-      (ord.items || []).some(item => servicioMap[item.servicio_id]?.operacion_id === opId)
-    );
-
-  const getEstadoPres = (pres, opId) => (pres.procesos_planta_estado || {})[opId] || "pendiente";
-
-  const isActivoPres = (pres, opId) => {
-    const e = getEstadoPres(pres, opId);
-    if (filtroEstado === "activos") return e !== "listo";
-    if (filtroEstado === "listos") return e === "listo";
+  const filtrar = (estado) => {
+    if (filtroEstado === "activos") return estado !== "listo";
+    if (filtroEstado === "listos") return estado === "listo";
     return true;
   };
 
-  const isActivoOrden = (ord) => {
-    const e = ord.estado === "lista" ? "listo" : ord.estado;
-    if (filtroEstado === "activos") return e !== "listo";
-    if (filtroEstado === "listos") return e === "listo";
-    return true;
-  };
-
-  const isActivoTendido = (t) => {
-    if (filtroEstado === "activos") return t.estado !== "listo";
-    if (filtroEstado === "listos") return t.estado === "listo";
-    return true;
-  };
-
-  // Conteo de pendientes por operación (para badge)
   const countPendOp = (opId) => {
-    const presPend = presupuestosDeOp(opId).filter(p => getEstadoPres(p, opId) !== "listo").length;
-    const ordPend = ordenesDeOp(opId).filter(o => o.estado !== "listo" && o.estado !== "lista").length;
-    return presPend + ordPend;
+    const t = tareasDeOp(opId).filter(t => (t.estado || "pendiente") !== "listo").length;
+    const o = ordenesDeOp(opId).filter(o => o.estado !== "listo" && o.estado !== "lista").length;
+    return t + o;
   };
 
   const pendTendidos = tendidos.filter(t => t.estado !== "listo").length;
@@ -383,19 +354,18 @@ export default function PlantPortal() {
     ...operaciones.map(op => ({ id: op.id, label: op.nombre, Icon: Factory, count: countPendOp(op.id) })),
   ];
 
-  const tendidosFiltrados = tendidos.filter(isActivoTendido);
+  const tendidosFiltrados = tendidos.filter(t => filtrar(t.estado || "pendiente"));
 
-  const presFiltrados = tabId && tabId !== "tendidos"
-    ? presupuestosDeOp(tabId).filter(p => isActivoPres(p, tabId)) : [];
+  const tareasFiltradas = tabId && tabId !== "tendidos"
+    ? tareasDeOp(tabId).filter(t => filtrar(t.estado || "pendiente")) : [];
 
   const ordFiltradas = tabId && tabId !== "tendidos"
-    ? ordenesDeOp(tabId).filter(isActivoOrden) : [];
+    ? ordenesDeOp(tabId).filter(o => filtrar(o.estado === "lista" ? "listo" : o.estado)) : [];
 
-  const hayContenido = presFiltrados.length > 0 || ordFiltradas.length > 0;
+  const hayContenido = tareasFiltradas.length > 0 || ordFiltradas.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -408,16 +378,15 @@ export default function PlantPortal() {
             </div>
           </div>
           <button onClick={loadData}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
             <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
           {tabs.map(({ id, label, Icon, count }) => (
             <button key={id} onClick={() => setTabId(id)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all
                 ${tabId === id ? "bg-emerald-600 text-white shadow" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
               <Icon className="w-3.5 h-3.5" />
               {label}
@@ -431,7 +400,6 @@ export default function PlantPortal() {
           ))}
         </div>
 
-        {/* Filtro estado */}
         <div className="flex gap-1.5 mt-2">
           {[{ id: "activos", label: "Activos" }, { id: "listos", label: "Listos" }, { id: "todos", label: "Todos" }].map(f => (
             <button key={f.id} onClick={() => setFiltroEstado(f.id)}
@@ -443,7 +411,6 @@ export default function PlantPortal() {
         </div>
       </div>
 
-      {/* Contenido */}
       <div className="p-4 space-y-3 max-w-lg mx-auto">
         {loading ? (
           <div className="flex justify-center py-16">
@@ -457,47 +424,31 @@ export default function PlantPortal() {
               <p className="font-medium">No hay tendidos {filtroEstado === "activos" ? "activos" : filtroEstado}</p>
             </div>
           ) : tendidosFiltrados.map(t => (
-            <TendidoCard key={t.id} tendido={t} presupuesto={presMap[t.presupuesto_id] || null} onUpdate={loadData} />
+            <TendidoCard key={t.id} tendido={t} presNumero={t.presupuesto_numero} onUpdate={loadData} />
           ))
 
         ) : !hayContenido ? (
           <div className="text-center py-16 text-slate-400">
             <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p className="font-medium">No hay trabajo {filtroEstado === "activos" ? "activo" : filtroEstado}</p>
-            {filtroEstado === "activos" && presupuestosDeOp(tabId).length === 0 && ordenesDeOp(tabId).length === 0 && (
-              <p className="text-xs mt-2">Los presupuestos aprobados y órdenes de servicio aparecen aquí</p>
+            {filtroEstado === "activos" && (
+              <p className="text-xs mt-2">Las tareas se generan al aprobar un presupuesto</p>
             )}
           </div>
         ) : (
           <>
-            {/* Trabajo interno: presupuestos */}
-            {presFiltrados.length > 0 && (
+            {tareasFiltradas.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">Producción interna</p>
-                {presFiltrados.map(pres => (
-                  <PresupuestoOpCard
-                    key={pres.id}
-                    presupuesto={pres}
-                    opId={tabId}
-                    productoMap={productoMap}
-                    onUpdate={loadData}
-                  />
+                {tareasFiltradas.map(t => (
+                  <TareaCard key={t.id} tarea={t} onUpdate={loadData} />
                 ))}
               </div>
             )}
-
-            {/* Trabajo externo: órdenes de servicio */}
             {ordFiltradas.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">Servicios externos</p>
                 {ordFiltradas.map(ord => (
-                  <OrdenOpCard
-                    key={ord.id}
-                    orden={ord}
-                    opId={tabId}
-                    servicioMap={servicioMap}
-                    onUpdate={loadData}
-                  />
+                  <OrdenOpCard key={ord.id} orden={ord} opId={tabId} servicioMap={servicioMap} onUpdate={loadData} />
                 ))}
               </div>
             )}
