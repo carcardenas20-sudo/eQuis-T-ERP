@@ -96,6 +96,27 @@ export default function Serv_Ordenes() {
     return match ? match.precio : (svc.precio_venta || 0);
   };
 
+  const tienePrecioEspecial = (svc, clienteNombre) => {
+    if (!clienteNombre || !(svc?.precios_clientes || []).length) return false;
+    const nombre = clienteNombre.trim().toLowerCase();
+    return svc.precios_clientes.some(pc => pc.cliente.toLowerCase().includes(nombre) || nombre.includes(pc.cliente.toLowerCase()));
+  };
+
+  // Recalcula precios de todos los ítems cuando cambia el nombre del cliente
+  const updateCliente = (nuevoNombre) => {
+    setForm(f => {
+      const items = f.items.map(item => {
+        if (!item.servicio_id) return item;
+        const svc = servicios.find(s => s.id === item.servicio_id);
+        if (!svc) return item;
+        const precio_unitario = getPrecioParaCliente(svc, nuevoNombre);
+        const cant = Number(item.cantidad) || 0;
+        return { ...item, precio_unitario, subtotal: cant * precio_unitario };
+      });
+      return { ...f, cliente_nombre: nuevoNombre, items };
+    });
+  };
+
   const updateItem = (idx, field, value) => {
     setForm(f => {
       const items = [...f.items];
@@ -226,7 +247,7 @@ export default function Serv_Ordenes() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Cliente *</Label>
-                    <Input value={form.cliente_nombre} onChange={e => setForm(f => ({ ...f, cliente_nombre: e.target.value }))} placeholder="Nombre o empresa" className="mt-1" />
+                    <Input value={form.cliente_nombre} onChange={e => updateCliente(e.target.value)} placeholder="Nombre o empresa" className="mt-1" />
                   </div>
                   <div>
                     <Label>Contacto</Label>
@@ -272,6 +293,9 @@ export default function Serv_Ordenes() {
                               <option value="">Seleccionar servicio</option>
                               {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                             </select>
+                            {tienePrecioEspecial(svc, form.cliente_nombre) && (
+                              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 shrink-0 whitespace-nowrap">★ Precio especial</span>
+                            )}
                             <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => removeItem(idx)}><X className="w-3.5 h-3.5" /></Button>
                           </div>
 
