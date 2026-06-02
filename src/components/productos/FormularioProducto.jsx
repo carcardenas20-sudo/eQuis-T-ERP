@@ -395,6 +395,16 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                           placeholder="0"
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Prendas por lona</Label>
+                        <Input
+                          type="number"
+                          value={formData.prendas_por_lona || ""}
+                          onChange={(e) => setFormData({ ...formData, prendas_por_lona: parseInt(e.target.value) || 0 })}
+                          placeholder="ej. 25"
+                        />
+                        <p className="text-xs text-slate-400">Para el asistente de conteo en traslados</p>
+                      </div>
                     </div>
 
                     <div className="space-y-2 p-3 bg-slate-50 rounded-lg text-sm">

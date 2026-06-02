@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig } from "@/api/publicEntities";
+import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
-  Play, Check, Layers, Package } from "lucide-react";
+  Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2 } from "lucide-react";
+import TransferReceive from "@/components/transfers/TransferReceive";
 
 const ESTADO_CFG = {
   pendiente:  { label: "Pendiente",  color: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -298,8 +299,15 @@ export default function PlantPortal() {
   const [tendidos, setTendidos] = useState([]);
   const [servicios, setServicios] = useState([]);
   const [ordenes, setOrdenes] = useState([]);
-  const [estadosMap, setEstadosMap] = useState({});   // { "presId_opId": estado }
+  const [estadosMap, setEstadosMap] = useState({});
   const [estadoConfigId, setEstadoConfigId] = useState(null);
+  const [traslados, setTraslados] = useState(/** @type {any[]} */ ([]));
+  const [productosPOS, setProductosPOS] = useState(/** @type {any[]} */ ([]));
+  const [locations, setLocations] = useState(/** @type {any[]} */ ([]));
+  const [plantaLocationId, setPlantaLocationId] = useState(/** @type {string|null} */ (null));
+  const [receivingTrasladoId, setReceivingTrasladoId] = useState(/** @type {string|null} */ (null));
+  const [trasladoForm, setTrasladoForm] = useState({ destino: "", items: /** @type {any[]} */ ([]), notas: "" });
+  const [savingTraslado, setSavingTraslado] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tabId, setTabId] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState("activos");
@@ -328,16 +336,25 @@ export default function PlantPortal() {
       console.error("Error cargando datos principales:", e);
     }
 
-    // Servicios y órdenes son opcionales — no rompen el portal si fallan
+    // Servicios, órdenes y traslados son opcionales
     try {
-      const [svcData, ordData] = await Promise.all([
+      const [svcData, ordData, trasData, locsData, prodsData, plantaCfg] = await Promise.all([
         Servicio.list(),
         OrdenServicio.list("-fecha_orden"),
+        Traslado.list("-created_date"),
+        LocationPub.list(),
+        ProductoPOS.list(),
+        AppConfig.filter({ key: "planta_location_id" }),
       ]);
       setServicios((svcData || []).filter(s => s.activo !== false));
       setOrdenes((ordData || []).filter(o => !["pagada", "cancelada"].includes(o.estado)));
+      setTraslados(trasData || []);
+      setLocations(locsData || []);
+      setProductosPOS(prodsData || []);
+      const plId = (plantaCfg || [])[0]?.value || null;
+      setPlantaLocationId(plId);
     } catch (e) {
-      console.warn("Servicios/Ordenes no disponibles:", e.message);
+      console.warn("Servicios/Ordenes/Traslados no disponibles:", e.message);
     }
 
     setLoading(false);
@@ -397,9 +414,52 @@ export default function PlantPortal() {
 
   const pendTendidos = tendidos.filter(t => t.estado !== "listo").length;
 
+  // Traslados pendientes de recibir en el taller
+  const trasladosPendientesRecibir = traslados.filter(t =>
+    t.estado === "pendiente" && (!plantaLocationId || t.destino_location_id === plantaLocationId)
+  );
+  const trasladosPendientesEnviar = traslados.filter(t =>
+    t.estado === "pendiente" && (!plantaLocationId || t.origen_location_id === plantaLocationId)
+  );
+
+  const nextNumeroTraslado = () => {
+    const nums = traslados.map(t => parseInt((t.numero_traslado || "").replace(/\D/g, "")) || 0);
+    return "TRA-" + String(Math.max(0, ...nums) + 1).padStart(4, "0");
+  };
+
+  const handleCrearTraslado = async (e) => {
+    e.preventDefault();
+    if (!trasladoForm.destino || trasladoForm.items.length === 0) return;
+    setSavingTraslado(true);
+    try {
+      const origen = locations.find(l => l.id === plantaLocationId);
+      const destino = locations.find(l => l.id === trasladoForm.destino);
+      await Traslado.create({
+        numero_traslado: nextNumeroTraslado(),
+        origen_location_id: plantaLocationId || "taller",
+        origen_nombre: origen?.name || "Taller",
+        destino_location_id: trasladoForm.destino,
+        destino_nombre: destino?.name || "",
+        items: trasladoForm.items.map(i => ({
+          product_id: i.product_id,
+          nombre: i.nombre,
+          cantidad_enviada: Number(i.cantidad),
+        })),
+        estado: "pendiente",
+        notas: trasladoForm.notas,
+      });
+      setTrasladoForm({ destino: "", items: [], notas: "" });
+      await loadData();
+    } catch (err) {
+      alert("Error: " + (err instanceof Error ? err.message : String(err)));
+    }
+    setSavingTraslado(false);
+  };
+
   const tabs = [
     { id: "tendidos", label: "Tendidos", Icon: Layers, count: pendTendidos },
     ...operaciones.map(op => ({ id: op.id, label: op.nombre, Icon: Factory, count: countPendOp(op.id) })),
+    { id: "traslados", label: "Traslados", Icon: ArrowRightLeft, count: trasladosPendientesRecibir.length },
   ];
 
   const tendidosFiltrados = tendidos.filter(t => filtrar(t.estado || "pendiente"));
@@ -474,6 +534,128 @@ export default function PlantPortal() {
           ) : tendidosFiltrados.map(t => (
             <TendidoCard key={t.id} tendido={t} onUpdate={loadData} />
           ))
+
+        ) : tabId === "traslados" ? (
+          receivingTrasladoId ? (
+            <TransferReceive
+              traslado={traslados.find(t => t.id === receivingTrasladoId)}
+              productos={productosPOS}
+              locations={locations}
+              onDone={() => { setReceivingTrasladoId(null); loadData(); }}
+              onCancel={() => setReceivingTrasladoId(null)}
+            />
+          ) : (
+            <div className="space-y-4">
+              {/* Pendientes de recibir */}
+              {trasladosPendientesRecibir.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">Por recibir</p>
+                  {trasladosPendientesRecibir.map(t => (
+                    <div key={t.id} className="bg-white rounded-xl border border-amber-200 p-3 shadow-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="font-bold text-slate-800 text-sm">{t.numero_traslado}</p>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                            <Building2 className="w-3.5 h-3.5 text-red-500" />
+                            <span>{t.origen_nombre}</span>
+                            <span>·</span>
+                            <span>{(t.items||[]).reduce((s,i) => s+(Number(i.cantidad_enviada)||0),0)} uds</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(t.items||[]).map((i,idx) => (
+                              <span key={idx} className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                                {i.nombre||i.product_id} · {i.cantidad_enviada}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <button onClick={() => setReceivingTrasladoId(t.id)}
+                          className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 shrink-0">
+                          <Package className="w-3.5 h-3.5" /> Recibir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Crear nuevo traslado */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
+                  <Send className="w-4 h-4 text-blue-500" /> Enviar traslado
+                </p>
+                {!plantaLocationId && (
+                  <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
+                    Configura el AppConfig "planta_location_id" con el ID de esta sucursal para habilitar envíos.
+                  </p>
+                )}
+                <form onSubmit={handleCrearTraslado} className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 block mb-1">Destino</label>
+                    <select value={trasladoForm.destino}
+                      onChange={e => setTrasladoForm(f => ({ ...f, destino: e.target.value }))}
+                      className="w-full h-8 px-2 text-sm border border-slate-200 rounded-lg">
+                      <option value="">Seleccionar sucursal...</option>
+                      {locations.filter(l => l.id !== plantaLocationId).map(l => (
+                        <option key={l.id} value={l.id}>{l.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-slate-600">Productos</label>
+                      <button type="button"
+                        onClick={() => setTrasladoForm(f => ({ ...f, items: [...f.items, { product_id: "", nombre: "", cantidad: "" }] }))}
+                        className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-0.5">
+                        <Plus className="w-3 h-3" /> Agregar
+                      </button>
+                    </div>
+                    {trasladoForm.items.length === 0 && (
+                      <p className="text-xs text-slate-400 text-center py-3 border border-dashed rounded-lg">Sin productos</p>
+                    )}
+                    <div className="space-y-1.5">
+                      {trasladoForm.items.map((item, idx) => (
+                        <div key={idx} className="flex gap-1.5 items-center">
+                          <select value={item.product_id}
+                            onChange={e => {
+                              const prod = productosPOS.find(p => p.sku === e.target.value || p.id === e.target.value);
+                              setTrasladoForm(f => {
+                                const items = [...f.items];
+                                items[idx] = { ...items[idx], product_id: e.target.value, nombre: prod?.name || "" };
+                                return { ...f, items };
+                              });
+                            }}
+                            className="flex-1 h-8 px-2 text-xs border border-slate-200 rounded">
+                            <option value="">Producto...</option>
+                            {productosPOS.map(p => <option key={p.id} value={p.sku||p.id}>{p.name}</option>)}
+                          </select>
+                          <input type="number" min="1" value={item.cantidad}
+                            onChange={e => setTrasladoForm(f => {
+                              const items = [...f.items];
+                              items[idx] = { ...items[idx], cantidad: e.target.value };
+                              return { ...f, items };
+                            })}
+                            className="w-20 h-8 px-2 text-xs border border-slate-200 rounded" placeholder="Uds" />
+                          <button type="button"
+                            onClick={() => setTrasladoForm(f => ({ ...f, items: f.items.filter((_,i) => i !== idx) }))}
+                            className="p-1 text-red-400 hover:text-red-600">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button type="submit" disabled={savingTraslado || !trasladoForm.destino || trasladoForm.items.length === 0}
+                    className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                    {savingTraslado ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Enviar
+                  </button>
+                </form>
+              </div>
+            </div>
+          )
 
         ) : !hayContenido ? (
           <div className="text-center py-16 text-slate-400">

@@ -66,6 +66,8 @@ const PORTAL_PUBLIC_ENTITIES = new Set([
   'Remision', 'OrdenServicio', 'Operacion', 'Presupuesto',
   // Certificados laborales
   'CertificadoSolicitud',
+  // Traslados entre sucursales
+  'Traslado', 'Location', 'Product',
 ]);
 // Entidades en las que el portal puede escribir
 const PORTAL_WRITE_ENTITIES = new Set([
@@ -73,8 +75,8 @@ const PORTAL_WRITE_ENTITIES = new Set([
   'Delivery', 'Dispatch',     // planillador registra entregas/despachos
   'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog', 'AppConfig',
   'Remision', 'OrdenServicio', // portal planta actualiza estados
-  'Remision', 'OrdenServicio', 'Operacion', 'Presupuesto', // portal planta actualiza estados
   'CertificadoSolicitud',     // operario solicita certificado laboral
+  'Traslado',                 // portal crea/gestiona traslados
 ]);
 // POST /api/portal-login  → recibe employee_id lógico + pin, devuelve datos del empleado
 app.post('/api/portal-login', async (req, res) => {
@@ -99,6 +101,74 @@ app.post('/api/portal-login', async (req, res) => {
   } catch (e) {
     console.error('portal-login error', e);
     res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// ─── Aceptar / rechazar traslado (portal o admin) ───────────────────────────
+app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
+  const { traslado_id, conteo, notas, accion } = req.body || {};
+  if (!traslado_id) return res.status(400).json({ error: 'Falta traslado_id' });
+  try {
+    const { rows: tras } = await query(`SELECT id, data FROM entity_traslado WHERE id = $1`, [traslado_id]);
+    if (!tras.length) return res.status(404).json({ error: 'Traslado no encontrado' });
+    const traslado = { ...tras[0].data, id: tras[0].id };
+    if (traslado.estado !== 'pendiente') return res.status(400).json({ error: 'El traslado ya fue procesado' });
+
+    if (accion === 'rechazar') {
+      await query(`UPDATE entity_traslado SET data = data || $1 WHERE id = $2`, [
+        JSON.stringify({ estado: 'rechazado', notas_receptor: notas || '' }),
+        traslado_id,
+      ]);
+      return res.json({ ok: true, estado: 'rechazado' });
+    }
+
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+    const { rows: allInv } = await query(`SELECT id, data FROM entity_inventory`);
+
+    for (const item of (traslado.items || [])) {
+      const pId = item.product_id;
+      const totalRecibido = conteo?.find(c => c.product_id === pId)?.total_recibido ?? item.cantidad_enviada;
+
+      // Salida del origen
+      await query(`INSERT INTO entity_inventorymovement (data) VALUES ($1)`, [JSON.stringify({
+        product_id: pId, location_id: traslado.origen_location_id,
+        movement_type: 'transfer_out', quantity: -item.cantidad_enviada,
+        reason: `Traslado ${traslado.numero_traslado}`, movement_date: today,
+      })]);
+      const origInv = allInv.find(r => r.data?.product_id === pId && r.data?.location_id === traslado.origen_location_id);
+      if (origInv) {
+        await query(`UPDATE entity_inventory SET data = data || $1 WHERE id = $2`, [
+          JSON.stringify({ current_stock: (origInv.data.current_stock || 0) - item.cantidad_enviada, last_movement_date: today }), origInv.id,
+        ]);
+      }
+
+      // Entrada al destino
+      await query(`INSERT INTO entity_inventorymovement (data) VALUES ($1)`, [JSON.stringify({
+        product_id: pId, location_id: traslado.destino_location_id,
+        movement_type: 'transfer_in', quantity: totalRecibido,
+        reason: `Traslado ${traslado.numero_traslado}`, movement_date: today,
+      })]);
+      const destInv = allInv.find(r => r.data?.product_id === pId && r.data?.location_id === traslado.destino_location_id);
+      if (destInv) {
+        await query(`UPDATE entity_inventory SET data = data || $1 WHERE id = $2`, [
+          JSON.stringify({ current_stock: (destInv.data.current_stock || 0) + totalRecibido, last_movement_date: today }), destInv.id,
+        ]);
+      } else {
+        await query(`INSERT INTO entity_inventory (data) VALUES ($1)`, [JSON.stringify({
+          product_id: pId, location_id: traslado.destino_location_id,
+          current_stock: totalRecibido, last_movement_date: today,
+        })]);
+      }
+    }
+
+    await query(`UPDATE entity_traslado SET data = data || $1 WHERE id = $2`, [
+      JSON.stringify({ estado: 'aceptado', conteo_receptor: conteo || [], notas_receptor: notas || '', fecha_aceptacion: today }),
+      traslado_id,
+    ]);
+    res.json({ ok: true, estado: 'aceptado' });
+  } catch (e) {
+    console.error('aceptarTraslado error:', e);
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -299,7 +369,7 @@ app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res)
 const DIST_DIR = join(__dirname, '..', 'dist');
 console.log('🗂️  DIST_DIR:', DIST_DIR);
 app.use(express.static(DIST_DIR));
-app.get('/{*path}', (_req, res) => {
+app.get('*', (_req, res) => {
   res.sendFile(join(DIST_DIR, 'index.html'));
 });
 

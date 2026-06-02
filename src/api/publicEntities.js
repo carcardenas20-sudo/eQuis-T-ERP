@@ -25,3 +25,6 @@ export const Operacion      = p.Operacion;
 export const Presupuesto    = p.Presupuesto;
 export const Servicio       = p.Servicio;
 export const TareaPlanta    = p.TareaPlanta;
+export const Traslado       = p.Traslado;
+export const ProductoPOS    = p.Product;
+export const LocationPub    = p.Location;
