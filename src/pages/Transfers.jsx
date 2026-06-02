@@ -31,8 +31,8 @@ export default function TransfersPage() {
   const [traslados, setTraslados] = useState([]);
   const [receivingId, setReceivingId] = useState(null);
 
-  // Form state
-  const [form, setForm] = useState({ origen: "", destino: "", notas: "", items: [] });
+  const [form, setForm] = useState(/** @type {{origen:string,destino:string,notas:string,items:any[],lonas:any[]}} */
+    ({ origen: "", destino: "", notas: "", items: [], lonas: [] }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -90,6 +90,38 @@ export default function TransfersPage() {
     return "TRA-" + String(Math.max(0, ...nums) + 1).padStart(4, "0");
   };
 
+  // ── Helpers de lonas ────────────────────────────────────────────────────────
+  const addLona = () => setForm(f => ({
+    ...f, lonas: [...f.lonas, { id: Date.now(), items: [] }]
+  }));
+  const removeLona = (lonaId) => setForm(f => ({ ...f, lonas: f.lonas.filter(l => l.id !== lonaId) }));
+  const addLonaItem = (lonaId) => setForm(f => ({
+    ...f, lonas: f.lonas.map(l => l.id === lonaId
+      ? { ...l, items: [...l.items, { product_id: "", nombre: "", cantidad: "" }] }
+      : l)
+  }));
+  const updateLonaItem = (lonaId, idx, field, value) => setForm(f => ({
+    ...f, lonas: f.lonas.map(l => {
+      if (l.id !== lonaId) return l;
+      const items = [...l.items];
+      items[idx] = { ...items[idx], [field]: value };
+      if (field === "product_id") {
+        const prod = products.find(p => p.sku === value || p.id === value);
+        items[idx].nombre = prod?.name || "";
+      }
+      return { ...l, items };
+    })
+  }));
+  const removeLonaItem = (lonaId, idx) => setForm(f => ({
+    ...f, lonas: f.lonas.map(l => l.id === lonaId
+      ? { ...l, items: l.items.filter((_, i) => i !== idx) }
+      : l)
+  }));
+
+  const totalEnLonas = form.lonas.reduce((s, l) =>
+    s + l.items.reduce((si, i) => si + (Number(i.cantidad) || 0), 0), 0);
+  const totalItems = form.items.reduce((s, i) => s + (Number(i.cantidad) || 0), 0);
+
   const handleEnviar = async (e) => {
     e.preventDefault();
     setError("");
@@ -113,15 +145,22 @@ export default function TransfersPage() {
           nombre: i.nombre,
           cantidad_enviada: Number(i.cantidad),
         })),
+        lonas: form.lonas.map((l, idx) => ({
+          numero: idx + 1,
+          items: l.items
+            .filter(i => i.product_id && i.cantidad)
+            .map(i => ({ product_id: i.product_id, nombre: i.nombre, cantidad: Number(i.cantidad) })),
+          total: l.items.reduce((s, i) => s + (Number(i.cantidad) || 0), 0),
+        })),
         estado: "pendiente",
         notas: form.notas,
         creado_por: currentUser?.email || "",
       });
-      setForm({ origen: "", destino: "", notas: "", items: [] });
+      setForm({ origen: "", destino: "", notas: "", items: [], lonas: [] });
       await loadData();
       setActiveTab("recibir");
-    } catch (e) {
-      setError("Error al crear el traslado: " + e.message);
+    } catch (err) {
+      setError("Error al crear el traslado: " + (err instanceof Error ? err.message : String(err)));
     }
     setSaving(false);
   };
@@ -217,6 +256,77 @@ export default function TransfersPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Lonas */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <label className="text-sm font-medium text-slate-700">Lonas de empaque</label>
+                      <p className="text-xs text-slate-400">Define el contenido de cada lona (puede ser mixto)</p>
+                    </div>
+                    <button type="button" onClick={addLona}
+                      className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
+                      <Plus className="w-3.5 h-3.5" /> Lona
+                    </button>
+                  </div>
+                  {form.lonas.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-3 border border-dashed border-slate-200 rounded-lg">
+                      Opcional — agrega lonas si quieres detallar el empaque
+                    </p>
+                  )}
+                  <div className="space-y-2">
+                    {form.lonas.map((lona, lonaIdx) => {
+                      const lonaTotal = lona.items.reduce((s, i) => s + (Number(i.cantidad) || 0), 0);
+                      return (
+                        <div key={lona.id} className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-indigo-700">Lona {lonaIdx + 1}
+                              {lonaTotal > 0 && <span className="ml-1 font-normal text-indigo-500">· {lonaTotal} prendas</span>}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <button type="button" onClick={() => addLonaItem(lona.id)}
+                                className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5">
+                                <Plus className="w-3 h-3" /> producto
+                              </button>
+                              <button type="button" onClick={() => removeLona(lona.id)}
+                                className="p-0.5 text-red-400 hover:text-red-600">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          {lona.items.length === 0 && (
+                            <p className="text-xs text-indigo-400 italic">Sin contenido — haz clic en "+ producto"</p>
+                          )}
+                          {lona.items.map((item, itemIdx) => (
+                            <div key={itemIdx} className="flex gap-1.5 items-center">
+                              <select value={item.product_id}
+                                onChange={e => updateLonaItem(lona.id, itemIdx, "product_id", e.target.value)}
+                                className="flex-1 h-7 px-2 text-xs border border-indigo-200 rounded bg-white">
+                                <option value="">Producto...</option>
+                                {products.map(p => <option key={p.id} value={p.sku || p.id}>{p.name}</option>)}
+                              </select>
+                              <input type="number" min="1" value={item.cantidad}
+                                onChange={e => updateLonaItem(lona.id, itemIdx, "cantidad", e.target.value)}
+                                className="w-16 h-7 px-2 text-xs border border-indigo-200 rounded bg-white"
+                                placeholder="Uds" />
+                              <button type="button"
+                                onClick={() => removeLonaItem(lona.id, itemIdx)}
+                                className="p-0.5 text-red-400 hover:text-red-600">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {form.lonas.length > 0 && totalItems > 0 && (
+                    <div className={`mt-2 text-xs px-3 py-1.5 rounded-lg ${totalEnLonas === totalItems ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
+                      Total en lonas: {totalEnLonas} / {totalItems} prendas declaradas
+                      {totalEnLonas !== totalItems && " — ajusta las cantidades"}
+                    </div>
+                  )}
                 </div>
 
                 <div>

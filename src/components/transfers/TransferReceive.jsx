@@ -1,133 +1,149 @@
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Package, Building2, AlertTriangle, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, Building2, AlertTriangle, RefreshCw, Package, ChevronDown, ChevronUp } from "lucide-react";
 
-function fmtCOP(n) {
-  return (Number(n) || 0).toLocaleString("es-CO");
-}
+function fmtN(n) { return (Number(n) || 0).toLocaleString("es-CO"); }
 
-function ConteoItem({ item, productos, onChange }) {
-  const prod = productos.find(p => p.sku === item.product_id || p.id === item.product_id);
-  const prendasPorLona = prod?.prendas_por_lona || 0;
-  const lonas = Number(item.lonas || 0);
-  const sueltas = Number(item.sueltas || 0);
-  const totalContado = lonas * prendasPorLona + sueltas;
-  const diferencia = totalContado - item.cantidad_enviada;
-  const ok = diferencia === 0;
+// ─── Verificación de una lona ─────────────────────────────────────────────────
+function LonaRow({ lona, idx, estado, onEstado, cantidades, onCantidad }) {
+  const [open, setOpen] = useState(false);
+  const isOk = estado === "ok";
+  const isDiff = estado === "diferencia";
 
   return (
-    <div className={`rounded-xl border p-4 space-y-3 ${ok ? "border-green-200 bg-green-50/30" : "border-amber-200 bg-amber-50/30"}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-semibold text-slate-800 text-sm">{prod?.name || item.product_id}</p>
-          <p className="text-xs text-slate-500">Esperado: <span className="font-bold text-slate-700">{fmtCOP(item.cantidad_enviada)} uds</span></p>
+    <div className={`rounded-xl border overflow-hidden ${isOk ? "border-green-200 bg-green-50/40" : isDiff ? "border-amber-200 bg-amber-50/40" : "border-slate-200 bg-white"}`}>
+      <div className="flex items-center justify-between px-3 py-2.5 gap-2">
+        <div className="flex items-center gap-2 min-w-0 cursor-pointer flex-1" onClick={() => setOpen(o => !o)}>
+          <span className="text-xs font-bold text-slate-600 shrink-0">Lona {idx + 1}</span>
+          <span className="text-xs text-slate-400">{fmtN(lona.total)} prendas · {(lona.items || []).length} ref.</span>
+          {open ? <ChevronUp className="w-3.5 h-3.5 text-slate-400 ml-auto" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-auto" />}
         </div>
-        {totalContado > 0 && (
-          <div className={`text-sm font-bold px-2.5 py-1 rounded-full ${ok ? "bg-green-100 text-green-700" : diferencia > 0 ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-600"}`}>
-            {ok ? "✓ Cuadra" : diferencia > 0 ? `+${diferencia} extra` : `${diferencia} faltante`}
-          </div>
-        )}
+        <div className="flex gap-1.5 shrink-0">
+          <button type="button"
+            onClick={() => onEstado("ok")}
+            className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all
+              ${isOk ? "bg-green-600 text-white border-green-600" : "bg-white border-green-200 text-green-700 hover:bg-green-50"}`}>
+            <CheckCircle className="w-3 h-3" /> Completa
+          </button>
+          <button type="button"
+            onClick={() => { onEstado("diferencia"); setOpen(true); }}
+            className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all
+              ${isDiff ? "bg-amber-500 text-white border-amber-500" : "bg-white border-amber-200 text-amber-700 hover:bg-amber-50"}`}>
+            <XCircle className="w-3 h-3" /> Diferencia
+          </button>
+        </div>
       </div>
 
-      {prendasPorLona > 0 ? (
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Lonas completas × {prendasPorLona} prendas</p>
-              <div className="flex items-center gap-2">
-                <Input
+      {open && (
+        <div className="px-3 pb-3 border-t border-slate-100 pt-2 space-y-1.5">
+          {(lona.items || []).map((item, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-700 flex-1">{item.nombre || item.product_id}</span>
+              <span className="text-xs text-slate-400 shrink-0">enviado: {fmtN(item.cantidad)}</span>
+              {isDiff ? (
+                <input
                   type="number" min="0"
-                  value={item.lonas || ""}
-                  onChange={e => onChange({ ...item, lonas: e.target.value })}
-                  className="h-9 text-sm"
-                  placeholder="0"
+                  value={cantidades[item.product_id] ?? item.cantidad}
+                  onChange={e => onCantidad(item.product_id, e.target.value)}
+                  className="w-20 h-7 px-2 text-xs border border-amber-300 rounded bg-white text-right"
                 />
-                <span className="text-xs text-slate-400 shrink-0">= {fmtCOP(lonas * prendasPorLona)}</span>
-              </div>
+              ) : (
+                <span className="text-xs font-bold text-slate-700 w-20 text-right">{fmtN(item.cantidad)}</span>
+              )}
             </div>
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Prendas sueltas</p>
-              <Input
-                type="number" min="0"
-                value={item.sueltas || ""}
-                onChange={e => onChange({ ...item, sueltas: e.target.value })}
-                className="h-9 text-sm"
-                placeholder="0"
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-slate-200">
-            <span className="text-xs text-slate-500">Total contado</span>
-            <span className={`text-base font-bold ${ok ? "text-green-700" : "text-amber-700"}`}>
-              {fmtCOP(totalContado)} uds
-            </span>
-          </div>
-        </div>
-      ) : (
-        <div>
-          <p className="text-xs text-slate-500 mb-1">Total recibido</p>
-          <Input
-            type="number" min="0"
-            value={item.sueltas || ""}
-            onChange={e => onChange({ ...item, sueltas: e.target.value, lonas: 0 })}
-            className="h-9 text-sm"
-            placeholder={String(item.cantidad_enviada)}
-          />
-          <p className="text-xs text-slate-400 mt-1">Configura "prendas por lona" en el producto para activar el asistente</p>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-export default function TransferReceive({ traslado, productos, locations, onDone, onCancel }) {
-  const [items, setItems] = useState(
-    (traslado.items || []).map(i => ({ ...i, lonas: "", sueltas: "" }))
+// ─── Conteo directo por producto (sin lonas definidas) ────────────────────────
+function ProductoRow({ item, totalContado, onChange }) {
+  return (
+    <div className={`rounded-xl border p-3 space-y-2 ${totalContado === item.cantidad_enviada && totalContado > 0 ? "border-green-200 bg-green-50/30" : "border-slate-200 bg-white"}`}>
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-slate-800">{item.nombre || item.product_id}</p>
+        <span className="text-xs text-slate-400">esperado: {fmtN(item.cantidad_enviada)}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-slate-500 shrink-0">Total recibido:</label>
+        <input type="number" min="0"
+          value={totalContado ?? ""}
+          onChange={e => onChange(Number(e.target.value))}
+          className="flex-1 h-8 px-3 text-sm border border-slate-200 rounded-lg"
+          placeholder={String(item.cantidad_enviada)}
+        />
+        {totalContado > 0 && (
+          <span className={`text-xs font-bold shrink-0 ${totalContado === item.cantidad_enviada ? "text-green-600" : "text-amber-600"}`}>
+            {totalContado === item.cantidad_enviada ? "✓" : totalContado > item.cantidad_enviada ? `+${totalContado - item.cantidad_enviada}` : `−${item.cantidad_enviada - totalContado}`}
+          </span>
+        )}
+      </div>
+    </div>
   );
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+export default function TransferReceive({ traslado, productos, locations, onDone, onCancel }) {
+  const lonas = traslado?.lonas || [];
+  const usaLonas = lonas.length > 0;
+
+  // Estado para verificación por lona: { [lonaIdx]: "ok" | "diferencia" }
+  const [estadoLonas, setEstadoLonas] = useState({});
+  // Cantidades ajustadas en lonas con diferencia: { [lonaIdx]: { [product_id]: qty } }
+  const [cantLonas, setCantLonas] = useState({});
+
+  // Estado para conteo directo (sin lonas): { [product_id]: qty }
+  const [conteoDirecto, setConteoDirecto] = useState({});
+
   const [notas, setNotas] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const origen = locations.find(l => l.id === traslado.origen_location_id);
-  const destino = locations.find(l => l.id === traslado.destino_location_id);
+  const origen = locations.find(l => l.id === traslado?.origen_location_id);
+  const destino = locations.find(l => l.id === traslado?.destino_location_id);
 
-  const getTotalContado = (item) => {
-    const prod = productos.find(p => p.sku === item.product_id || p.id === item.product_id);
-    const ppl = prod?.prendas_por_lona || 0;
-    return (Number(item.lonas || 0)) * ppl + Number(item.sueltas || 0);
-  };
-
-  const hasDiferencias = items.some(i => getTotalContado(i) !== i.cantidad_enviada && getTotalContado(i) > 0);
-  const allContado = items.every(i => getTotalContado(i) > 0 || (!i.lonas && !i.sueltas));
-
-  const callEndpoint = async (body) => {
-    const res = await fetch("/api/portal/functions/aceptarTraslado", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || "Error del servidor");
+  // Calcula conteo final consolidado desde lonas
+  const calcConteoFinal = () => {
+    if (usaLonas) {
+      const totales = {};
+      lonas.forEach((lona, idx) => {
+        const est = estadoLonas[idx];
+        if (!est) return; // lona no marcada → no contar
+        (lona.items || []).forEach(item => {
+          const cant = est === "diferencia"
+            ? Number(cantLonas[idx]?.[item.product_id] ?? item.cantidad)
+            : Number(item.cantidad);
+          totales[item.product_id] = (totales[item.product_id] || 0) + cant;
+        });
+      });
+      return totales;
     }
-    return res.json();
+    return conteoDirecto;
   };
+
+  const conteoFinal = calcConteoFinal();
+  const lonasNoMarcadas = usaLonas ? lonas.filter((_, idx) => !estadoLonas[idx]).length : 0;
 
   const handleAceptar = async () => {
+    if (usaLonas && lonasNoMarcadas > 0) {
+      return alert(`Faltan ${lonasNoMarcadas} lona(s) por verificar.`);
+    }
     setSaving(true);
     try {
-      const conteoFinal = items.map(i => ({
-        product_id: i.product_id,
-        cantidad_enviada: i.cantidad_enviada,
-        total_recibido: getTotalContado(i) || i.cantidad_enviada,
-        lonas: Number(i.lonas || 0),
-        sueltas: Number(i.sueltas || 0),
+      const conteoArr = (traslado.items || []).map(item => ({
+        product_id: item.product_id,
+        cantidad_enviada: item.cantidad_enviada,
+        total_recibido: conteoFinal[item.product_id] ?? item.cantidad_enviada,
       }));
-      await callEndpoint({ traslado_id: traslado.id, conteo: conteoFinal, notas, accion: "aceptar" });
+      const res = await fetch("/api/portal/functions/aceptarTraslado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ traslado_id: traslado.id, conteo: conteoArr, notas, accion: "aceptar" }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Error");
       onDone();
     } catch (e) {
-      alert("Error al aceptar: " + e.message);
+      alert("Error al aceptar: " + (e instanceof Error ? e.message : String(e)));
     }
     setSaving(false);
   };
@@ -136,83 +152,118 @@ export default function TransferReceive({ traslado, productos, locations, onDone
     if (!notas.trim()) return alert("Escribe el motivo del rechazo.");
     setSaving(true);
     try {
-      await callEndpoint({ traslado_id: traslado.id, notas, accion: "rechazar" });
+      const res = await fetch("/api/portal/functions/aceptarTraslado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ traslado_id: traslado.id, notas, accion: "rechazar" }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Error");
       onDone();
     } catch (e) {
-      alert("Error: " + e.message);
+      alert("Error: " + (e instanceof Error ? e.message : String(e)));
     }
     setSaving(false);
   };
+
+  const hasDiferencias = usaLonas
+    ? Object.values(estadoLonas).some(e => e === "diferencia")
+    : Object.entries(conteoDirecto).some(([pid, qty]) => {
+        const item = (traslado.items || []).find(i => i.product_id === pid);
+        return item && qty !== item.cantidad_enviada;
+      });
 
   return (
     <div className="space-y-4 max-w-lg mx-auto">
       {/* Header */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <p className="font-bold text-slate-900">{traslado.numero_traslado}</p>
-          <Badge className="bg-amber-100 text-amber-700">Pendiente</Badge>
+          <p className="font-bold text-slate-900">{traslado?.numero_traslado}</p>
+          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Pendiente</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Building2 className="w-4 h-4 text-red-500 shrink-0" />
-          <span className="font-medium text-red-700">{origen?.name || traslado.origen_nombre}</span>
+        <div className="flex items-center gap-2 text-sm">
+          <Building2 className="w-4 h-4 text-red-500" />
+          <span className="font-medium text-red-700">{origen?.name || traslado?.origen_nombre}</span>
           <span className="text-slate-400">→</span>
-          <Building2 className="w-4 h-4 text-green-500 shrink-0" />
-          <span className="font-medium text-green-700">{destino?.name || traslado.destino_nombre}</span>
+          <Building2 className="w-4 h-4 text-green-500" />
+          <span className="font-medium text-green-700">{destino?.name || traslado?.destino_nombre}</span>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-2">
+          {(traslado?.items || []).map((i, idx) => (
+            <span key={idx} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+              {i.nombre || i.product_id} · {fmtN(i.cantidad_enviada)} uds
+            </span>
+          ))}
         </div>
       </div>
 
       {hasDiferencias && (
         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          Hay diferencias entre lo enviado y lo contado. Puedes aceptar igual dejando una nota.
+          Hay diferencias registradas. Puedes aceptar con nota o rechazar.
         </div>
       )}
 
-      {/* Items con asistente de conteo */}
-      <div className="space-y-3">
-        {items.map((item, idx) => (
-          <ConteoItem
-            key={idx}
-            item={item}
-            productos={productos}
-            onChange={updated => setItems(prev => prev.map((it, i) => i === idx ? updated : it))}
-          />
-        ))}
-      </div>
+      {/* Verificación */}
+      {usaLonas ? (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            Verificar lonas ({lonas.length} esperadas)
+          </p>
+          {lonas.map((lona, idx) => (
+            <LonaRow
+              key={idx}
+              lona={lona}
+              idx={idx}
+              estado={estadoLonas[idx]}
+              onEstado={est => setEstadoLonas(prev => ({ ...prev, [idx]: est }))}
+              cantidades={cantLonas[idx] || {}}
+              onCantidad={(pid, qty) => setCantLonas(prev => ({
+                ...prev,
+                [idx]: { ...(prev[idx] || {}), [pid]: qty }
+              }))}
+            />
+          ))}
+          {lonasNoMarcadas > 0 && (
+            <p className="text-xs text-amber-600 text-center">{lonasNoMarcadas} lona(s) sin verificar</p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Conteo recibido</p>
+          {(traslado?.items || []).map((item, idx) => (
+            <ProductoRow
+              key={idx}
+              item={item}
+              totalContado={conteoDirecto[item.product_id]}
+              onChange={qty => setConteoDirecto(prev => ({ ...prev, [item.product_id]: qty }))}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Notas */}
       <div>
-        <p className="text-xs font-medium text-slate-600 mb-1">Notas de recepción (opcional)</p>
-        <textarea
-          value={notas}
-          onChange={e => setNotas(e.target.value)}
-          rows={2}
+        <p className="text-xs font-medium text-slate-600 mb-1">Notas de recepción</p>
+        <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}
           className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none"
-          placeholder="Observaciones, diferencias, condición de las prendas..."
-        />
+          placeholder="Observaciones, diferencias, estado de las prendas..." />
       </div>
 
       {/* Acciones */}
       <div className="flex gap-2">
-        <Button variant="outline" onClick={onCancel} className="flex-1" disabled={saving}>
+        <button type="button" onClick={onCancel} disabled={saving}
+          className="flex-1 text-sm font-medium py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50">
           Cancelar
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handleRechazar}
-          disabled={saving}
-          className="border-red-200 text-red-600 hover:bg-red-50"
-        >
-          <XCircle className="w-4 h-4 mr-1" /> Rechazar
-        </Button>
-        <Button
-          onClick={handleAceptar}
-          disabled={saving}
-          className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-        >
-          {saving ? <RefreshCw className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+        </button>
+        <button type="button" onClick={handleRechazar} disabled={saving}
+          className="flex items-center gap-1 text-sm font-semibold px-4 py-2 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 disabled:opacity-50">
+          <XCircle className="w-4 h-4" /> Rechazar
+        </button>
+        <button type="button" onClick={handleAceptar} disabled={saving}
+          className="flex-1 flex items-center justify-center gap-1 text-sm font-semibold py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
+          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
           Aceptar
-        </Button>
+        </button>
       </div>
     </div>
   );
