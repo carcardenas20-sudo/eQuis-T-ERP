@@ -369,7 +369,7 @@ app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res)
 const DIST_DIR = join(__dirname, '..', 'dist');
 console.log('🗂️  DIST_DIR:', DIST_DIR);
 app.use(express.static(DIST_DIR));
-app.get('*', (_req, res) => {
+app.get('/{*path}', (_req, res) => {
   res.sendFile(join(DIST_DIR, 'index.html'));
 });
 
