@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory } from "@/api/publicEntities";
+import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
-  Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2 } from "lucide-react";
+  Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2,
+  Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2 } from "lucide-react";
 import TransferReceive from "@/components/transfers/TransferReceive";
+import RouteOperario from "@/components/route/RouteOperario";
+import RouteDevoluciones from "@/components/route/RouteDevoluciones";
+import RouteConteoFisico from "@/components/route/RouteConteoFisico";
 
 const ESTADO_CFG = {
   pendiente:  { label: "Pendiente",  color: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -313,6 +317,62 @@ export default function PlantPortal() {
   const [tabId, setTabId] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState("activos");
 
+  // ── Planillador ───────────────────────────────────────────────────────────────
+  const [planilladorAuth, setPlanilladorAuth] = useState(/** @type {any|null} */ (null));
+  const [planilladorData, setPlanilladorData] = useState(/** @type {any|null} */ (null));
+  const [planilladorTab, setPlanilladorTab] = useState("operaciones");
+  const [planilladorLoading, setPlanilladorLoading] = useState(false);
+  const [pinForm, setPinForm] = useState({ employee_id: "", pin: "" });
+  const [pinError, setPinError] = useState("");
+
+  const handlePinLogin = async (e) => {
+    e.preventDefault();
+    setPinError("");
+    try {
+      const res = await fetch("/api/portal-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employee_id: pinForm.employee_id.trim(), pin: pinForm.pin }),
+      });
+      if (!res.ok) { const d = await res.json(); setPinError(d.error || "PIN incorrecto"); return; }
+      const emp = await res.json();
+      setPlanilladorAuth(emp);
+      setPinForm({ employee_id: "", pin: "" });
+      loadPlanilladorData();
+    } catch { setPinError("Error de conexión"); }
+  };
+
+  const loadPlanilladorData = async () => {
+    setPlanilladorLoading(true);
+    try {
+      const [employees, products, dispatches, deliveries, inventory, devoluciones, configs] = await Promise.all([
+        Employee.list(),
+        Producto.list(),
+        Dispatch.list(),
+        Delivery.list(),
+        Inventory.list(),
+        Devolucion.list(),
+        AppConfig.filter({ key: "pending_row_order" }),
+      ]);
+      const activeEmps = (employees || []).filter(e => e.is_active);
+      let routeOrder = [];
+      try { routeOrder = JSON.parse((configs || [])[0]?.value || "[]"); } catch {}
+      const orderedEmployees = [
+        ...routeOrder.map(id => activeEmps.find(e => e.employee_id === id)).filter(Boolean),
+        ...activeEmps.filter(e => !routeOrder.includes(e.employee_id)),
+      ];
+      setPlanilladorData({
+        employees: orderedEmployees,
+        products: (products || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra })),
+        dispatches: dispatches || [],
+        deliveries: deliveries || [],
+        inventory: inventory || [],
+        devoluciones: devoluciones || [],
+      });
+    } catch (e) { console.error("Planillador data error:", e); }
+    setPlanilladorLoading(false);
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -497,6 +557,7 @@ export default function PlantPortal() {
     { id: "tendidos", label: "Tendidos", Icon: Layers, count: pendTendidos },
     ...operaciones.map(op => ({ id: op.id, label: op.nombre, Icon: Factory, count: countPendOp(op.id) })),
     { id: "traslados", label: "Traslados", Icon: ArrowRightLeft, count: trasladosPendientesRecibir.length },
+    { id: "planillador", label: "Planillador", Icon: planilladorAuth ? Unlock : Lock, count: 0 },
   ];
 
   const tendidosFiltrados = tendidos.filter(t => filtrar(t.estado || "pendiente"));
@@ -715,6 +776,87 @@ export default function PlantPortal() {
                   </button>
                 </form>
               </div>
+            </div>
+          )
+
+        ) : tabId === "planillador" ? (
+          !planilladorAuth ? (
+            // ── PIN Gate ──────────────────────────────────────────────────────
+            <div className="max-w-sm mx-auto mt-8 px-4">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                <div className="text-center">
+                  <div className="w-14 h-14 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <Lock className="w-7 h-7 text-violet-600" />
+                  </div>
+                  <h2 className="font-bold text-slate-800 text-lg">Portal Planillador</h2>
+                  <p className="text-sm text-slate-500 mt-1">Ingresa tu ID y PIN para continuar</p>
+                </div>
+                {pinError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">{pinError}</p>}
+                <form onSubmit={handlePinLogin} className="space-y-3">
+                  <input
+                    type="text" inputMode="numeric" placeholder="ID Empleado"
+                    value={pinForm.employee_id}
+                    onChange={e => setPinForm(f => ({ ...f, employee_id: e.target.value }))}
+                    className="w-full h-11 px-4 border border-slate-200 rounded-xl text-sm text-center tracking-widest"
+                    autoComplete="off"
+                  />
+                  <input
+                    type="password" inputMode="numeric" placeholder="PIN"
+                    value={pinForm.pin}
+                    onChange={e => setPinForm(f => ({ ...f, pin: e.target.value }))}
+                    className="w-full h-11 px-4 border border-slate-200 rounded-xl text-sm text-center tracking-widest"
+                  />
+                  <button type="submit"
+                    className="w-full h-11 bg-violet-600 text-white rounded-xl font-semibold text-sm hover:bg-violet-700 flex items-center justify-center gap-2">
+                    <Unlock className="w-4 h-4" /> Ingresar
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            // ── Planillador autenticado ────────────────────────────────────────
+            <div className="space-y-3">
+              {/* Header planillador */}
+              <div className="flex items-center justify-between bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Unlock className="w-4 h-4 text-violet-600" />
+                  <span className="text-sm font-semibold text-violet-800">{planilladorAuth.name}</span>
+                </div>
+                <button onClick={() => { setPlanilladorAuth(null); setPlanilladorData(null); setPlanilladorTab("operaciones"); }}
+                  className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800">
+                  <LogOut className="w-3.5 h-3.5" /> Cerrar sesión
+                </button>
+              </div>
+
+              {/* Sub-tabs planillador */}
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+                {[
+                  { id: "operaciones", label: "Operaciones", Icon: Truck },
+                  { id: "devoluciones", label: "Devoluciones", Icon: RotateCcw },
+                  { id: "conteo", label: "Conteo", Icon: PackageCheck },
+                ].map(({ id, label, Icon }) => (
+                  <button key={id} onClick={() => setPlanilladorTab(id)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all
+                      ${planilladorTab === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}>
+                    <Icon className="w-3.5 h-3.5" />{label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Contenido planillador */}
+              {planilladorLoading ? (
+                <div className="flex items-center justify-center py-16 text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" /> Cargando...
+                </div>
+              ) : !planilladorData ? (
+                <div className="text-center py-16 text-slate-400">Sin datos</div>
+              ) : planilladorTab === "operaciones" ? (
+                <RouteOperario {...planilladorData} onSaved={loadPlanilladorData} />
+              ) : planilladorTab === "devoluciones" ? (
+                <RouteDevoluciones {...planilladorData} onSaved={loadPlanilladorData} />
+              ) : (
+                <RouteConteoFisico {...planilladorData} onSaved={loadPlanilladorData} />
+              )}
             </div>
           )
 
