@@ -585,16 +585,16 @@ export default function PlantPortal() {
           </button>
         </div>
 
-        {/* Fila 2: tabs */}
-        <div className="flex gap-1 overflow-x-auto scrollbar-none pb-0.5">
+        {/* Tabs en grid 2 columnas */}
+        <div className="grid grid-cols-2 gap-1">
           {tabs.map(({ id, label, Icon, count }) => (
             <button key={id} onClick={() => setTabId(id)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all w-full
                 ${tabId === id ? "bg-emerald-600 text-white shadow-sm" : "bg-slate-100 text-slate-600"}`}>
-              <Icon className="w-3 h-3" />
-              {label}
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{label}</span>
               {count > 0 && (
-                <span className={`text-[10px] px-1 py-0.5 rounded-full font-bold
+                <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0
                   ${tabId === id ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"}`}>
                   {count}
                 </span>
