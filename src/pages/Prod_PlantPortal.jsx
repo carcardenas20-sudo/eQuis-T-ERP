@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub } from "@/api/publicEntities";
+import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
   Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2 } from "lucide-react";
 import TransferReceive from "@/components/transfers/TransferReceive";
@@ -304,6 +304,7 @@ export default function PlantPortal() {
   const [traslados, setTraslados] = useState(/** @type {any[]} */ ([]));
   const [productosPOS, setProductosPOS] = useState(/** @type {any[]} */ ([]));
   const [locations, setLocations] = useState(/** @type {any[]} */ ([]));
+  const [inventarioPlanta, setInventarioPlanta] = useState(/** @type {any[]} */ ([]));
   const [plantaLocationId, setPlantaLocationId] = useState(/** @type {string|null} */ (null));
   const [receivingTrasladoId, setReceivingTrasladoId] = useState(/** @type {string|null} */ (null));
   const [trasladoForm, setTrasladoForm] = useState({ destino: "", items: /** @type {any[]} */ ([]), notas: "" });
@@ -336,25 +337,42 @@ export default function PlantPortal() {
       console.error("Error cargando datos principales:", e);
     }
 
-    // Servicios, órdenes y traslados son opcionales
+    // AppConfig de planta — se carga siempre por separado
+    let plId = null;
     try {
-      const [svcData, ordData, trasData, locsData, prodsData, plantaCfg] = await Promise.all([
+      const plantaCfg = await AppConfig.filter({ key: "planta_location_id" });
+      plId = (plantaCfg || [])[0]?.value || null;
+      setPlantaLocationId(plId);
+    } catch (e) {
+      console.warn("AppConfig planta_location_id no disponible:", e.message);
+    }
+
+    // Servicios, órdenes, traslados y localizaciones son opcionales
+    try {
+      const [svcData, ordData, trasData, locsData, prodsData] = await Promise.all([
         Servicio.list(),
         OrdenServicio.list("-fecha_orden"),
         Traslado.list("-created_date"),
         LocationPub.list(),
         ProductoPOS.list(),
-        AppConfig.filter({ key: "planta_location_id" }),
       ]);
       setServicios((svcData || []).filter(s => s.activo !== false));
       setOrdenes((ordData || []).filter(o => !["pagada", "cancelada"].includes(o.estado)));
       setTraslados(trasData || []);
       setLocations(locsData || []);
       setProductosPOS(prodsData || []);
-      const plId = (plantaCfg || [])[0]?.value || null;
-      setPlantaLocationId(plId);
     } catch (e) {
       console.warn("Servicios/Ordenes/Traslados no disponibles:", e.message);
+    }
+
+    // Inventario de la planta para filtrar productos disponibles
+    if (plId) {
+      try {
+        const invData = await Inventory.filter({ location_id: plId });
+        setInventarioPlanta(invData || []);
+      } catch (e) {
+        console.warn("Inventario planta no disponible:", e.message);
+      }
     }
 
     setLoading(false);
@@ -615,35 +633,49 @@ export default function PlantPortal() {
                       <p className="text-xs text-slate-400 text-center py-3 border border-dashed rounded-lg">Sin productos</p>
                     )}
                     <div className="space-y-1.5">
-                      {trasladoForm.items.map((item, idx) => (
-                        <div key={idx} className="flex gap-1.5 items-center">
-                          <select value={item.product_id}
-                            onChange={e => {
-                              const prod = productosPOS.find(p => p.sku === e.target.value || p.id === e.target.value);
-                              setTrasladoForm(f => {
+                      {trasladoForm.items.map((item, idx) => {
+                        const invItem = inventarioPlanta.find(i => i.product_id === item.product_id);
+                        const stock = Number(invItem?.current_stock || invItem?.available_stock || 0);
+                        return (
+                          <div key={idx} className="flex gap-1.5 items-center">
+                            <select value={item.product_id}
+                              onChange={e => {
+                                const prod = productosPOS.find(p => p.sku === e.target.value || p.id === e.target.value);
+                                setTrasladoForm(f => {
+                                  const items = [...f.items];
+                                  items[idx] = { ...items[idx], product_id: e.target.value, nombre: prod?.name || "" };
+                                  return { ...f, items };
+                                });
+                              }}
+                              className="flex-1 h-8 px-2 text-xs border border-slate-200 rounded">
+                              <option value="">Producto...</option>
+                              {(inventarioPlanta.length > 0
+                                ? inventarioPlanta.filter(i => Number(i.current_stock || 0) > 0).map(i => {
+                                    const prod = productosPOS.find(p => p.sku === i.product_id || p.id === i.product_id);
+                                    return prod ? { ...prod, _stock: Number(i.current_stock || 0) } : null;
+                                  }).filter(Boolean)
+                                : productosPOS
+                              ).map(p => (
+                                <option key={p.id} value={p.sku || p.id}>
+                                  {p.name}{p._stock !== undefined ? ` (${p._stock} disponibles)` : ""}
+                                </option>
+                              ))}
+                            </select>
+                            <input type="number" min="1" max={stock || undefined} value={item.cantidad}
+                              onChange={e => setTrasladoForm(f => {
                                 const items = [...f.items];
-                                items[idx] = { ...items[idx], product_id: e.target.value, nombre: prod?.name || "" };
+                                items[idx] = { ...items[idx], cantidad: e.target.value };
                                 return { ...f, items };
-                              });
-                            }}
-                            className="flex-1 h-8 px-2 text-xs border border-slate-200 rounded">
-                            <option value="">Producto...</option>
-                            {productosPOS.map(p => <option key={p.id} value={p.sku||p.id}>{p.name}</option>)}
-                          </select>
-                          <input type="number" min="1" value={item.cantidad}
-                            onChange={e => setTrasladoForm(f => {
-                              const items = [...f.items];
-                              items[idx] = { ...items[idx], cantidad: e.target.value };
-                              return { ...f, items };
-                            })}
-                            className="w-20 h-8 px-2 text-xs border border-slate-200 rounded" placeholder="Uds" />
-                          <button type="button"
-                            onClick={() => setTrasladoForm(f => ({ ...f, items: f.items.filter((_,i) => i !== idx) }))}
-                            className="p-1 text-red-400 hover:text-red-600">
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                              })}
+                              className="w-20 h-8 px-2 text-xs border border-slate-200 rounded" placeholder="Uds" />
+                            <button type="button"
+                              onClick={() => setTrasladoForm(f => ({ ...f, items: f.items.filter((_,i) => i !== idx) }))}
+                              className="p-1 text-red-400 hover:text-red-600">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
