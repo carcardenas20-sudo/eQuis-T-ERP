@@ -579,8 +579,8 @@ export default function PlantPortal() {
                 </div>
               )}
 
-              {/* Crear nuevo traslado */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              {/* Envío de traslados solo desde módulo Traslados (requiere permiso inventory_transfer) */}
+              {false && <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
                 <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
                   <Send className="w-4 h-4 text-blue-500" /> Enviar traslado
                 </p>
@@ -653,7 +653,7 @@ export default function PlantPortal() {
                     Enviar
                   </button>
                 </form>
-              </div>
+              </div>}
             </div>
           )
 

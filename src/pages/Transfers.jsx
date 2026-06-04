@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Inventory, Product, Location, User } from "@/entities/all";
 import { localClient } from "@/api/localClient";
+import { useSession } from "@/components/auth/SessionContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,9 @@ const ESTADO_CFG = {
 };
 
 export default function TransfersPage() {
-  const [activeTab, setActiveTab] = useState("enviar");
+  const { permissions, isRealAdmin } = useSession();
+  const puedeEnviar = isRealAdmin || permissions?.includes("inventory_transfer");
+  const [activeTab, setActiveTab] = useState(() => puedeEnviar ? "enviar" : "recibir");
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [locations, setLocations] = useState([]);
@@ -184,10 +187,10 @@ export default function TransfersPage() {
         {/* Tabs */}
         <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
           {[
-            { id: "enviar", label: "Enviar", icon: Send },
+            puedeEnviar && { id: "enviar", label: "Enviar", icon: Send },
             { id: "recibir", label: `Recibir${pendientesRecibir.length > 0 ? ` (${pendientesRecibir.length})` : ""}`, icon: InboxIcon },
             { id: "historial", label: "Historial", icon: History },
-          ].map(({ id, label, icon: Icon }) => (
+          ].filter(Boolean).map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => { setActiveTab(id); setReceivingId(null); }}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all
                 ${activeTab === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-800"}`}>
