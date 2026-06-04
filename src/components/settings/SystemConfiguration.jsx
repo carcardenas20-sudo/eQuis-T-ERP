@@ -54,6 +54,8 @@ export default function SystemConfiguration() {
   const [locations, setLocations] = useState([]);
   const [plantaLocationId, setPlantaLocationId] = useState("");
   const [plantaConfigId, setPlantaConfigId] = useState(null);
+  const [planilladorPin, setPlanilladorPin] = useState("");
+  const [planilladorPinConfigId, setPlanilladorPinConfigId] = useState(null);
 
   useEffect(() => {
     loadSettings();
@@ -62,15 +64,14 @@ export default function SystemConfiguration() {
 
   const loadPortalConfig = async () => {
     try {
-      const [locs, configs] = await Promise.all([
+      const [locs, configs, pinConfigs] = await Promise.all([
         Location.filter({ is_active: true }),
         AppConfig.filter({ key: "planta_location_id" }),
+        AppConfig.filter({ key: "planillador_pin" }),
       ]);
       setLocations(locs || []);
-      if (configs?.length) {
-        setPlantaLocationId(configs[0].value || "");
-        setPlantaConfigId(configs[0].id);
-      }
+      if (configs?.length) { setPlantaLocationId(configs[0].value || ""); setPlantaConfigId(configs[0].id); }
+      if (pinConfigs?.length) { setPlanilladorPin(pinConfigs[0].value || ""); setPlanilladorPinConfigId(pinConfigs[0].id); }
     } catch (e) {
       console.error("Error cargando config portal:", e);
     }
@@ -83,6 +84,14 @@ export default function SystemConfiguration() {
       } else {
         const created = await AppConfig.create({ key: "planta_location_id", value: plantaLocationId });
         setPlantaConfigId(created.id);
+      }
+      if (planilladorPin) {
+        if (planilladorPinConfigId) {
+          await AppConfig.update(planilladorPinConfigId, { value: planilladorPin });
+        } else {
+          const created = await AppConfig.create({ key: "planillador_pin", value: planilladorPin });
+          setPlanilladorPinConfigId(created.id);
+        }
       }
       setSaveMessage("Configuración guardada exitosamente");
       setTimeout(() => setSaveMessage(""), 3000);
@@ -405,6 +414,19 @@ export default function SystemConfiguration() {
                 <option key={l.id} value={l.id}>{l.name}</option>
               ))}
             </select>
+          </div>
+          <div className="space-y-2">
+            <Label>PIN del Planillador</Label>
+            <p className="text-xs text-slate-500">PIN numérico compartido para acceder al módulo planillador. Por defecto: 1234.</p>
+            <Input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="Ej: 1234"
+              value={planilladorPin}
+              onChange={e => setPlanilladorPin(e.target.value.replace(/\D/g, ''))}
+              className="w-32 text-center tracking-widest text-lg font-bold"
+            />
           </div>
           <Button onClick={handleSavePlanta} size="sm" className="bg-emerald-600 hover:bg-emerald-700 gap-2">
             <Save className="w-4 h-4" /> Guardar

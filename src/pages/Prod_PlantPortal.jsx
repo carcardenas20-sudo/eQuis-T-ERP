@@ -334,8 +334,7 @@ export default function PlantPortal() {
         body: JSON.stringify({ pin }),
       });
       if (!res.ok) { const d = await res.json(); setPinError(d.error || "PIN incorrecto"); setPinForm({ employee_id: "", pin: "" }); return; }
-      const emp = await res.json();
-      setPlanilladorAuth(emp);
+      setPlanilladorAuth({ ok: true });
       setPinForm({ employee_id: "", pin: "" });
       loadPlanilladorData();
     } catch { setPinError("Error de conexión"); }
@@ -831,7 +830,7 @@ export default function PlantPortal() {
               <div className="flex items-center justify-between bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5">
                 <div className="flex items-center gap-2">
                   <Unlock className="w-4 h-4 text-violet-600" />
-                  <span className="text-sm font-semibold text-violet-800">{planilladorAuth.name}</span>
+                  <span className="text-sm font-semibold text-violet-800">Planillador activo</span>
                 </div>
                 <button onClick={() => { setPlanilladorAuth(null); setPlanilladorData(null); setPlanilladorTab("operaciones"); }}
                   className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800">

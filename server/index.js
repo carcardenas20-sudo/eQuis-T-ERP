@@ -79,21 +79,19 @@ const PORTAL_WRITE_ENTITIES = new Set([
   'Traslado',                 // portal crea/gestiona traslados
 ]);
 // POST /api/portal-login  → recibe employee_id lógico + pin, devuelve datos del empleado
-// Login por PIN únicamente (para planillador) — busca el empleado por PIN
+// Validar PIN del planillador — PIN único compartido guardado en AppConfig
 app.post('/api/portal-pin-login', async (req, res) => {
   const { pin } = req.body || {};
   if (!pin) return res.status(400).json({ error: 'Falta PIN' });
   try {
     const { rows } = await query(
-      `SELECT id, name, is_active, position, phone, hire_date, data, created_date, updated_date
-       FROM entity_employee WHERE data->>'portal_pin' = $1 AND is_active = true LIMIT 1`,
-      [String(pin).trim()]
+      `SELECT value FROM entity_app_config WHERE key = 'planillador_pin' LIMIT 1`
     );
-    if (!rows.length) return res.status(401).json({ error: 'PIN incorrecto' });
-    const row = rows[0];
-    const { portal_pin: _p, ...dataRest } = row.data || {};
-    res.json({ ...dataRest, id: row.id, name: row.name, employee_id: row.data?.employee_id,
-      is_active: row.is_active, position: row.position });
+    const storedPin = rows[0]?.value || '1234';
+    if (String(pin).trim() !== String(storedPin).trim()) {
+      return res.status(401).json({ error: 'PIN incorrecto' });
+    }
+    res.json({ ok: true });
   } catch (e) {
     console.error('portal-pin-login error', e);
     res.status(500).json({ error: 'Error interno' });
