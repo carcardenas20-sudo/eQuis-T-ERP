@@ -47,7 +47,7 @@ export default function PaymentsHistory({ payments, employees, paymentRequests =
                   </div>
                   <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
                     <div className="text-sm text-slate-500 flex flex-col sm:items-end gap-1">
-                       <p className="flex items-center gap-1"><Calendar className="w-3 h-3"/>{payment.payment_date ? format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy') : '—'}</p>
+                       <p className="flex items-center gap-1"><Calendar className="w-3 h-3"/>{(() => { try { const d = new Date(payment.payment_date); return isNaN(d) ? '—' : format(d, 'dd/MM/yyyy'); } catch { return '—'; } })()}</p>
                        <Badge variant={payment.payment_type === 'pago_completo' ? 'default' : 'secondary'}>
                           {payment.payment_type === 'pago_completo' ? 'Pago Completo' : payment.payment_type === 'solicitud_aprobada' ? 'Solicitud aprobada' : 'Avance'}
                        </Badge>
