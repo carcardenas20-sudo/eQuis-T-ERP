@@ -589,7 +589,7 @@ export default function POS() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
 
         {isAdmin && locations.length > 0 && (
-          <div className="bg-white border-b border-slate-200 p-3 sm:p-4">
+          <div className="hidden lg:block bg-white border-b border-slate-200 p-3 sm:p-4">
             <Card className="shadow-lg border-0">
               <CardContent className="p-3 sm:p-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
@@ -624,7 +624,7 @@ export default function POS() {
         )}
 
         {!isAdmin && userLocation && (
-          <div className="bg-white border-b border-slate-200 p-3 sm:p-4">
+          <div className="hidden lg:block bg-white border-b border-slate-200 p-3 sm:p-4">
             <Card className="shadow-lg border-0">
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-3 sm:gap-4">
@@ -655,7 +655,25 @@ export default function POS() {
           </div>
         )}
 
-        <div className="lg:hidden bg-white border-b border-slate-200 px-3 py-2">
+        <div className="lg:hidden bg-white border-b border-slate-200 px-3 py-1.5">
+          {/* Sucursal compacta en mobile */}
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Building2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+            {isAdmin && locations.length > 0 ? (
+              <Select value={selectedLocationId || ''} onValueChange={handleLocationChange}>
+                <SelectTrigger className="h-7 text-xs border-0 shadow-none p-0 font-medium text-slate-700 focus:ring-0">
+                  <SelectValue placeholder="Seleccionar sucursal..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map(l => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span className="text-xs font-medium text-slate-700">{userLocation?.name || "Sin sucursal"}</span>
+            )}
+          </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
               <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs shrink-0" onClick={() => setShowHoldCart(true)} disabled={!selectedLocationId}>
