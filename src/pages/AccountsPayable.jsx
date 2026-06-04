@@ -721,7 +721,7 @@ export default function AccountsPayablePage() {
           description: `Pago a ${payable.supplier_name} - ${payable.description}`,
           amount: paymentData.amount,
           category: payable.category || "otros",
-          expense_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
+          expense_date: paymentData.payment_date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
           location_id: paymentData.location_id,
           payment_method: "cash",
           receipt_number: paymentData.reference || "",

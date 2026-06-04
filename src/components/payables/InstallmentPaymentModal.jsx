@@ -17,6 +17,9 @@ export default function InstallmentPaymentModal({ payable, onClose, onSaved }) {
   const [locationId, setLocationId] = useState(payable.location_id || "");
   const [notes, setNotes] = useState("");
   const [bankAccounts, setBankAccounts] = useState([]);
+  const [paymentDate, setPaymentDate] = useState(
+    new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+  );
 
   useEffect(() => {
     load();
@@ -81,7 +84,7 @@ export default function InstallmentPaymentModal({ payable, onClose, onSaved }) {
           description: `Pago cuota #${inst.sequence_number} a ${payable.supplier_name} - ${payable.description}`,
           amount: v,
           category: payable.category || "otros",
-          expense_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
+          expense_date: paymentDate,
           location_id: locationId,
           payment_method: 'cash',
           receipt_number: reference || "",
@@ -173,6 +176,13 @@ export default function InstallmentPaymentModal({ payable, onClose, onSaved }) {
               <Input value={locationId} onChange={e=>setLocationId(e.target.value)} placeholder="ID de sucursal" />
             </div>
           </div>
+
+          {method === 'cash' && (
+            <div>
+              <Label>Fecha del pago (descuenta de esa caja)</Label>
+              <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="mt-1" />
+            </div>
+          )}
 
           {method === 'transfer' && (
             <div>

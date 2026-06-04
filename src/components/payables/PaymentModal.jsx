@@ -17,6 +17,9 @@ export default function PaymentModal({ payable, locations, userLocation, onConfi
   const [locationId, setLocationId] = useState(userLocation?.id || "");
   const [notes, setNotes] = useState("");
   const [bankAccounts, setBankAccounts] = useState([]);
+  const [paymentDate, setPaymentDate] = useState(
+    new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+  );
 
   useEffect(() => {
     loadBankAccounts();
@@ -64,6 +67,7 @@ export default function PaymentModal({ payable, locations, userLocation, onConfi
       location_id: isOutsideCash ? null : locationId,
       notes,
       skip_cash_control: isOutsideCash,
+      payment_date: paymentDate,
     });
   };
 
@@ -142,12 +146,22 @@ export default function PaymentModal({ payable, locations, userLocation, onConfi
 
           {/* Info según método */}
           {method === "cash" && (
-            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-blue-800">
-                Se crea un <strong>Gasto</strong> que descuenta del control de efectivo de la sucursal seleccionada.
-              </p>
-            </div>
+            <>
+              <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-blue-800">
+                  Se crea un <strong>Gasto</strong> que descuenta del control de efectivo de la sucursal seleccionada.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Fecha del pago (descuenta de esa caja)</Label>
+                <Input
+                  type="date"
+                  value={paymentDate}
+                  onChange={e => setPaymentDate(e.target.value)}
+                />
+              </div>
+            </>
           )}
           {isOutsideCash && (
             <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-start gap-2">
