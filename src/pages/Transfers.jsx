@@ -101,6 +101,16 @@ export default function TransfersPage() {
       : l)
   }));
 
+  const handleCancelar = async (t) => {
+    if (!confirm(`¿Cancelar el traslado ${t.numero_traslado}? No se modificará el inventario.`)) return;
+    try {
+      await Traslado.delete(t.id);
+      await loadData();
+    } catch (err) {
+      alert("Error al cancelar: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
   const handleEnviar = async (e) => {
     e.preventDefault();
     setError("");
@@ -304,7 +314,12 @@ export default function TransfersPage() {
                     <div key={t.id} className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                       <div className="flex items-center justify-between">
                         <p className="font-semibold text-slate-800 text-sm">{t.numero_traslado}</p>
-                        <Badge className={ESTADO_CFG.pendiente.color}>{ESTADO_CFG.pendiente.label}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={ESTADO_CFG.pendiente.color}>{ESTADO_CFG.pendiente.label}</Badge>
+                          <button onClick={() => handleCancelar(t)} className="text-xs text-red-500 hover:text-red-700 font-medium">
+                            Cancelar
+                          </button>
+                        </div>
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
                         → {t.destino_nombre} · {(t.items || []).length} producto(s) · {fmtDate(t.created_date)}
@@ -366,10 +381,14 @@ export default function TransfersPage() {
                           )}
                           {t.notas && <p className="text-xs text-slate-400 mt-1 italic">{t.notas}</p>}
                         </div>
-                        <Button onClick={() => setReceivingId(t.id)}
-                          className="bg-emerald-600 hover:bg-emerald-700 shrink-0">
-                          <Package className="w-4 h-4 mr-1.5" /> Recibir
-                        </Button>
+                        <div className="flex gap-2 shrink-0">
+                          <button onClick={() => handleCancelar(t)} className="text-xs text-red-500 hover:text-red-700 font-medium px-2">
+                            Cancelar
+                          </button>
+                          <Button onClick={() => setReceivingId(t.id)} className="bg-emerald-600 hover:bg-emerald-700">
+                            <Package className="w-4 h-4 mr-1.5" /> Recibir
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

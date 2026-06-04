@@ -109,16 +109,27 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
   const { traslado_id, conteo, notas, accion } = req.body || {};
   if (!traslado_id) return res.status(400).json({ error: 'Falta traslado_id' });
   try {
-    const { rows: tras } = await query(`SELECT id, data FROM entity_traslado WHERE id = $1`, [traslado_id]);
-    if (!tras.length) return res.status(404).json({ error: 'Traslado no encontrado' });
-    const traslado = { ...tras[0].data, id: tras[0].id };
+    // Buscar primero en la tabla propia, luego en app_entities (compatibilidad con traslados viejos)
+    let trasRow = null, useAppEntities = false;
+    try {
+      const { rows } = await query(`SELECT id, data FROM entity_traslado WHERE id = $1`, [traslado_id]);
+      if (rows.length) trasRow = rows[0];
+    } catch (_) {}
+    if (!trasRow) {
+      const { rows } = await query(`SELECT id, data FROM app_entities WHERE entity_type = 'Traslado' AND id = $1`, [traslado_id]);
+      if (rows.length) { trasRow = rows[0]; useAppEntities = true; }
+    }
+    if (!trasRow) return res.status(404).json({ error: 'Traslado no encontrado' });
+
+    const traslado = { ...trasRow.data, id: trasRow.id };
     if (traslado.estado !== 'pendiente') return res.status(400).json({ error: 'El traslado ya fue procesado' });
 
+    const updateTraslado = (fields) => useAppEntities
+      ? query(`UPDATE app_entities SET data = data || $1::jsonb, updated_date = NOW() WHERE entity_type = 'Traslado' AND id = $2`, [JSON.stringify(fields), traslado_id])
+      : query(`UPDATE entity_traslado SET data = data || $1 WHERE id = $2`, [JSON.stringify(fields), traslado_id]);
+
     if (accion === 'rechazar') {
-      await query(`UPDATE entity_traslado SET data = data || $1 WHERE id = $2`, [
-        JSON.stringify({ estado: 'rechazado', notas_receptor: notas || '' }),
-        traslado_id,
-      ]);
+      await updateTraslado({ estado: 'rechazado', notas_receptor: notas || '' });
       return res.json({ ok: true, estado: 'rechazado' });
     }
 
@@ -172,10 +183,7 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
       }
     }
 
-    await query(`UPDATE entity_traslado SET data = data || $1 WHERE id = $2`, [
-      JSON.stringify({ estado: 'aceptado', conteo_receptor: conteo || [], notas_receptor: notas || '', fecha_aceptacion: today }),
-      traslado_id,
-    ]);
+    await updateTraslado({ estado: 'aceptado', conteo_receptor: conteo || [], notas_receptor: notas || '', fecha_aceptacion: today });
     res.json({ ok: true, estado: 'aceptado' });
   } catch (e) {
     console.error('aceptarTraslado error:', e);
