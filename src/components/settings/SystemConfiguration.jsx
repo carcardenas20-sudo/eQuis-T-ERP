@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { SystemSettings } from "@/entities/SystemSettings"; // Added import
+import { SystemSettings } from "@/entities/SystemSettings";
+import { AppConfig, Location } from "@/entities/all";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,16 +9,17 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Settings, 
-  Building, 
-  Receipt, 
-  Percent, 
-  Save, 
-  AlertCircle, 
+import {
+  Settings,
+  Building,
+  Receipt,
+  Percent,
+  Save,
+  AlertCircle,
   CheckCircle,
   Info,
-  Loader2
+  Loader2,
+  Factory
 } from "lucide-react";
 import DiscountPinManager from "./DiscountPinManager";
 
@@ -49,10 +51,45 @@ export default function SystemConfiguration() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState("");
   const [currentSettingsId, setCurrentSettingsId] = useState(null);
+  const [locations, setLocations] = useState([]);
+  const [plantaLocationId, setPlantaLocationId] = useState("");
+  const [plantaConfigId, setPlantaConfigId] = useState(null);
 
   useEffect(() => {
     loadSettings();
+    loadPortalConfig();
   }, []);
+
+  const loadPortalConfig = async () => {
+    try {
+      const [locs, configs] = await Promise.all([
+        Location.filter({ is_active: true }),
+        AppConfig.filter({ key: "planta_location_id" }),
+      ]);
+      setLocations(locs || []);
+      if (configs?.length) {
+        setPlantaLocationId(configs[0].value || "");
+        setPlantaConfigId(configs[0].id);
+      }
+    } catch (e) {
+      console.error("Error cargando config portal:", e);
+    }
+  };
+
+  const handleSavePlanta = async () => {
+    try {
+      if (plantaConfigId) {
+        await AppConfig.update(plantaConfigId, { value: plantaLocationId });
+      } else {
+        const created = await AppConfig.create({ key: "planta_location_id", value: plantaLocationId });
+        setPlantaConfigId(created.id);
+      }
+      setSaveMessage("Configuración guardada exitosamente");
+      setTimeout(() => setSaveMessage(""), 3000);
+    } catch (e) {
+      setSaveMessage("Error al guardar la configuración");
+    }
+  };
 
   const loadSettings = async () => {
     setIsLoading(true);
@@ -345,6 +382,35 @@ export default function SystemConfiguration() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Portal de Planta */}
+      <Card className="shadow-none border border-slate-200 dark:border-slate-700 rounded-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Factory className="w-5 h-5 text-emerald-600" />
+            Portal de Planta
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 p-3 sm:p-5">
+          <div className="space-y-2">
+            <Label>Sucursal de la planta</Label>
+            <p className="text-xs text-slate-500">Define desde qué sucursal envía traslados el portal de planta.</p>
+            <select
+              value={plantaLocationId}
+              onChange={e => setPlantaLocationId(e.target.value)}
+              className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm"
+            >
+              <option value="">Sin asignar</option>
+              {locations.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+          <Button onClick={handleSavePlanta} size="sm" className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+            <Save className="w-4 h-4" /> Guardar
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Save Button */}
       <div className="flex justify-center sm:justify-end pt-4 sm:pt-6 border-t">
