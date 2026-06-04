@@ -112,7 +112,7 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
     // Buscar primero en la tabla propia, luego en app_entities (compatibilidad con traslados viejos)
     let trasRow = null, useAppEntities = false;
     try {
-      const { rows } = await query(`SELECT id, data FROM entity_traslado WHERE id = $1`, [traslado_id]);
+      const { rows } = await query(`SELECT id, estado, origen_location_id, destino_location_id, data FROM entity_traslado WHERE id = $1`, [traslado_id]);
       if (rows.length) trasRow = rows[0];
     } catch (_) {}
     if (!trasRow) {
@@ -121,12 +121,20 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
     }
     if (!trasRow) return res.status(404).json({ error: 'Traslado no encontrado' });
 
-    const traslado = { ...trasRow.data, id: trasRow.id };
+    // Combinar columnas tipadas + JSONB (las tipadas tienen precedencia)
+    const traslado = {
+      ...trasRow.data,
+      ...(trasRow.estado !== undefined && { estado: trasRow.estado }),
+      ...(trasRow.origen_location_id !== undefined && { origen_location_id: trasRow.origen_location_id }),
+      ...(trasRow.destino_location_id !== undefined && { destino_location_id: trasRow.destino_location_id }),
+      id: trasRow.id,
+    };
     if (traslado.estado !== 'pendiente') return res.status(400).json({ error: 'El traslado ya fue procesado' });
 
     const updateTraslado = (fields) => useAppEntities
       ? query(`UPDATE app_entities SET data = data || $1::jsonb, updated_date = NOW() WHERE entity_type = 'Traslado' AND id = $2`, [JSON.stringify(fields), traslado_id])
-      : query(`UPDATE entity_traslado SET data = data || $1 WHERE id = $2`, [JSON.stringify(fields), traslado_id]);
+      : query(`UPDATE entity_traslado SET estado = COALESCE($1, estado), data = data || $2 WHERE id = $3`,
+          [fields.estado || null, JSON.stringify(fields), traslado_id]);
 
     if (accion === 'rechazar') {
       await updateTraslado({ estado: 'rechazado', notas_receptor: notas || '' });
