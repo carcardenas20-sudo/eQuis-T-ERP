@@ -240,8 +240,16 @@ export default function MerchandiseAssignment() {
   // Descontar del inventario las cantidades de las entregas que se están revirtiendo
   const revertInventoryForDeliveries = async (deliveryIds) => {
     const delivsToRevert = assignedDeliveries.filter(d => deliveryIds.includes(d.id));
-    const [allInv, allProducts] = await Promise.all([Inventory.list(), Product.list()]);
+    const [allInv, allProducts, productosData] = await Promise.all([
+      Inventory.list(), Product.list(), Producto.list(),
+    ]);
+
+    // Reconstruir el mismo mapeo que usa la asignación, con datos frescos
     const posMap = new Map((allProducts || []).map(pp => [pp.id, pp]));
+    const freshProductos = (productosData || []).filter(p => p.reference).map(p => {
+      const posProduct = p.familia_id ? posMap.get(p.familia_id) : null;
+      return { ...p, _posSku: posProduct?.sku || p.reference };
+    });
 
     // Sumar unidades por referencia
     const unitsByRef = {};
@@ -255,7 +263,7 @@ export default function MerchandiseAssignment() {
 
     let reverted = 0;
     for (const [ref, qty] of Object.entries(unitsByRef)) {
-      const prod = productos.find(p => p.reference === ref);
+      const prod = freshProductos.find(p => p.reference === ref);
       const productId = prod?._posSku || ref;
 
       // Buscar en todas las sucursales que tengan este producto
