@@ -381,18 +381,18 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
               !diff?.ingresado ? "bg-slate-50" :
               diff?.cuadra ? "bg-green-50" : "bg-red-50"
             }`}>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm text-slate-800">{emp.name}</p>
-                  <div className="flex gap-3 mt-0.5 flex-wrap">
+                  <div className="mt-0.5 space-y-0.5">
                     {tieneEntregas && (
-                      <p className="text-xs text-slate-500">
-                        📦 Entregas sistema: {Object.entries(registradoSistema[empId] || {}).map(([ref, qty]) => `${qty} ${prodName(ref)}`).join(", ")}
+                      <p className="text-xs text-slate-500 break-words">
+                        📦 {Object.entries(registradoSistema[empId] || {}).map(([ref, qty]) => `${qty} ${prodName(ref)}`).join(", ")}
                       </p>
                     )}
                     {tieneDevoluciones && (
-                      <p className="text-xs text-orange-600">
-                        🔧 Reparadas sistema: {Object.entries(devolucionesSistema[empId] || {}).map(([ref, qty]) => `${qty} ${prodName(ref)}`).join(", ")}
+                      <p className="text-xs text-orange-600 break-words">
+                        🔧 {Object.entries(devolucionesSistema[empId] || {}).map(([ref, qty]) => `${qty} ${prodName(ref)}`).join(", ")}
                       </p>
                     )}
                   </div>

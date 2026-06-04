@@ -740,7 +740,7 @@ export default function PlantPortal() {
                                   const prod = productosPOS.find(p => p.sku === e.target.value || p.id === e.target.value);
                                   setTrasladoForm(f => ({ ...f, lonas: f.lonas.map(l => l.id !== lona.id ? l : { ...l, items: l.items.map((it, i) => i !== itemIdx ? it : { ...it, product_id: e.target.value, nombre: prod?.name || "" }) }) }));
                                 }}
-                                className="flex-1 h-7 px-2 text-xs border border-indigo-200 rounded bg-white">
+                                className="flex-1 h-9 px-2 text-sm border border-indigo-200 rounded bg-white">
                                 <option value="">Producto...</option>
                                 {(inventarioPlanta.length > 0
                                   ? inventarioPlanta.filter(i => Number(i.current_stock || 0) > 0).map(i => {
@@ -756,11 +756,11 @@ export default function PlantPortal() {
                               </select>
                               <input type="number" min="1" value={item.cantidad}
                                 onChange={e => setTrasladoForm(f => ({ ...f, lonas: f.lonas.map(l => l.id !== lona.id ? l : { ...l, items: l.items.map((it, i) => i !== itemIdx ? it : { ...it, cantidad: e.target.value }) }) }))}
-                                className="w-16 h-7 px-2 text-xs border border-indigo-200 rounded bg-white" placeholder="Uds" />
+                                className="w-16 h-9 px-2 text-sm border border-indigo-200 rounded bg-white" placeholder="Uds" />
                               <button type="button"
                                 onClick={() => setTrasladoForm(f => ({ ...f, lonas: f.lonas.map(l => l.id !== lona.id ? l : { ...l, items: l.items.filter((_,i) => i !== itemIdx) }) }))}
-                                className="p-0.5 text-red-400 hover:text-red-600">
-                                <X className="w-3 h-3" />
+                                className="p-2 text-red-400 hover:text-red-600">
+                                <X className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           ))}

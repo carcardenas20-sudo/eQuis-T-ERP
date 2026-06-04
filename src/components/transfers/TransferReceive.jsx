@@ -250,20 +250,22 @@ export default function TransferReceive({ traslado, productos, locations, onDone
       </div>
 
       {/* Acciones */}
-      <div className="flex gap-2">
-        <button type="button" onClick={onCancel} disabled={saving}
-          className="flex-1 text-sm font-medium py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50">
-          Cancelar
-        </button>
-        <button type="button" onClick={handleRechazar} disabled={saving}
-          className="flex items-center gap-1 text-sm font-semibold px-4 py-2 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 disabled:opacity-50">
-          <XCircle className="w-4 h-4" /> Rechazar
-        </button>
+      <div className="space-y-2">
         <button type="button" onClick={handleAceptar} disabled={saving}
-          className="flex-1 flex items-center justify-center gap-1 text-sm font-semibold py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
+          className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold py-3 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
           {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-          Aceptar
+          Aceptar traslado
         </button>
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancel} disabled={saving}
+            className="flex-1 text-sm font-medium py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50">
+            Cancelar
+          </button>
+          <button type="button" onClick={handleRechazar} disabled={saving}
+            className="flex-1 flex items-center justify-center gap-1 text-sm font-semibold py-2.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 disabled:opacity-50">
+            <XCircle className="w-4 h-4" /> Rechazar
+          </button>
+        </div>
       </div>
     </div>
   );
