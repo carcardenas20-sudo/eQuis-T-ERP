@@ -201,7 +201,15 @@ export default function SaleDetailModal({ sale, onClose }) {
 
       const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: [pageWidth, pageHeight] });
       pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
-      pdf.save(`Factura_${sale.invoice_number || sale.id.slice(-8)}.pdf`);
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Factura_${sale.invoice_number || sale.id.slice(-8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch (err) {
       console.error('PDF generation error:', err);
       alert('No se pudo generar el PDF. Intenta nuevamente.');
