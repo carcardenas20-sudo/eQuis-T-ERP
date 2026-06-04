@@ -33,6 +33,7 @@ const movementTypeColors = {
   return: "bg-yellow-100 text-yellow-800",
   merchandise_assignment: "bg-indigo-100 text-indigo-800",
   merchandise_assignment_revert: "bg-rose-100 text-rose-800",
+  transfer_return: "bg-teal-100 text-teal-800",
 };
 
 const movementTypeLabels = {
@@ -45,6 +46,7 @@ const movementTypeLabels = {
   return: "Devolución",
   merchandise_assignment: "Asignación Mercancía",
   merchandise_assignment_revert: "Reversión Asignación",
+  transfer_return: "Retorno por Diferencia",
 };
 
 const movementTypeIcons = {
@@ -57,6 +59,7 @@ const movementTypeIcons = {
   return: <TrendingUp className="w-4 h-4" />,
   merchandise_assignment: <TrendingUp className="w-4 h-4" />,
   merchandise_assignment_revert: <TrendingDown className="w-4 h-4" />,
+  transfer_return: <TrendingUp className="w-4 h-4" />,
 };
 
 const LoadingSkeleton = () => (

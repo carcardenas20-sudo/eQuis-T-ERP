@@ -128,18 +128,29 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
     for (const item of (traslado.items || [])) {
       const pId = item.product_id;
       const totalRecibido = conteo?.find(c => c.product_id === pId)?.total_recibido ?? item.cantidad_enviada;
+      const diferencia = item.cantidad_enviada - totalRecibido;
 
-      // Salida del origen
+      // Salida del origen (solo lo que realmente llegó al destino)
       await query(`INSERT INTO entity_inventorymovement (data) VALUES ($1)`, [JSON.stringify({
         product_id: pId, location_id: traslado.origen_location_id,
-        movement_type: 'transfer_out', quantity: -item.cantidad_enviada,
+        movement_type: 'transfer_out', quantity: -totalRecibido,
         reason: `Traslado ${traslado.numero_traslado}`, movement_date: today,
       })]);
       const origInv = allInv.find(r => r.data?.product_id === pId && r.data?.location_id === traslado.origen_location_id);
       if (origInv) {
         await query(`UPDATE entity_inventory SET data = data || $1 WHERE id = $2`, [
-          JSON.stringify({ current_stock: (origInv.data.current_stock || 0) - item.cantidad_enviada, last_movement_date: today }), origInv.id,
+          JSON.stringify({ current_stock: (origInv.data.current_stock || 0) - totalRecibido, last_movement_date: today }), origInv.id,
         ]);
+      }
+
+      // Si hay diferencia, registrar retorno al origen
+      if (diferencia > 0) {
+        await query(`INSERT INTO entity_inventorymovement (data) VALUES ($1)`, [JSON.stringify({
+          product_id: pId, location_id: traslado.origen_location_id,
+          movement_type: 'transfer_return', quantity: diferencia,
+          reason: `Diferencia en recepción — Traslado ${traslado.numero_traslado} (enviado ${item.cantidad_enviada}, recibido ${totalRecibido})`,
+          movement_date: today,
+        })]);
       }
 
       // Entrada al destino
