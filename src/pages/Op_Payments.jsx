@@ -13,6 +13,7 @@ import ActivityHistory from "../components/history/ActivityHistory";
 
 export default function Payments() {
   const [employees, setEmployees] = useState([]);
+  const [allEmployees, setAllEmployees] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [payments, setPayments] = useState([]);
   const [purchases, setPurchases] = useState([]);
@@ -38,6 +39,7 @@ export default function Payments() {
         base44.entities.EmployeePurchase.list(),
         base44.entities.PaymentRequest.list('-request_date'),
       ]);
+      setAllEmployees(employeesData);
       setEmployees(employeesData.filter(e => e.is_active));
       setDeliveries(deliveriesData);
       setPayments(paymentsData);
@@ -481,7 +483,7 @@ export default function Payments() {
               <TabsContent value="history">
                 <PaymentsHistory
                   payments={payments}
-                  employees={employees}
+                  employees={allEmployees}
                   paymentRequests={allPaymentRequests}
                   onDelete={handleDeletePayment}
                 />

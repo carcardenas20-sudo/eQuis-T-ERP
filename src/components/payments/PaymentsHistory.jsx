@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 
 export default function PaymentsHistory({ payments, employees, paymentRequests = [], onDelete }) {
   const getEmployeeName = (employeeId) => {
-    const employee = employees.find(e => e.employee_id === employeeId);
-    return employee ? employee.name : employeeId;
+    const employee = employees.find(e => String(e.employee_id) === String(employeeId));
+    return employee ? employee.name : (employeeId || '—');
   };
 
   const getRelatedRequest = (payment) => {
