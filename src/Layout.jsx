@@ -343,8 +343,8 @@ function LayoutContent({ children }) {
           })}
         </nav>
 
-        {/* Footer — solo en desktop */}
-        <div className="hidden lg:block px-4 py-4" style={{ borderTop: `1px solid ${sidebarBorder}` }}>
+        {/* Footer */}
+        <div className="px-4 py-4" style={{ borderTop: `1px solid ${sidebarBorder}` }}>
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white"
               style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}>
