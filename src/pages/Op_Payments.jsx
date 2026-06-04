@@ -42,7 +42,8 @@ export default function Payments() {
       setAllEmployees(employeesData);
       setEmployees(employeesData.filter(e => e.is_active));
       setDeliveries(deliveriesData);
-      setPayments(paymentsData);
+      const OPERARIO_PAYMENT_TYPES = new Set(['avance', 'pago_completo', 'solicitud_aprobada']);
+      setPayments(paymentsData.filter(p => p.employee_id && OPERARIO_PAYMENT_TYPES.has(p.payment_type)));
       setPurchases(purchasesData || []);
       setAllPaymentRequests(requestsData || []);
       setPaymentRequests((requestsData || []).filter(r => r.status === 'pending'));
