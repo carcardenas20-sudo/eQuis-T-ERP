@@ -142,22 +142,24 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
     }
 
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
-    const { rows: allInv } = await query(`SELECT id, data FROM entity_inventory`);
+    const { rows: allInv } = await query(`SELECT id, product_id, location_id, current_stock, available_stock FROM entity_inventory`);
 
     for (const item of (traslado.items || [])) {
       const pId = item.product_id;
       const totalRecibido = conteo?.find(c => c.product_id === pId)?.total_recibido ?? item.cantidad_enviada;
       const diferencia = item.cantidad_enviada - totalRecibido;
 
-      // Salida del origen (solo lo que realmente llegó al destino)
+      // Salida del origen
       await query(`INSERT INTO entity_inventory_movement (id, movement_type, product_id, location_id, quantity, movement_date, data) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [
         crypto.randomUUID(), 'transfer_out', pId, traslado.origen_location_id, -totalRecibido, today,
         JSON.stringify({ reason: `Traslado ${traslado.numero_traslado}` }),
       ]);
-      const origInv = allInv.find(r => r.data?.product_id === pId && r.data?.location_id === traslado.origen_location_id);
+      const origInv = allInv.find(r => r.product_id === pId && r.location_id === traslado.origen_location_id);
       if (origInv) {
-        await query(`UPDATE entity_inventory SET data = data || $1 WHERE id = $2`, [
-          JSON.stringify({ current_stock: (origInv.data.current_stock || 0) - totalRecibido, last_movement_date: today }), origInv.id,
+        await query(`UPDATE entity_inventory SET current_stock = $1, available_stock = $2 WHERE id = $3`, [
+          (Number(origInv.current_stock) || 0) - totalRecibido,
+          Math.max(0, (Number(origInv.available_stock) || 0) - totalRecibido),
+          origInv.id,
         ]);
       }
 
@@ -174,15 +176,16 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
         crypto.randomUUID(), 'transfer_in', pId, traslado.destino_location_id, totalRecibido, today,
         JSON.stringify({ reason: `Traslado ${traslado.numero_traslado}` }),
       ]);
-      const destInv = allInv.find(r => r.data?.product_id === pId && r.data?.location_id === traslado.destino_location_id);
+      const destInv = allInv.find(r => r.product_id === pId && r.location_id === traslado.destino_location_id);
       if (destInv) {
-        await query(`UPDATE entity_inventory SET data = data || $1 WHERE id = $2`, [
-          JSON.stringify({ current_stock: (destInv.data.current_stock || 0) + totalRecibido, last_movement_date: today }), destInv.id,
+        await query(`UPDATE entity_inventory SET current_stock = $1, available_stock = $2 WHERE id = $3`, [
+          (Number(destInv.current_stock) || 0) + totalRecibido,
+          (Number(destInv.available_stock) || 0) + totalRecibido,
+          destInv.id,
         ]);
       } else {
-        await query(`INSERT INTO entity_inventory (id, product_id, location_id, data) VALUES ($1,$2,$3,$4)`, [
-          crypto.randomUUID(), pId, traslado.destino_location_id,
-          JSON.stringify({ current_stock: totalRecibido, last_movement_date: today }),
+        await query(`INSERT INTO entity_inventory (id, product_id, location_id, current_stock, available_stock, data) VALUES ($1,$2,$3,$4,$5,$6)`, [
+          crypto.randomUUID(), pId, traslado.destino_location_id, totalRecibido, totalRecibido, JSON.stringify({}),
         ]);
       }
     }
