@@ -424,7 +424,12 @@ export default function TransfersPage() {
                         <Badge className={cfg.color}>{cfg.label}</Badge>
                         {hasDiff && <Badge className="bg-amber-100 text-amber-700">Con diferencia</Badge>}
                       </div>
-                      <span className="text-xs text-slate-400">{fmtDate(t.created_date)}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400">{fmtDate(t.created_date)}</span>
+                        <button onClick={() => handleCancelar(t)} className="text-xs text-red-400 hover:text-red-600">
+                          Eliminar
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Building2 className="w-3.5 h-3.5 text-red-500 shrink-0" />
