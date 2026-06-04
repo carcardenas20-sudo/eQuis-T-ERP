@@ -44,40 +44,41 @@ function PresupuestoOpCard({ presupuesto, opId, estado, productoMap, onCambiarEs
 
   return (
     <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isListo ? "border-green-200" : "border-slate-200"}`}>
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => setOpen(o => !o)}>
+      <div className="px-3 py-2.5">
+        {/* Fila 1: número + chevron */}
+        <div className="flex items-center justify-between gap-2 mb-1" onClick={() => setOpen(o => !o)}>
+          <div className="flex items-center gap-2 min-w-0">
             {isListo
-              ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-              : <div className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />}
-            <div className="min-w-0">
-              <p className="font-bold text-slate-800 text-sm">{presupuesto.numero_presupuesto}</p>
-              <p className="text-xs text-slate-500">
-                {prodsDeOp.map(i => productoMap[i.producto_id]?.nombre || "—").join(", ")}
-                {" · "}{totalUds} uds
-              </p>
-            </div>
+              ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+              : <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0" />}
+            <p className="font-bold text-slate-800 text-sm truncate">{presupuesto.numero_presupuesto}</p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <EstadoBadge estado={estado} />
-            {!isListo && (
-              <>
-                {estado === "pendiente" && (
-                  <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
-                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-50">
-                    <Play className="w-3 h-3" /> Iniciar
-                  </button>
-                )}
-                <button onClick={() => cambiarEstado("listo")} disabled={loading}
-                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 disabled:opacity-50">
-                  <Check className="w-3 h-3" /> Listo
+          <button className="p-1 text-slate-400 shrink-0">
+            {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        </div>
+        {/* Fila 2: productos + unidades (truncado) */}
+        <p className="text-xs text-slate-500 truncate mb-2">
+          {prodsDeOp.map(i => productoMap[i.producto_id]?.nombre || "—").join(", ")}
+          {" · "}<span className="font-semibold text-slate-700">{totalUds} uds</span>
+        </p>
+        {/* Fila 3: estado + botones (ancho completo) */}
+        <div className="flex items-center gap-2">
+          <EstadoBadge estado={estado} />
+          {!isListo && (
+            <div className="flex gap-1.5 ml-auto">
+              {estado === "pendiente" && (
+                <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 active:bg-blue-100 disabled:opacity-50">
+                  <Play className="w-3 h-3" /> Iniciar
                 </button>
-              </>
-            )}
-            <button onClick={() => setOpen(o => !o)} className="p-1 text-slate-400">
-              {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-          </div>
+              )}
+              <button onClick={() => cambiarEstado("listo")} disabled={loading}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 active:bg-green-100 disabled:opacity-50">
+                <Check className="w-3 h-3" /> Listo
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -163,38 +164,36 @@ function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
 
   return (
     <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isListo ? "border-green-200" : "border-indigo-200"}`}>
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={() => setOpen(o => !o)}>
-            <Wrench className={`w-5 h-5 shrink-0 ${isListo ? "text-green-500" : "text-indigo-500"}`} />
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="font-bold text-slate-800 text-sm">{orden.numero_orden}</p>
-                <span className="text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-semibold">Externo</span>
-              </div>
-              <p className="text-xs text-slate-500 truncate">{orden.cliente_nombre}</p>
-            </div>
+      <div className="px-3 py-2.5">
+        {/* Fila 1: número + cliente + chevron */}
+        <div className="flex items-center justify-between gap-2 mb-1" onClick={() => setOpen(o => !o)}>
+          <div className="flex items-center gap-2 min-w-0">
+            <Wrench className={`w-4 h-4 shrink-0 ${isListo ? "text-green-500" : "text-indigo-500"}`} />
+            <p className="font-bold text-slate-800 text-sm truncate">{orden.numero_orden}</p>
+            <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-semibold shrink-0">Ext</span>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <EstadoBadge estado={isListo ? "listo" : (orden.estado || "pendiente")} />
-            {!isListo && (
-              <>
-                {(orden.estado === "confirmada" || orden.estado === "borrador") && (
-                  <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
-                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 disabled:opacity-50">
-                    <Play className="w-3 h-3" /> Iniciar
-                  </button>
-                )}
-                <button onClick={() => cambiarEstado("lista")} disabled={loading}
-                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 disabled:opacity-50">
-                  <Check className="w-3 h-3" /> Listo
+          <button className="p-1 text-slate-400 shrink-0">
+            {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 truncate mb-2">{orden.cliente_nombre}</p>
+        {/* Fila 2: estado + botones */}
+        <div className="flex items-center gap-2">
+          <EstadoBadge estado={isListo ? "listo" : (orden.estado || "pendiente")} />
+          {!isListo && (
+            <div className="flex gap-1.5 ml-auto">
+              {(orden.estado === "confirmada" || orden.estado === "borrador") && (
+                <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 active:bg-blue-100 disabled:opacity-50">
+                  <Play className="w-3 h-3" /> Iniciar
                 </button>
-              </>
-            )}
-            <button onClick={() => setOpen(o => !o)} className="p-1 text-slate-400">
-              {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-          </div>
+              )}
+              <button onClick={() => cambiarEstado("lista")} disabled={loading}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 active:bg-green-100 disabled:opacity-50">
+                <Check className="w-3 h-3" /> Listo
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {open && itemsDeOp.length > 0 && (
