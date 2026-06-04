@@ -58,7 +58,7 @@ export default function RolePreviewBanner() {
 
   if (!previewRoleId) {
     return (
-      <div className="fixed top-0 left-0 right-0 z-[300] bg-slate-900 text-white shadow-xl border-b border-slate-700">
+      <div className="hidden lg:block fixed top-0 left-0 right-0 z-[300] bg-slate-900 text-white shadow-xl border-b border-slate-700">
         <div className="flex items-center gap-0 min-w-0 h-9">
           {/* Left label */}
           <div className="flex items-center gap-2 px-3 shrink-0 border-r border-slate-700 h-full">
