@@ -25,6 +25,7 @@ const ESTADO_CFG = {
 export default function TransfersPage() {
   const { permissions, isRealAdmin } = useSession();
   const puedeEnviar = isRealAdmin || permissions?.includes("inventory_transfer");
+  const { currentUser: sessionUser } = useSession();
   const [activeTab, setActiveTab] = useState(() => puedeEnviar ? "enviar" : "recibir");
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
@@ -33,7 +34,7 @@ export default function TransfersPage() {
   const [traslados, setTraslados] = useState([]);
   const [receivingId, setReceivingId] = useState(null);
 
-  const [form, setForm] = useState(({ origen: "", destino: "", notas: "", lonas: [] }));
+  const [form, setForm] = useState(({ origen: sessionUser?.location_id || "", destino: "", notas: "", lonas: [] }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -156,7 +157,7 @@ export default function TransfersPage() {
         notas: form.notas,
         creado_por: currentUser?.email || "",
       });
-      setForm({ origen: "", destino: "", notas: "", lonas: [] });
+      setForm({ origen: sessionUser?.location_id || "", destino: "", notas: "", lonas: [] });
       await loadData();
       setActiveTab("recibir");
     } catch (err) {
@@ -210,11 +211,17 @@ export default function TransfersPage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-slate-700 block mb-1">Origen *</label>
-                    <select value={form.origen} onChange={e => setForm(f => ({ ...f, origen: e.target.value }))}
-                      className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm">
-                      <option value="">Seleccionar sucursal...</option>
-                      {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                    </select>
+                    {sessionUser?.location_id && !isRealAdmin ? (
+                      <div className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm bg-slate-50 flex items-center text-slate-700">
+                        {locations.find(l => l.id === sessionUser.location_id)?.name || sessionUser.location_id}
+                      </div>
+                    ) : (
+                      <select value={form.origen} onChange={e => setForm(f => ({ ...f, origen: e.target.value }))}
+                        className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm">
+                        <option value="">Seleccionar sucursal...</option>
+                        {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      </select>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-slate-700 block mb-1">Destino *</label>
