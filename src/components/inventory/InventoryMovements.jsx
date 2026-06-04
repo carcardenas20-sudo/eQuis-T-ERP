@@ -25,12 +25,14 @@ import {
 
 const movementTypeColors = {
   entry: "bg-green-100 text-green-800",
-  exit: "bg-red-100 text-red-800", 
+  exit: "bg-red-100 text-red-800",
   adjustment: "bg-blue-100 text-blue-800",
   transfer_out: "bg-orange-100 text-orange-800",
   transfer_in: "bg-purple-100 text-purple-800",
   sale: "bg-gray-100 text-gray-800",
-  return: "bg-yellow-100 text-yellow-800"
+  return: "bg-yellow-100 text-yellow-800",
+  merchandise_assignment: "bg-indigo-100 text-indigo-800",
+  merchandise_assignment_revert: "bg-rose-100 text-rose-800",
 };
 
 const movementTypeLabels = {
@@ -38,9 +40,11 @@ const movementTypeLabels = {
   exit: "Salida",
   adjustment: "Ajuste",
   transfer_out: "Traslado Salida",
-  transfer_in: "Traslado Entrada", 
+  transfer_in: "Traslado Entrada",
   sale: "Venta",
-  return: "Devolución"
+  return: "Devolución",
+  merchandise_assignment: "Asignación Mercancía",
+  merchandise_assignment_revert: "Reversión Asignación",
 };
 
 const movementTypeIcons = {
@@ -50,7 +54,9 @@ const movementTypeIcons = {
   transfer_out: <TrendingDown className="w-4 h-4" />,
   transfer_in: <TrendingUp className="w-4 h-4" />,
   sale: <TrendingDown className="w-4 h-4" />,
-  return: <TrendingUp className="w-4 h-4" />
+  return: <TrendingUp className="w-4 h-4" />,
+  merchandise_assignment: <TrendingUp className="w-4 h-4" />,
+  merchandise_assignment_revert: <TrendingDown className="w-4 h-4" />,
 };
 
 const LoadingSkeleton = () => (

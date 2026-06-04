@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { localClient } from "@/api/localClient";
 import { Location } from "@/entities/Location";
 import { Inventory } from "@/entities/Inventory";
-import { Product } from "@/entities/all";
+import { Product, InventoryMovement } from "@/entities/all";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PackageCheck, CheckCircle2, Store, RefreshCw, Undo2, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
@@ -182,6 +182,7 @@ export default function MerchandiseAssignment() {
           const existingInv = (liveInventory || []).find(
             inv => inv.product_id === productId && inv.location_id === locationId
           );
+          const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
           if (existingInv) {
             const newStock = (Number(existingInv.current_stock) || 0) + quantity;
             const newAvail = (Number(existingInv.available_stock) || 0) + quantity;
@@ -189,7 +190,6 @@ export default function MerchandiseAssignment() {
               current_stock: newStock,
               available_stock: newAvail,
             });
-            // Actualizar en el array local para que la próxima iteración lo vea
             existingInv.current_stock = newStock;
             existingInv.available_stock = newAvail;
           } else {
@@ -200,9 +200,16 @@ export default function MerchandiseAssignment() {
               available_stock: quantity,
               reserved_stock: 0,
             });
-            // Agregarlo al array para que no se duplique en la próxima iteración
             liveInventory.push(created);
           }
+          await InventoryMovement.create({
+            product_id: productId,
+            location_id: locationId,
+            movement_type: "merchandise_assignment",
+            quantity,
+            reason: `Asignación de mercancía — entrega ${dateKey} (ref: ${item.product_reference})`,
+            movement_date: today,
+          });
         }
       }
 
@@ -262,6 +269,14 @@ export default function MerchandiseAssignment() {
           await Inventory.update(inv.id, {
             current_stock: currentStock - toDeduct,
             available_stock: Math.max(0, (Number(inv.available_stock) || 0) - toDeduct),
+          });
+          await InventoryMovement.create({
+            product_id: inv.product_id,
+            location_id: inv.location_id,
+            movement_type: "merchandise_assignment_revert",
+            quantity: -toDeduct,
+            reason: `Reversión de asignación de mercancía (ref: ${ref})`,
+            movement_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
           });
           remaining -= toDeduct;
           reverted += toDeduct;
