@@ -33,6 +33,7 @@ const comercialGroups = [
   },
   {
     title: "Inventario", items: [
+      { title: "Productos POS", url: createPageUrl("Products"), icon: Package, permissions: ["products_view"] },
       { title: "Inventario", url: createPageUrl("Inventory"), icon: MapPin, permissions: ["inventory_view"] },
       { title: "Auditorías", url: createPageUrl("InventoryAudits"), icon: MapPin, permissions: ["inventory_view"] },
       { title: "Traslados", url: createPageUrl("Transfers"), icon: ArrowRightLeft, permissions: ["inventory_transfer"] },
