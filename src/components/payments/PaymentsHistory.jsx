@@ -6,9 +6,10 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 
 export default function PaymentsHistory({ payments, employees, paymentRequests = [], onDelete }) {
-  const getEmployeeName = (employeeId) => {
-    const employee = employees.find(e => String(e.employee_id) === String(employeeId));
-    return employee ? employee.name : (employeeId || '—');
+  const getEmployeeName = (payment) => {
+    if (payment.employee_name) return payment.employee_name;
+    const employee = employees.find(e => String(e.employee_id) === String(payment.employee_id));
+    return employee ? employee.name : (payment.employee_id || '—');
   };
 
   const getRelatedRequest = (payment) => {
@@ -37,7 +38,7 @@ export default function PaymentsHistory({ payments, employees, paymentRequests =
                   <div className="mb-2 sm:mb-0">
                     <p className="font-bold text-lg text-green-700">${(payment.amount || 0).toLocaleString()}</p>
                     <p className="text-sm text-slate-600 font-medium flex items-center gap-1">
-                      <User className="w-3 h-3"/>{getEmployeeName(payment.employee_id)}
+                      <User className="w-3 h-3"/>{getEmployeeName(payment)}
                     </p>
                     {relatedReq && (
                       <p className="text-xs text-slate-400 mt-0.5">

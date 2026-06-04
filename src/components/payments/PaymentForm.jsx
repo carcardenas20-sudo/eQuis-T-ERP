@@ -70,6 +70,7 @@ export default function PaymentForm({ employee, payment, pendingDeliveries, onSu
 
     const finalPaymentData = {
       employee_id: employee.employee_id,
+      employee_name: employee.name,
       amount: totalAmount,
       payment_date: paymentDate,
       payment_type: 'avance',
