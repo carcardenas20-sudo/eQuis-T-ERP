@@ -62,11 +62,11 @@ function PresupuestoOpCard({ presupuesto, opId, estado, productoMap, onCambiarEs
           {prodsDeOp.map(i => productoMap[i.producto_id]?.nombre || "—").join(", ")}
           {" · "}<span className="font-semibold text-slate-700">{totalUds} uds</span>
         </p>
-        {/* Fila 3: estado + botones (ancho completo) */}
-        <div className="flex items-center gap-2">
+        {/* Fila 3: estado + botones */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           <EstadoBadge estado={estado} />
           {!isListo && (
-            <div className="flex gap-1.5 ml-auto">
+            <>
               {estado === "pendiente" && (
                 <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
                   className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 active:bg-blue-100 disabled:opacity-50">
@@ -77,7 +77,7 @@ function PresupuestoOpCard({ presupuesto, opId, estado, productoMap, onCambiarEs
                 className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 active:bg-green-100 disabled:opacity-50">
                 <Check className="w-3 h-3" /> Listo
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -178,10 +178,10 @@ function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
         </div>
         <p className="text-xs text-slate-500 truncate mb-2">{orden.cliente_nombre}</p>
         {/* Fila 2: estado + botones */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <EstadoBadge estado={isListo ? "listo" : (orden.estado || "pendiente")} />
           {!isListo && (
-            <div className="flex gap-1.5 ml-auto">
+            <>
               {(orden.estado === "confirmada" || orden.estado === "borrador") && (
                 <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
                   className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 active:bg-blue-100 disabled:opacity-50">
@@ -192,7 +192,7 @@ function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
                 className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 active:bg-green-100 disabled:opacity-50">
                 <Check className="w-3 h-3" /> Listo
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -570,8 +570,8 @@ export default function PlantPortal() {
   const esTabOperacion = tabId && tabId !== "tendidos" && tabId !== "traslados" && tabId !== "planillador";
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-safe">
-      <div className="bg-white border-b border-slate-200 px-3 py-2 sticky top-0 z-10 shadow-sm">
+    <div className="min-h-screen bg-slate-50 pb-safe w-full overflow-x-hidden">
+      <div className="bg-white border-b border-slate-200 px-3 py-2 sticky top-0 z-10 shadow-sm w-full">
         {/* Fila 1: título + refresh */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -617,7 +617,7 @@ export default function PlantPortal() {
         )}
       </div>
 
-      <div className="p-3 space-y-3 max-w-2xl mx-auto">
+      <div className="p-3 space-y-3 w-full max-w-2xl mx-auto overflow-x-hidden">
         {loading ? (
           <div className="flex justify-center py-16">
             <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
@@ -835,8 +835,8 @@ export default function PlantPortal() {
                   <span className="text-sm font-semibold text-violet-800">Planillador activo</span>
                 </div>
                 <button onClick={() => { setPlanilladorAuth(null); setPlanilladorData(null); setPlanilladorTab("operaciones"); }}
-                  className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800">
-                  <LogOut className="w-3.5 h-3.5" /> Cerrar sesión
+                  className="flex items-center gap-1 text-xs text-violet-600 active:text-violet-800 shrink-0">
+                  <LogOut className="w-3.5 h-3.5" /> Salir
                 </button>
               </div>
 
