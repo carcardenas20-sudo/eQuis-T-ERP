@@ -347,22 +347,30 @@ export default function PlantPortal() {
       console.warn("AppConfig planta_location_id no disponible:", e.message);
     }
 
-    // Servicios, órdenes, traslados y localizaciones son opcionales
+    // Localizaciones y productos del POS — críticos para traslados
     try {
-      const [svcData, ordData, trasData, locsData, prodsData] = await Promise.all([
-        Servicio.list(),
-        OrdenServicio.list("-fecha_orden"),
-        Traslado.list("-created_date"),
+      const [locsData, prodsData, trasData] = await Promise.all([
         LocationPub.list(),
         ProductoPOS.list(),
+        Traslado.list("-created_date"),
+      ]);
+      setLocations(locsData || []);
+      setProductosPOS(prodsData || []);
+      setTraslados(trasData || []);
+    } catch (e) {
+      console.warn("Localizaciones/Productos/Traslados no disponibles:", e.message);
+    }
+
+    // Servicios y órdenes — opcionales
+    try {
+      const [svcData, ordData] = await Promise.all([
+        Servicio.list(),
+        OrdenServicio.list("-fecha_orden"),
       ]);
       setServicios((svcData || []).filter(s => s.activo !== false));
       setOrdenes((ordData || []).filter(o => !["pagada", "cancelada"].includes(o.estado)));
-      setTraslados(trasData || []);
-      setLocations(locsData || []);
-      setProductosPOS(prodsData || []);
     } catch (e) {
-      console.warn("Servicios/Ordenes/Traslados no disponibles:", e.message);
+      console.warn("Servicios/Ordenes no disponibles:", e.message);
     }
 
     // Inventario de la planta para filtrar productos disponibles
