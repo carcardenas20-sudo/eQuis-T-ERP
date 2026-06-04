@@ -132,6 +132,21 @@ const MODULE_ACCESS_PERMS = {
   analisis: ["produccion_view"],
 };
 
+// Mapa de page name → permisos requeridos (al menos uno debe tenerlo)
+const PAGE_PERMISSIONS = (() => {
+  const map = {};
+  const allGroups = [...comercialGroups, ...produccionGroups, ...serviciosGroups, ...analisisGroups, ...operariosGroups];
+  for (const group of allGroups) {
+    for (const item of (group.items || [])) {
+      if (item.url && item.permissions?.length) {
+        const pageName = item.url.replace(/^\//, '');
+        map[pageName] = item.permissions;
+      }
+    }
+  }
+  return map;
+})();
+
 const MODULE_META = {
   comercial: { label: "Comercial", icon: ShoppingCart, badgeCls: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", activeCls: "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300", groupCls: "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" },
   produccion: { label: "Producción", icon: Factory, badgeCls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", activeCls: "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300", groupCls: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" },
@@ -363,7 +378,21 @@ function LayoutContent({ children }) {
       <main className="lg:ml-64 min-h-[100dvh] pb-24 lg:pb-0 overflow-x-hidden overflow-y-auto touch-pan-y">
         <AnimatePresence mode="wait">
           <motion.div key={location.pathname} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.18, ease: "easeOut" }}>
-            {children}
+            {(() => {
+              if (isAdmin || isLoading) return children;
+              const pageName = location.pathname.replace(/^\//, '');
+              const required = PAGE_PERMISSIONS[pageName];
+              if (!required || required.length === 0) return children;
+              const hasAccess = permissions?.some(p => required.includes(p));
+              if (hasAccess) return children;
+              return (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+                  <div className="text-5xl mb-4">🔒</div>
+                  <h2 className="text-xl font-bold text-slate-800 mb-2">Acceso restringido</h2>
+                  <p className="text-slate-500 text-sm">No tienes permiso para ver esta página.</p>
+                </div>
+              );
+            })()}
           </motion.div>
         </AnimatePresence>
       </main>
