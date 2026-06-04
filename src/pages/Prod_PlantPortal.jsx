@@ -325,16 +325,15 @@ export default function PlantPortal() {
   const [pinForm, setPinForm] = useState({ employee_id: "", pin: "" });
   const [pinError, setPinError] = useState("");
 
-  const handlePinLogin = async (e) => {
-    e.preventDefault();
+  const handlePinLogin = async (pin) => {
     setPinError("");
     try {
-      const res = await fetch("/api/portal-login", {
+      const res = await fetch("/api/portal-pin-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employee_id: pinForm.employee_id.trim(), pin: pinForm.pin }),
+        body: JSON.stringify({ pin }),
       });
-      if (!res.ok) { const d = await res.json(); setPinError(d.error || "PIN incorrecto"); return; }
+      if (!res.ok) { const d = await res.json(); setPinError(d.error || "PIN incorrecto"); setPinForm({ employee_id: "", pin: "" }); return; }
       const emp = await res.json();
       setPlanilladorAuth(emp);
       setPinForm({ employee_id: "", pin: "" });
@@ -789,28 +788,40 @@ export default function PlantPortal() {
                     <Lock className="w-7 h-7 text-violet-600" />
                   </div>
                   <h2 className="font-bold text-slate-800 text-lg">Portal Planillador</h2>
-                  <p className="text-sm text-slate-500 mt-1">Ingresa tu ID y PIN para continuar</p>
+                  <p className="text-sm text-slate-500 mt-1">Ingresa tu PIN</p>
                 </div>
-                {pinError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">{pinError}</p>}
-                <form onSubmit={handlePinLogin} className="space-y-3">
-                  <input
-                    type="text" inputMode="numeric" placeholder="ID Empleado"
-                    value={pinForm.employee_id}
-                    onChange={e => setPinForm(f => ({ ...f, employee_id: e.target.value }))}
-                    className="w-full h-11 px-4 border border-slate-200 rounded-xl text-sm text-center tracking-widest"
-                    autoComplete="off"
-                  />
-                  <input
-                    type="password" inputMode="numeric" placeholder="PIN"
-                    value={pinForm.pin}
-                    onChange={e => setPinForm(f => ({ ...f, pin: e.target.value }))}
-                    className="w-full h-11 px-4 border border-slate-200 rounded-xl text-sm text-center tracking-widest"
-                  />
-                  <button type="submit"
-                    className="w-full h-11 bg-violet-600 text-white rounded-xl font-semibold text-sm hover:bg-violet-700 flex items-center justify-center gap-2">
-                    <Unlock className="w-4 h-4" /> Ingresar
-                  </button>
-                </form>
+
+                {/* Puntos del PIN */}
+                <div className="flex justify-center gap-3 py-2">
+                  {[0,1,2,3].map(i => (
+                    <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all ${pinForm.pin.length > i ? "bg-violet-600 border-violet-600" : "border-slate-300"}`} />
+                  ))}
+                </div>
+
+                {pinError && <p className="text-xs text-red-600 text-center">{pinError}</p>}
+
+                {/* Teclado numérico */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((k, i) => (
+                    <button key={i} type="button"
+                      disabled={k === ""}
+                      onClick={() => {
+                        if (k === "⌫") {
+                          const next = pinForm.pin.slice(0, -1);
+                          setPinForm(f => ({ ...f, pin: next }));
+                          setPinError("");
+                        } else if (pinForm.pin.length < 4) {
+                          const next = pinForm.pin + String(k);
+                          setPinForm(f => ({ ...f, pin: next }));
+                          if (next.length === 4) handlePinLogin(next);
+                        }
+                      }}
+                      className={`h-14 rounded-xl text-lg font-semibold transition-all
+                        ${k === "" ? "invisible" : k === "⌫" ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "bg-slate-50 text-slate-800 hover:bg-violet-50 hover:text-violet-700 border border-slate-200"}`}>
+                      {k}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
