@@ -307,7 +307,7 @@ export default function PlantPortal() {
   const [inventarioPlanta, setInventarioPlanta] = useState(/** @type {any[]} */ ([]));
   const [plantaLocationId, setPlantaLocationId] = useState(/** @type {string|null} */ (null));
   const [receivingTrasladoId, setReceivingTrasladoId] = useState(/** @type {string|null} */ (null));
-  const [trasladoForm, setTrasladoForm] = useState({ destino: "", items: /** @type {any[]} */ ([]), notas: "" });
+  const [trasladoForm, setTrasladoForm] = useState({ destino: "", lonas: /** @type {any[]} */ ([]), notas: "" });
   const [savingTraslado, setSavingTraslado] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tabId, setTabId] = useState(null);
@@ -455,26 +455,37 @@ export default function PlantPortal() {
 
   const handleCrearTraslado = async (e) => {
     e.preventDefault();
-    if (!trasladoForm.destino || trasladoForm.items.length === 0) return;
+    if (!trasladoForm.destino || trasladoForm.lonas.length === 0) return;
+    if (trasladoForm.lonas.some(l => l.items.length === 0)) { alert("Todas las lonas deben tener al menos un producto."); return; }
     setSavingTraslado(true);
     try {
       const origen = locations.find(l => l.id === plantaLocationId);
       const destino = locations.find(l => l.id === trasladoForm.destino);
+      // Consolidar items desde lonas
+      const itemsMap = {};
+      for (const lona of trasladoForm.lonas) {
+        for (const i of lona.items) {
+          if (!i.product_id || !i.cantidad) continue;
+          if (!itemsMap[i.product_id]) itemsMap[i.product_id] = { product_id: i.product_id, nombre: i.nombre, cantidad_enviada: 0 };
+          itemsMap[i.product_id].cantidad_enviada += Number(i.cantidad);
+        }
+      }
       await Traslado.create({
         numero_traslado: nextNumeroTraslado(),
         origen_location_id: plantaLocationId || "taller",
         origen_nombre: origen?.name || "Taller",
         destino_location_id: trasladoForm.destino,
         destino_nombre: destino?.name || "",
-        items: trasladoForm.items.map(i => ({
-          product_id: i.product_id,
-          nombre: i.nombre,
-          cantidad_enviada: Number(i.cantidad),
+        items: Object.values(itemsMap),
+        lonas: trasladoForm.lonas.map((l, idx) => ({
+          numero: idx + 1,
+          items: l.items.filter(i => i.product_id && i.cantidad).map(i => ({ product_id: i.product_id, nombre: i.nombre, cantidad: Number(i.cantidad) })),
+          total: l.items.reduce((s, i) => s + (Number(i.cantidad) || 0), 0),
         })),
         estado: "pendiente",
         notas: trasladoForm.notas,
       });
-      setTrasladoForm({ destino: "", items: [], notas: "" });
+      setTrasladoForm({ destino: "", lonas: [], notas: "" });
       await loadData();
     } catch (err) {
       alert("Error: " + (err instanceof Error ? err.message : String(err)));
@@ -630,64 +641,74 @@ export default function PlantPortal() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-slate-600">Productos</label>
+                      <label className="text-xs font-medium text-slate-600">Lonas *</label>
                       <button type="button"
-                        onClick={() => setTrasladoForm(f => ({ ...f, items: [...f.items, { product_id: "", nombre: "", cantidad: "" }] }))}
-                        className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-0.5">
-                        <Plus className="w-3 h-3" /> Agregar
+                        onClick={() => setTrasladoForm(f => ({ ...f, lonas: [...f.lonas, { id: Date.now(), items: [] }] }))}
+                        className="text-xs font-semibold px-2 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 flex items-center gap-0.5">
+                        <Plus className="w-3 h-3" /> Lona
                       </button>
                     </div>
-                    {trasladoForm.items.length === 0 && (
-                      <p className="text-xs text-slate-400 text-center py-3 border border-dashed rounded-lg">Sin productos</p>
+                    {trasladoForm.lonas.length === 0 && (
+                      <p className="text-xs text-slate-400 text-center py-3 border border-dashed rounded-lg">Agrega al menos una lona</p>
                     )}
-                    <div className="space-y-1.5">
-                      {trasladoForm.items.map((item, idx) => {
-                        const invItem = inventarioPlanta.find(i => i.product_id === item.product_id);
-                        const stock = Number(invItem?.current_stock || invItem?.available_stock || 0);
-                        return (
-                          <div key={idx} className="flex gap-1.5 items-center">
-                            <select value={item.product_id}
-                              onChange={e => {
-                                const prod = productosPOS.find(p => p.sku === e.target.value || p.id === e.target.value);
-                                setTrasladoForm(f => {
-                                  const items = [...f.items];
-                                  items[idx] = { ...items[idx], product_id: e.target.value, nombre: prod?.name || "" };
-                                  return { ...f, items };
-                                });
-                              }}
-                              className="flex-1 h-8 px-2 text-xs border border-slate-200 rounded">
-                              <option value="">Producto...</option>
-                              {(inventarioPlanta.length > 0
-                                ? inventarioPlanta.filter(i => Number(i.current_stock || 0) > 0).map(i => {
-                                    const prod = productosPOS.find(p => p.sku === i.product_id || p.id === i.product_id);
-                                    return prod ? { ...prod, _stock: Number(i.current_stock || 0) } : null;
-                                  }).filter(Boolean)
-                                : productosPOS
-                              ).map(p => (
-                                <option key={p.id} value={p.sku || p.id}>
-                                  {p.name}{p._stock !== undefined ? ` (${p._stock} disponibles)` : ""}
-                                </option>
-                              ))}
-                            </select>
-                            <input type="number" min="1" max={stock || undefined} value={item.cantidad}
-                              onChange={e => setTrasladoForm(f => {
-                                const items = [...f.items];
-                                items[idx] = { ...items[idx], cantidad: e.target.value };
-                                return { ...f, items };
-                              })}
-                              className="w-20 h-8 px-2 text-xs border border-slate-200 rounded" placeholder="Uds" />
-                            <button type="button"
-                              onClick={() => setTrasladoForm(f => ({ ...f, items: f.items.filter((_,i) => i !== idx) }))}
-                              className="p-1 text-red-400 hover:text-red-600">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                    <div className="space-y-2">
+                      {trasladoForm.lonas.map((lona, lonaIdx) => (
+                        <div key={lona.id} className="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-indigo-700">
+                              Lona {lonaIdx + 1}
+                              {lona.items.length > 0 && <span className="ml-1 font-normal text-indigo-500">· {lona.items.reduce((s,i)=>s+(Number(i.cantidad)||0),0)} prendas</span>}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button type="button"
+                                onClick={() => setTrasladoForm(f => ({ ...f, lonas: f.lonas.map(l => l.id === lona.id ? { ...l, items: [...l.items, { product_id: "", nombre: "", cantidad: "" }] } : l) }))}
+                                className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5">
+                                <Plus className="w-3 h-3" /> producto
+                              </button>
+                              <button type="button"
+                                onClick={() => setTrasladoForm(f => ({ ...f, lonas: f.lonas.filter(l => l.id !== lona.id) }))}
+                                className="p-0.5 text-red-400 hover:text-red-600">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })}
+                          {lona.items.map((item, itemIdx) => (
+                            <div key={itemIdx} className="flex gap-1.5 items-center">
+                              <select value={item.product_id}
+                                onChange={e => {
+                                  const prod = productosPOS.find(p => p.sku === e.target.value || p.id === e.target.value);
+                                  setTrasladoForm(f => ({ ...f, lonas: f.lonas.map(l => l.id !== lona.id ? l : { ...l, items: l.items.map((it, i) => i !== itemIdx ? it : { ...it, product_id: e.target.value, nombre: prod?.name || "" }) }) }));
+                                }}
+                                className="flex-1 h-7 px-2 text-xs border border-indigo-200 rounded bg-white">
+                                <option value="">Producto...</option>
+                                {(inventarioPlanta.length > 0
+                                  ? inventarioPlanta.filter(i => Number(i.current_stock || 0) > 0).map(i => {
+                                      const prod = productosPOS.find(p => p.sku === i.product_id || p.id === i.product_id);
+                                      return prod ? { ...prod, _stock: Number(i.current_stock || 0) } : null;
+                                    }).filter(Boolean)
+                                  : productosPOS
+                                ).map(p => (
+                                  <option key={p.id} value={p.sku || p.id}>
+                                    {p.name}{p._stock !== undefined ? ` (${p._stock})` : ""}
+                                  </option>
+                                ))}
+                              </select>
+                              <input type="number" min="1" value={item.cantidad}
+                                onChange={e => setTrasladoForm(f => ({ ...f, lonas: f.lonas.map(l => l.id !== lona.id ? l : { ...l, items: l.items.map((it, i) => i !== itemIdx ? it : { ...it, cantidad: e.target.value }) }) }))}
+                                className="w-16 h-7 px-2 text-xs border border-indigo-200 rounded bg-white" placeholder="Uds" />
+                              <button type="button"
+                                onClick={() => setTrasladoForm(f => ({ ...f, lonas: f.lonas.map(l => l.id !== lona.id ? l : { ...l, items: l.items.filter((_,i) => i !== itemIdx) }) }))}
+                                className="p-0.5 text-red-400 hover:text-red-600">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  <button type="submit" disabled={savingTraslado || !trasladoForm.destino || trasladoForm.items.length === 0}
+                  <button type="submit" disabled={savingTraslado || !trasladoForm.destino || trasladoForm.lonas.length === 0}
                     className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                     {savingTraslado ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     Enviar
