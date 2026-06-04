@@ -655,21 +655,17 @@ export default function POS() {
           </div>
         )}
 
-        <div className="lg:hidden bg-white border-b border-slate-200 px-3 py-2 sm:px-4 sm:py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Package className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-              <h1 className="text-base sm:text-lg font-semibold text-slate-900">POS</h1>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" className="h-8 px-2 gap-1 text-xs" onClick={() => setShowExchange(true)} disabled={!selectedLocationId}>
-                <ArrowLeftRight className="w-3 h-3" />
+        <div className="lg:hidden bg-white border-b border-slate-200 px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+              <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs shrink-0" onClick={() => setShowHoldCart(true)} disabled={!selectedLocationId}>
+                <Clock className="w-3.5 h-3.5 text-amber-600" /><span>En Espera</span>
               </Button>
-              <Button variant="outline" size="sm" className="h-8 px-2 gap-1 text-xs" onClick={() => setShowQuote(true)} disabled={cart.length === 0}>
-                <FileText className="w-3 h-3" />
+              <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs shrink-0" onClick={() => setShowExchange(true)} disabled={!selectedLocationId}>
+                <ArrowLeftRight className="w-3.5 h-3.5 text-orange-600" /><span>Cambio</span>
               </Button>
-              <Button variant="outline" size="sm" className="h-8 px-2 gap-1 text-xs" onClick={() => setShowHoldCart(true)} disabled={!selectedLocationId}>
-                <Clock className="w-3 h-3" />
+              <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs shrink-0" onClick={() => setShowQuote(true)} disabled={cart.length === 0}>
+                <FileText className="w-3.5 h-3.5 text-blue-600" /><span>Cotizar</span>
               </Button>
             </div>
 
@@ -813,7 +809,7 @@ export default function POS() {
                 </TabsTrigger>
                 <TabsTrigger value="customer" className="flex items-center gap-2 text-sm sm:text-base">
                   <Users className="w-4 h-4" />
-                  Cliente
+                  Cliente{customer?.name ? ' ✓' : ''}
                 </TabsTrigger>
                 <TabsTrigger value="ingresos" className="flex items-center gap-2 text-sm sm:text-base"
                   onClick={() => loadIngresos()}>
@@ -824,13 +820,7 @@ export default function POS() {
 
               <TabsContent value="products" className="flex-1 mx-2 sm:mx-4 mt-0 flex flex-col min-h-0 overflow-hidden">
                 <Card className="flex flex-col flex-1 min-h-0 overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <Search className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                      Buscar Productos
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 pb-28 -mx-2 sm:mx-0 overflow-y-auto touch-pan-y">
+                  <CardContent className="flex-1 pt-3 pb-28 px-2 overflow-y-auto touch-pan-y">
                     <ProductSearch
                       products={products}
                       inventory={inventory}

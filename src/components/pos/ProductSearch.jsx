@@ -1,33 +1,27 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, ShoppingCart, Package, AlertTriangle, AlertCircle } from "lucide-react";
 
-export default function ProductSearch({ 
-  products, 
-  searchTerm, 
-  onSearchChange, 
-  onAddToCart, 
+export default function ProductSearch({
+  products,
+  searchTerm,
+  onSearchChange,
+  onAddToCart,
   inventory = [],
   selectedLocationId,
-  isMobile = false 
+  isMobile = false
 }) {
-  
-  // DEBUG: Log cuando cambian los props
-  React.useEffect(() => {
-    console.log("🔍 ProductSearch - Props actualizados:", {
-      totalProducts: products.length,
-      totalInventory: inventory.length,
-      selectedLocationId: selectedLocationId,
-      inventoryLocationIds: [...new Set(inventory.map(i => i.location_id))],
-      sampleInventory: inventory.slice(0, 3).map(i => ({
-        product_id: i.product_id,
-        location_id: i.location_id,
-        stock: i.current_stock
-      }))
-    });
-  }, [inventory, selectedLocationId, products]);
+  const inputRef = useRef(null);
+
+  const handleAddToCart = (product) => {
+    onAddToCart(product);
+    if (isMobile) {
+      onSearchChange('');
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  };
 
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return products.slice(0, isMobile ? 8 : 12);
@@ -116,26 +110,14 @@ export default function ProductSearch({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
         <Input
-          placeholder="Buscar por nombre, SKU, código de barras, talla o color..."
+          ref={inputRef}
+          placeholder={isMobile ? "Nombre, SKU o código..." : "Buscar por nombre, SKU, código de barras, talla o color..."}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className={`pl-10 border-2 focus:border-blue-500 transition-colors ${isMobile ? 'h-12 text-base' : 'h-12 text-lg'}`}
         />
       </div>
 
-      {/* Location indicator for stock */}
-      {selectedLocationId && (
-        <div className={`text-sm text-slate-600 bg-blue-50 rounded-lg border border-blue-200 ${
-          isMobile ? 'p-2' : 'p-2'
-        }`} style={{contain: 'content'}} >
-          <Package className="w-4 h-4 inline mr-2" />
-          Mostrando stock para la sucursal seleccionada (ID: {selectedLocationId})
-          <div className="text-xs mt-1 text-slate-500 hidden sm:block">
-            Total registros inventario: {inventory.length} | 
-            En esta sucursal: {inventory.filter(i => i.location_id === selectedLocationId).length}
-          </div>
-        </div>
-      )}
 
       {/* Products Grid */}
       <div className={`grid gap-2 sm:gap-3 overflow-y-auto touch-pan-y pr-1 ${
@@ -157,7 +139,7 @@ export default function ProductSearch({
               <div
                 key={product.id}
                 className={`bg-white border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-200 hover:border-blue-300 cursor-pointer relative overflow-hidden ${isOutOfStock ? 'opacity-75' : ''} ${isMobile ? 'p-2' : 'p-4'}` }
-                onClick={() => !isOutOfStock && onAddToCart(product)}
+                onClick={() => !isOutOfStock && handleAddToCart(product)}
               >
                 {/* Stock Badge - positioned absolutely */}
                 <div className="absolute top-2 right-2">
