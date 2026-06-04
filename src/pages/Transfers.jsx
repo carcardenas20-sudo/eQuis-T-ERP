@@ -4,7 +4,6 @@ import { localClient } from "@/api/localClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { ArrowRightLeft, Package, History, Loader2, Plus, X, Building2, InboxIcon, Send, CheckCircle, XCircle, ChevronDown, ChevronUp } from "lucide-react";
 import TransferHistory from "../components/transfers/TransferHistory";
 import TransferReceive from "../components/transfers/TransferReceive";
@@ -31,8 +30,7 @@ export default function TransfersPage() {
   const [traslados, setTraslados] = useState([]);
   const [receivingId, setReceivingId] = useState(null);
 
-  const [form, setForm] = useState(/** @type {{origen:string,destino:string,notas:string,items:any[],lonas:any[]}} */
-    ({ origen: "", destino: "", notas: "", items: [], lonas: [] }));
+  const [form, setForm] = useState(({ origen: "", destino: "", notas: "", lonas: [] }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -70,21 +68,6 @@ export default function TransfersPage() {
   );
   const historialTraslados = traslados.filter(t => t.estado === "aceptado" || t.estado === "rechazado");
 
-  // ── Helpers del formulario ────────────────────────────────────────────────
-  const addItem = () => setForm(f => ({ ...f, items: [...f.items, { product_id: "", nombre: "", cantidad: "" }] }));
-  const removeItem = (idx) => setForm(f => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
-  const updateItem = (idx, field, value) => {
-    setForm(f => {
-      const items = [...f.items];
-      items[idx] = { ...items[idx], [field]: value };
-      if (field === "product_id") {
-        const prod = products.find(p => p.id === value || p.sku === value);
-        items[idx].nombre = prod?.name || "";
-      }
-      return { ...f, items };
-    });
-  };
-
   const nextNumero = () => {
     const nums = traslados.map(t => parseInt((t.numero_traslado || "").replace(/\D/g, "")) || 0);
     return "TRA-" + String(Math.max(0, ...nums) + 1).padStart(4, "0");
@@ -118,17 +101,25 @@ export default function TransfersPage() {
       : l)
   }));
 
-  const totalEnLonas = form.lonas.reduce((s, l) =>
-    s + l.items.reduce((si, i) => si + (Number(i.cantidad) || 0), 0), 0);
-  const totalItems = form.items.reduce((s, i) => s + (Number(i.cantidad) || 0), 0);
-
   const handleEnviar = async (e) => {
     e.preventDefault();
     setError("");
     if (!form.origen || !form.destino) return setError("Selecciona origen y destino.");
     if (form.origen === form.destino) return setError("Origen y destino deben ser diferentes.");
-    if (form.items.length === 0) return setError("Agrega al menos un producto.");
-    if (form.items.some(i => !i.product_id || !i.cantidad)) return setError("Completa todos los productos.");
+    if (form.lonas.length === 0) return setError("Agrega al menos una lona.");
+    if (form.lonas.some(l => l.items.length === 0)) return setError("Todas las lonas deben tener al menos un producto.");
+    if (form.lonas.some(l => l.items.some(i => !i.product_id || !i.cantidad))) return setError("Completa todos los productos en las lonas.");
+
+    // Consolidar items desde las lonas
+    const itemsMap = {};
+    for (const lona of form.lonas) {
+      for (const i of lona.items) {
+        if (!i.product_id || !i.cantidad) continue;
+        if (!itemsMap[i.product_id]) itemsMap[i.product_id] = { product_id: i.product_id, nombre: i.nombre, cantidad_enviada: 0 };
+        itemsMap[i.product_id].cantidad_enviada += Number(i.cantidad);
+      }
+    }
+    const items = Object.values(itemsMap);
 
     setSaving(true);
     try {
@@ -140,11 +131,7 @@ export default function TransfersPage() {
         origen_nombre: origen?.name || "",
         destino_location_id: form.destino,
         destino_nombre: destino?.name || "",
-        items: form.items.map(i => ({
-          product_id: i.product_id,
-          nombre: i.nombre,
-          cantidad_enviada: Number(i.cantidad),
-        })),
+        items,
         lonas: form.lonas.map((l, idx) => ({
           numero: idx + 1,
           items: l.items
@@ -156,7 +143,7 @@ export default function TransfersPage() {
         notas: form.notas,
         creado_por: currentUser?.email || "",
       });
-      setForm({ origen: "", destino: "", notas: "", items: [], lonas: [] });
+      setForm({ origen: "", destino: "", notas: "", lonas: [] });
       await loadData();
       setActiveTab("recibir");
     } catch (err) {
@@ -226,44 +213,12 @@ export default function TransfersPage() {
                   </div>
                 </div>
 
-                {/* Productos */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-slate-700">Productos *</label>
-                    <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                      <Plus className="w-3.5 h-3.5 mr-1" /> Agregar
-                    </Button>
-                  </div>
-                  {form.items.length === 0 && (
-                    <p className="text-xs text-slate-400 text-center py-4 border border-dashed border-slate-200 rounded-lg">
-                      Sin productos — haz clic en Agregar
-                    </p>
-                  )}
-                  <div className="space-y-2">
-                    {form.items.map((item, idx) => (
-                      <div key={idx} className="flex gap-2 items-center bg-slate-50 rounded-lg p-2">
-                        <select value={item.product_id} onChange={e => updateItem(idx, "product_id", e.target.value)}
-                          className="flex-1 h-8 px-2 text-xs border border-slate-200 rounded">
-                          <option value="">Seleccionar producto...</option>
-                          {products.map(p => <option key={p.id} value={p.sku || p.id}>{p.name}</option>)}
-                        </select>
-                        <Input type="number" min="1" value={item.cantidad}
-                          onChange={e => updateItem(idx, "cantidad", e.target.value)}
-                          className="w-24 h-8 text-xs" placeholder="Cantidad" />
-                        <button type="button" onClick={() => removeItem(idx)} className="p-1 text-red-400 hover:text-red-600">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Lonas */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <label className="text-sm font-medium text-slate-700">Lonas de empaque</label>
-                      <p className="text-xs text-slate-400">Define el contenido de cada lona (puede ser mixto)</p>
+                      <label className="text-sm font-medium text-slate-700">Lonas *</label>
+                      <p className="text-xs text-slate-400">Cada lona puede tener varios productos</p>
                     </div>
                     <button type="button" onClick={addLona}
                       className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
@@ -271,8 +226,8 @@ export default function TransfersPage() {
                     </button>
                   </div>
                   {form.lonas.length === 0 && (
-                    <p className="text-xs text-slate-400 text-center py-3 border border-dashed border-slate-200 rounded-lg">
-                      Opcional — agrega lonas si quieres detallar el empaque
+                    <p className="text-xs text-slate-400 text-center py-4 border border-dashed border-slate-200 rounded-lg">
+                      Agrega al menos una lona para continuar
                     </p>
                   )}
                   <div className="space-y-2">
@@ -321,11 +276,10 @@ export default function TransfersPage() {
                       );
                     })}
                   </div>
-                  {form.lonas.length > 0 && totalItems > 0 && (
-                    <div className={`mt-2 text-xs px-3 py-1.5 rounded-lg ${totalEnLonas === totalItems ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
-                      Total en lonas: {totalEnLonas} / {totalItems} prendas declaradas
-                      {totalEnLonas !== totalItems && " — ajusta las cantidades"}
-                    </div>
+                  {form.lonas.length > 0 && (
+                    <p className="mt-2 text-xs text-slate-500 px-1">
+                      Total: {form.lonas.reduce((s, l) => s + l.items.reduce((si, i) => si + (Number(i.cantidad) || 0), 0), 0)} prendas en {form.lonas.length} lona{form.lonas.length !== 1 ? "s" : ""}
+                    </p>
                   )}
                 </div>
 
