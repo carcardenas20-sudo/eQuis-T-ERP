@@ -5,7 +5,7 @@ function fmtN(n) { return (Number(n) || 0).toLocaleString("es-CO"); }
 
 // ─── Verificación de una lona ─────────────────────────────────────────────────
 function LonaRow({ lona, idx, estado, onEstado, cantidades, onCantidad }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const isOk = estado === "ok";
   const isDiff = estado === "diferencia";
 
