@@ -841,16 +841,17 @@ export default function PlantPortal() {
               </div>
 
               {/* Sub-tabs planillador */}
-              <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+              <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
                 {[
                   { id: "operaciones", label: "Operaciones", Icon: Truck },
                   { id: "devoluciones", label: "Devoluciones", Icon: RotateCcw },
-                  { id: "conteo", label: "Conteo", Icon: PackageCheck },
+                  { id: "conteo", label: "Conteo Físico", Icon: PackageCheck },
                 ].map(({ id, label, Icon }) => (
                   <button key={id} onClick={() => setPlanilladorTab(id)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all
+                    className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg text-[10px] font-semibold leading-tight transition-all
                       ${planilladorTab === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}>
-                    <Icon className="w-3.5 h-3.5" />{label}
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="text-center">{label}</span>
                   </button>
                 ))}
               </div>
