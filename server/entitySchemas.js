@@ -588,6 +588,21 @@ export const ENTITY_SCHEMAS = {
     },
     indexes: ['estado', 'cliente_nombre', 'fecha_orden'],
   },
+
+  Traslado: {
+    table: 'entity_traslado',
+    typed: {
+      numero_traslado: 'TEXT',
+      origen_location_id: 'TEXT',
+      origen_nombre: 'TEXT',
+      destino_location_id: 'TEXT',
+      destino_nombre: 'TEXT',
+      estado: 'TEXT',           // pendiente | aceptado | rechazado
+      creado_por: 'TEXT',
+      fecha_aceptacion: 'TEXT',
+    },
+    indexes: ['estado', 'origen_location_id', 'destino_location_id'],
+  },
 };
 
 /**
