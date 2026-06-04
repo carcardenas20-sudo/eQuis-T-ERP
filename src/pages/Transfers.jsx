@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Inventory, Product, Location, User } from "@/entities/all";
 import { localClient } from "@/api/localClient";
-import { useSession } from "@/components/auth/SessionContext";
+import { useSession } from "@/components/providers/SessionProvider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
