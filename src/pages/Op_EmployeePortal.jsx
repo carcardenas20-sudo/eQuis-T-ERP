@@ -265,13 +265,15 @@ export default function EmployeePortal() {
         ]);
 
         const normProducts = (products || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra }));
-        setData({ deliveries, dispatches, payments, products: normProducts, purchases: purchases || [] });
+        const OPERARIO_TYPES = new Set(['avance', 'pago_completo', 'solicitud_aprobada']);
+        const operarioPayments = (payments || []).filter(p => OPERARIO_TYPES.has(p.payment_type));
+        setData({ deliveries, dispatches, payments: operarioPayments, products: normProducts, purchases: purchases || [] });
         setHasPendingRequest(existingRequests.length > 0);
         // Tomar la solicitud de certificado más reciente
         const ultimaSolicitud = (certSolicitudes || []).sort((a, b) => new Date(b.request_date) - new Date(a.request_date))[0] || null;
         setSolicitudCert(ultimaSolicitud);
-        calculateStats(deliveries, dispatches, payments, purchases || []);
-        calculateBalance(deliveries, dispatches, payments, normProducts, purchases || []);
+        calculateStats(deliveries, dispatches, operarioPayments, purchases || []);
+        calculateBalance(deliveries, dispatches, operarioPayments, normProducts, purchases || []);
 
       } catch (err) {
         console.error("Error cargando datos del empleado:", err);
@@ -526,7 +528,7 @@ export default function EmployeePortal() {
     steps.push({
       type: 'final',
       description: '💰 SALDO PENDIENTE TOTAL',
-      amount: saldoPendiente,
+      amount: Math.max(0, saldoPendiente),
       pendingByProduct: JSON.parse(JSON.stringify(pendingByProduct))
     });
 
