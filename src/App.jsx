@@ -5,7 +5,6 @@ import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
-import Op_RoutePortal from './pages/Op_RoutePortal';
 import Op_EmployeePortal from './pages/Op_EmployeePortal';
 import Prod_PlantPortal from './pages/Prod_PlantPortal';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -55,7 +54,6 @@ const AuthenticatedApp = () => {
       ))}
 
 
-      <Route path="/portal-planillador" element={<Op_RoutePortal />} />
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
@@ -66,7 +64,6 @@ const AuthenticatedApp = () => {
 const PublicRoutes = () => (
   <Routes>
     <Route path="/Op_EmployeePortal" element={<Op_EmployeePortal />} />
-    <Route path="/portal-planillador" element={<Op_RoutePortal />} />
     <Route path="/portal-planta" element={<Prod_PlantPortal />} />
     <Route path="/portal-planta" element={<Prod_PlantPortal />} />
     <Route path="*" element={<AuthenticatedApp />} />
