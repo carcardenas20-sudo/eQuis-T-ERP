@@ -568,34 +568,34 @@ export default function PlantPortal() {
 
   const hayContenido = presFiltrados.length > 0 || ordFiltradas.length > 0;
 
+  const esTabOperacion = tabId && tabId !== "tendidos" && tabId !== "traslados" && tabId !== "planillador";
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center">
-              <Factory className="w-5 h-5 text-white" />
+    <div className="min-h-screen bg-slate-50 pb-safe">
+      <div className="bg-white border-b border-slate-200 px-3 py-2 sticky top-0 z-10 shadow-sm">
+        {/* Fila 1: título + refresh */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
+              <Factory className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <h1 className="font-bold text-slate-900 text-base leading-tight">Portal de Planta</h1>
-              <p className="text-xs text-slate-500">Procesos · eQuis-T</p>
-            </div>
+            <span className="font-bold text-slate-900 text-sm">Portal de Planta</span>
           </div>
-          <button onClick={loadData}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
-            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+          <button onClick={loadData} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
+        {/* Fila 2: tabs */}
+        <div className="flex gap-1 overflow-x-auto scrollbar-none pb-0.5">
           {tabs.map(({ id, label, Icon, count }) => (
             <button key={id} onClick={() => setTabId(id)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all
-                ${tabId === id ? "bg-emerald-600 text-white shadow" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-              <Icon className="w-3.5 h-3.5" />
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all
+                ${tabId === id ? "bg-emerald-600 text-white shadow-sm" : "bg-slate-100 text-slate-600"}`}>
+              <Icon className="w-3 h-3" />
               {label}
               {count > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold
+                <span className={`text-[10px] px-1 py-0.5 rounded-full font-bold
                   ${tabId === id ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"}`}>
                   {count}
                 </span>
@@ -604,18 +604,21 @@ export default function PlantPortal() {
           ))}
         </div>
 
-        <div className="flex gap-1.5 mt-2">
-          {[{ id: "activos", label: "Activos" }, { id: "listos", label: "Listos" }, { id: "todos", label: "Todos" }].map(f => (
-            <button key={f.id} onClick={() => setFiltroEstado(f.id)}
-              className={`text-xs px-3 py-1 rounded-full border font-medium transition-all
-                ${filtroEstado === f.id ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-500 border-slate-200"}`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
+        {/* Fila 3: filtro — solo para tabs de operaciones */}
+        {esTabOperacion && (
+          <div className="flex gap-1 mt-1.5">
+            {[{ id: "activos", label: "Activos" }, { id: "listos", label: "Listos" }, { id: "todos", label: "Todos" }].map(f => (
+              <button key={f.id} onClick={() => setFiltroEstado(f.id)}
+                className={`text-[11px] px-2.5 py-0.5 rounded-full border font-medium transition-all
+                  ${filtroEstado === f.id ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-500 border-slate-200"}`}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="p-4 space-y-3 max-w-lg mx-auto">
+      <div className="p-3 space-y-3 max-w-2xl mx-auto">
         {loading ? (
           <div className="flex justify-center py-16">
             <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
