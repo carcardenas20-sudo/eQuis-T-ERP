@@ -372,7 +372,9 @@ export default function POS() {
         return;
       }
 
-      const locationInventory = await Inventory.filter({ location_id: selectedLocationId });
+      // Usar el inventario pre-cargado (mismo que ve ProductSearch) para evitar
+      // inconsistencias por registros fantasma negativos en la BD
+      const locationInventory = inventory;
 
       for (const item of cart) {
         const availableStock = locationInventory
