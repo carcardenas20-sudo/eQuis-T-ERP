@@ -164,6 +164,37 @@ export default function InventoryPage() {
 
   const isAdmin = currentUser?.role === 'admin';
 
+  // Detectar registros duplicados (mismo producto + misma sucursal)
+  const duplicadosGrupos = Object.values(
+    inventory.reduce((acc, item) => {
+      const key = `${item.product_id}_${item.location_id}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {})
+  ).filter(g => g.length > 1);
+
+  const handleConsolidarDuplicados = async () => {
+    if (!confirm(`Se van a fusionar ${duplicadosGrupos.length} grupo(s) de registros duplicados, sumando sus stocks en un solo registro. ¿Continuar?`)) return;
+    try {
+      for (const grupo of duplicadosGrupos) {
+        const totalStock = grupo.reduce((s, item) => s + (item.current_stock || 0), 0);
+        // Conservar el de mayor stock absoluto, eliminar los demás
+        const [conservar, ...eliminar] = [...grupo].sort((a, b) => (b.current_stock || 0) - (a.current_stock || 0));
+        await Inventory.update(conservar.id, {
+          current_stock: totalStock,
+          last_movement_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+        });
+        for (const item of eliminar) {
+          await Inventory.delete(item.id);
+        }
+      }
+      await loadData();
+    } catch (err) {
+      alert("Error al consolidar: " + err.message);
+    }
+  };
+
   return (
     <div className="p-3 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-slate-900 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
@@ -183,7 +214,16 @@ export default function InventoryPage() {
             )}
           </div>
           <div className="flex gap-2">
-            {/* Removed the "Restaurar Inventario por Factura" button and its logic */}
+            {duplicadosGrupos.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleConsolidarDuplicados}
+                className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+              >
+                <TrendingDown className="w-4 h-4" />
+                Consolidar duplicados ({duplicadosGrupos.length})
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={loadData}
