@@ -375,11 +375,9 @@ export default function POS() {
       const locationInventory = await Inventory.filter({ location_id: selectedLocationId });
 
       for (const item of cart) {
-        const inventoryRecord = locationInventory.find(inv =>
-          inv.product_id === item.product.sku
-        );
-
-        const availableStock = inventoryRecord ? inventoryRecord.current_stock : 0;
+        const availableStock = locationInventory
+          .filter(inv => inv.product_id === item.product.sku)
+          .reduce((sum, inv) => sum + (inv.current_stock || 0), 0);
 
         if (availableStock < item.quantity) {
           alert(`Stock insuficiente para ${item.product.name}. Disponible: ${availableStock}, Requerido: ${item.quantity}`);
@@ -456,9 +454,10 @@ export default function POS() {
           line_total: itemLineTotal
         });
 
-        const inventoryRecord = locationInventory.find(inv =>
+        const inventoryRecords = locationInventory.filter(inv =>
           inv.product_id === item.product.sku
         );
+        const inventoryRecord = inventoryRecords.find(inv => inv.current_stock > 0) || inventoryRecords[0];
 
         if (inventoryRecord) {
           await Inventory.update(inventoryRecord.id, {
