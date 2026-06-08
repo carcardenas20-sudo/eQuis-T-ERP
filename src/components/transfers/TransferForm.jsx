@@ -33,13 +33,9 @@ import { useSession } from "@/components/providers/SessionProvider";
    // Get available stock for selected product and origin location
   const availableStock = useMemo(() => {
     if (!formData.product_id || !formData.from_location) return 0;
-    
-    const inventoryRecord = inventory.find(inv => 
-      inv.product_id === formData.product_id && 
-      inv.location_id === formData.from_location
-    );
-    
-    return inventoryRecord ? inventoryRecord.current_stock : 0;
+    return inventory
+      .filter(inv => inv.product_id === formData.product_id && inv.location_id === formData.from_location)
+      .reduce((sum, inv) => sum + (inv.current_stock || 0), 0);
   }, [formData.product_id, formData.from_location, inventory]);
 
   const selectedProduct = products.find(p => p.sku === formData.product_id);
@@ -104,11 +100,10 @@ import { useSession } from "@/components/providers/SessionProvider";
       });
 
       // Update inventory in origin location
-      const originInventory = inventory.find(inv => 
-        inv.product_id === formData.product_id && 
-        inv.location_id === formData.from_location
-      );
-      
+      const originInventory = inventory
+        .filter(inv => inv.product_id === formData.product_id && inv.location_id === formData.from_location)
+        .sort((a, b) => (b.current_stock || 0) - (a.current_stock || 0))[0];
+
       if (originInventory) {
         await Inventory.update(originInventory.id, {
           current_stock: originInventory.current_stock - quantity,
@@ -117,10 +112,9 @@ import { useSession } from "@/components/providers/SessionProvider";
       }
 
       // Update or create inventory in destination location
-      const destInventory = inventory.find(inv => 
-        inv.product_id === formData.product_id && 
-        inv.location_id === formData.to_location
-      );
+      const destInventory = inventory
+        .filter(inv => inv.product_id === formData.product_id && inv.location_id === formData.to_location)
+        .sort((a, b) => (b.current_stock || 0) - (a.current_stock || 0))[0];
       
       if (destInventory) {
         await Inventory.update(destInventory.id, {

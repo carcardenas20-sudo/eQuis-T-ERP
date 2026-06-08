@@ -345,8 +345,13 @@ export default function TransferHistory({ locations, products, onRefresh }) {
 
       // Fetch current inventory records for both locations
       const allInv = await Inventory.list();
-      const originInv = allInv.find(i => i.product_id === productId && i.location_id === fromLocationId);
-      const destInv = toLocationId ? allInv.find(i => i.product_id === productId && i.location_id === toLocationId) : null;
+      const originInv = allInv
+        .filter(i => i.product_id === productId && i.location_id === fromLocationId)
+        .sort((a, b) => (b.current_stock || 0) - (a.current_stock || 0))[0];
+      const destInv = toLocationId
+        ? allInv.filter(i => i.product_id === productId && i.location_id === toLocationId)
+            .sort((a, b) => (b.current_stock || 0) - (a.current_stock || 0))[0]
+        : null;
 
       // Restore stock to origin
       if (originInv) {

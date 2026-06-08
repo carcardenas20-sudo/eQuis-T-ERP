@@ -173,7 +173,9 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
         crypto.randomUUID(), 'transfer_out', pId, traslado.origen_location_id, -totalRecibido, today,
         JSON.stringify({ reason: `Traslado ${traslado.numero_traslado}` }),
       ]);
-      const origInv = allInv.find(r => r.product_id === pId && r.location_id === traslado.origen_location_id);
+      const origInv = allInv
+        .filter(r => r.product_id === pId && r.location_id === traslado.origen_location_id)
+        .sort((a, b) => (Number(b.current_stock) || 0) - (Number(a.current_stock) || 0))[0];
       if (origInv) {
         await query(`UPDATE entity_inventory SET current_stock = $1, available_stock = $2 WHERE id = $3`, [
           (Number(origInv.current_stock) || 0) - totalRecibido,
@@ -195,7 +197,9 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
         crypto.randomUUID(), 'transfer_in', pId, traslado.destino_location_id, totalRecibido, today,
         JSON.stringify({ reason: `Traslado ${traslado.numero_traslado}` }),
       ]);
-      const destInv = allInv.find(r => r.product_id === pId && r.location_id === traslado.destino_location_id);
+      const destInv = allInv
+        .filter(r => r.product_id === pId && r.location_id === traslado.destino_location_id)
+        .sort((a, b) => (Number(b.current_stock) || 0) - (Number(a.current_stock) || 0))[0];
       if (destInv) {
         await query(`UPDATE entity_inventory SET current_stock = $1, available_stock = $2 WHERE id = $3`, [
           (Number(destInv.current_stock) || 0) + totalRecibido,
