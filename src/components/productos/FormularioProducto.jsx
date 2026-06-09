@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,154 @@ import { X, Plus, Trash2, Shirt, Package, Palette, Copy, ChevronUp, ChevronDown 
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import GestorCombinacionesPredefinidas from './GestorCombinacionesPredefinidas';
+
+const MaterialRow = memo(function MaterialRow({ material, index, total, materiasPrimas, secciones, onActualizar, onRemover, onMover }) {
+  const mp = materiasPrimas.find(m => m.id === material.materia_prima_id);
+  const costo = (mp?.precio_por_unidad || 0) * (material.cantidad_por_unidad || 0);
+  return (
+    <div className="border border-slate-200 rounded-lg bg-slate-50 p-3 space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
+        <div className="sm:col-span-2">
+          <Label className="text-xs text-slate-500">Material</Label>
+          <Select value={material.materia_prima_id} onValueChange={(v) => onActualizar(index, 'materia_prima_id', v)}>
+            <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+            <SelectContent>
+              {materiasPrimas.map(mp => (
+                <SelectItem key={mp.id} value={mp.id}>{mp.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs text-slate-500">Sección / Anclaje</Label>
+          <Select value={material.seccion || 'superior'} onValueChange={(v) => onActualizar(index, 'seccion', v)}>
+            <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {secciones.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Label className="text-xs text-slate-500">Cant/ud</Label>
+            <Input type="number" step="0.01" value={material.cantidad_por_unidad}
+              onChange={(e) => onActualizar(index, 'cantidad_por_unidad', e.target.value)}
+              className="h-8 text-xs mt-1" />
+          </div>
+          <div className="text-xs text-slate-500 pb-1">${costo.toFixed(2)}</div>
+          <div className="flex flex-col shrink-0">
+            <Button type="button" variant="ghost" size="icon" onClick={() => onMover(index, -1)} disabled={index === 0}
+              className="h-4 w-8 text-slate-400 hover:text-slate-700 disabled:opacity-20">
+              <ChevronUp className="w-3 h-3" />
+            </Button>
+            <Button type="button" variant="ghost" size="icon" onClick={() => onMover(index, 1)} disabled={index === total - 1}
+              className="h-4 w-8 text-slate-400 hover:text-slate-700 disabled:opacity-20">
+              <ChevronDown className="w-3 h-3" />
+            </Button>
+          </div>
+          <Button type="button" variant="ghost" size="icon" onClick={() => onRemover(index)}
+            className="text-red-400 hover:bg-red-50 h-8 w-8 shrink-0">
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+      {mp?.color_fijo && (
+        <div className="flex items-center gap-2 pt-1 pb-0.5">
+          <button type="button" onClick={() => onActualizar(index, 'color_independiente', !material.color_independiente)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${material.color_independiente ? 'bg-indigo-500' : 'bg-slate-300'}`}>
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${material.color_independiente ? 'translate-x-4' : 'translate-x-0.5'}`} />
+          </button>
+          <span className="text-xs text-slate-600">Color variable en este producto</span>
+          {material.color_independiente && <span className="text-xs text-indigo-500 font-medium">— aparece como columna en combinaciones</span>}
+        </div>
+      )}
+      <div className="flex items-center gap-2 pt-1 border-t border-slate-200 pb-1">
+        <button type="button" onClick={() => onActualizar(index, 'en_remision', material.en_remision === false ? true : false)}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${material.en_remision === false ? 'bg-slate-300' : 'bg-green-500'}`}>
+          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${material.en_remision === false ? 'translate-x-0.5' : 'translate-x-4'}`} />
+        </button>
+        <span className="text-xs text-slate-600">Incluir en remisión</span>
+      </div>
+      {material.en_remision !== false && (<>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-1">
+          <div>
+            <Label className="text-xs text-slate-400">Nombre en remisión</Label>
+            <Input placeholder="Ej: BOLSILLO, MANGA" value={material.nombre_seccion_display || ""}
+              onChange={(e) => onActualizar(index, 'nombre_seccion_display', e.target.value)} className="h-7 text-xs mt-0.5" />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-400">Unidad en remisión</Label>
+            <Input placeholder="Ej: tiras, pares, mts" value={material.unidad_remision || material.etiqueta_cantidad || ""}
+              onChange={(e) => onActualizar(index, 'unidad_remision', e.target.value)} className="h-7 text-xs mt-0.5" />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-400">Descripción en remisión</Label>
+            <Input placeholder="Ej: tiras tejidas negras" value={material.descripcion_remision || ""}
+              onChange={(e) => onActualizar(index, 'descripcion_remision', e.target.value)} className="h-7 text-xs mt-0.5" />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-400">Fórmula remisión</Label>
+            <Select value={material.remision_formula || 'lineal'} onValueChange={(v) => onActualizar(index, 'remision_formula', v)}>
+              <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lineal">N × factor</SelectItem>
+                <SelectItem value="ceil_divide">⌈N ÷ divisor⌉</SelectItem>
+                <SelectItem value="paso">Escalonado</SelectItem>
+                <SelectItem value="sin_cantidad">Sin cantidad</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1 border-t border-dashed border-slate-200">
+          {(!material.remision_formula || material.remision_formula === 'lineal') && (
+            <div className="col-span-3 sm:col-span-2">
+              <Label className="text-xs text-slate-400">Factor (× N prendas)</Label>
+              <Input type="number" min="0.01" step="0.01" value={material.piezas_por_unidad ?? 1}
+                onChange={(e) => onActualizar(index, 'piezas_por_unidad', e.target.value)} className="h-7 text-xs mt-0.5" />
+            </div>
+          )}
+          {material.remision_formula === 'ceil_divide' && (
+            <div className="col-span-3 sm:col-span-2">
+              <Label className="text-xs text-slate-400">Divisor (N ÷ ?)</Label>
+              <Input type="number" min="1" step="1" value={material.remision_divisor || 3}
+                onChange={(e) => onActualizar(index, 'remision_divisor', parseFloat(e.target.value) || 3)} className="h-7 text-xs mt-0.5" />
+            </div>
+          )}
+          {material.remision_formula === 'paso' && (<>
+            <div className="col-span-1">
+              <Label className="text-xs text-slate-400">Umbral (N ≤)</Label>
+              <Input type="number" min="1" step="1" value={material.remision_umbral || 15}
+                onChange={(e) => onActualizar(index, 'remision_umbral', parseFloat(e.target.value) || 15)} className="h-7 text-xs mt-0.5" />
+            </div>
+            <div className="col-span-1">
+              <Label className="text-xs text-slate-400">Val. bajo</Label>
+              <Input type="number" min="0" step="1" value={material.remision_val_bajo || 1}
+                onChange={(e) => onActualizar(index, 'remision_val_bajo', parseFloat(e.target.value) || 1)} className="h-7 text-xs mt-0.5" />
+            </div>
+            <div className="col-span-1">
+              <Label className="text-xs text-slate-400">Val. alto</Label>
+              <Input type="number" min="0" step="1" value={material.remision_val_alto || 2}
+                onChange={(e) => onActualizar(index, 'remision_val_alto', parseFloat(e.target.value) || 2)} className="h-7 text-xs mt-0.5" />
+            </div>
+          </>)}
+          <div className="col-span-3 sm:col-span-4 flex items-end pb-0.5">
+            <span className="text-xs text-slate-400 italic">
+              {(() => {
+                const f = material.remision_formula || 'lineal';
+                const N = 12;
+                if (f === 'lineal') return `Ej: ${N} prendas → ${N * (material.piezas_por_unidad || 1)} ${material.unidad_remision || 'uds'}`;
+                if (f === 'ceil_divide') return `Ej: ${N} prendas → ${Math.ceil(N / (material.remision_divisor || 3))} ${material.unidad_remision || 'mts'}`;
+                if (f === 'paso') return `Ej: N≤${material.remision_umbral || 15} → ${material.remision_val_bajo || 1}, N>${material.remision_umbral || 15} → ${material.remision_val_alto || 2}`;
+                if (f === 'sin_cantidad') return 'Aparece en remisión sin cantidad';
+                return '';
+              })()}
+            </span>
+          </div>
+        </div>
+      </>)}
+    </div>
+  );
+});
 
 export default function FormularioProducto({ producto, materiasPrimas, colores = [], familias = [], operaciones = [], onSubmit, onCancel }) {
   const DRAFT_KEY = `producto_draft_${producto?.id || 'nuevo'}`;
@@ -65,14 +213,18 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
 
   const isFirstRender = useRef(true);
 
-  // Auto-guardar en localStorage con debounce (evita escrituras excesivas)
+  // Auto-guardar en localStorage — excluye combinaciones_predefinidas para evitar bloquear
+  // el hilo con JSON grandes; usa setTimeout(0) para no interferir con el render actual
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
     const timer = setTimeout(() => {
-      try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...formData, _savedAt: Date.now() }));
-      } catch (_) {}
-    }, 800);
+      setTimeout(() => {
+        try {
+          const { combinaciones_predefinidas: _, ...draftData } = formData;
+          localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draftData, _savedAt: Date.now() }));
+        } catch (_) {}
+      }, 0);
+    }, 1500);
     return () => clearTimeout(timer);
   }, [formData]);
 
@@ -101,7 +253,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
     setFormData({ ...formData, tallas: formData.tallas.filter(t => t !== talla) });
   };
 
-  const agregarMaterial = () => {
+  const agregarMaterial = useCallback(() => {
     const nuevoMaterial = {
       row_id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       materia_prima_id: "",
@@ -112,24 +264,24 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
       nombre_seccion_display: "",
       es_opcional: false
     };
-    setFormData({ ...formData, materiales_requeridos: [...formData.materiales_requeridos, nuevoMaterial] });
-  };
+    setFormData(prev => ({ ...prev, materiales_requeridos: [...prev.materiales_requeridos, nuevoMaterial] }));
+  }, []);
 
-  const removerMaterial = (index) => {
+  const removerMaterial = useCallback((index) => {
     setFormData(prev => ({
       ...prev,
       materiales_requeridos: prev.materiales_requeridos.filter((_, i) => i !== index)
     }));
-  };
+  }, []);
 
-  const actualizarMaterial = (index, campo, valor) => {
+  const actualizarMaterial = useCallback((index, campo, valor) => {
     setFormData(prev => ({
       ...prev,
       materiales_requeridos: prev.materiales_requeridos.map((m, i) => i === index ? { ...m, [campo]: valor } : m)
     }));
-  };
+  }, []);
 
-  const moverMaterial = (index, direccion) => {
+  const moverMaterial = useCallback((index, direccion) => {
     setFormData(prev => {
       const arr = [...prev.materiales_requeridos];
       const destino = index + direccion;
@@ -137,7 +289,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
       [arr[index], arr[destino]] = [arr[destino], arr[index]];
       return { ...prev, materiales_requeridos: arr };
     });
-  };
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -498,204 +650,19 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                         No hay materiales agregados.
                       </div>
                     ) : (
-                      formData.materiales_requeridos.map((material, index) => {
-                        const mp = materiasPrimas.find(m => m.id === material.materia_prima_id);
-                        const costo = (mp?.precio_por_unidad || 0) * (material.cantidad_por_unidad || 0);
-                        return (
-                          <div key={material.row_id || index} className="border border-slate-200 rounded-lg bg-slate-50 p-3 space-y-2">
-                            {/* Fila 1: Material + Sección + Cantidad */}
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
-                              <div className="sm:col-span-2">
-                                <Label className="text-xs text-slate-500">Material</Label>
-                                <Select value={material.materia_prima_id}
-                                  onValueChange={(v) => actualizarMaterial(index, 'materia_prima_id', v)}>
-                                  <SelectTrigger className="h-8 text-xs mt-1">
-                                    <SelectValue placeholder="Seleccionar" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {materiasPrimas.map(mp => (
-                                      <SelectItem key={mp.id} value={mp.id}>{mp.nombre}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs text-slate-500">Sección / Anclaje</Label>
-                                <Select value={material.seccion || 'superior'}
-                                  onValueChange={(v) => actualizarMaterial(index, 'seccion', v)}>
-                                  <SelectTrigger className="h-8 text-xs mt-1">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {SECCIONES.map(s => (
-                                      <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="flex items-end gap-2">
-                                <div className="flex-1">
-                                  <Label className="text-xs text-slate-500">Cant/ud</Label>
-                                  <Input type="number" step="0.01"
-                                    value={material.cantidad_por_unidad}
-                                    onChange={(e) => actualizarMaterial(index, 'cantidad_por_unidad', e.target.value)}
-                                    className="h-8 text-xs mt-1" />
-                                </div>
-                                <div className="text-xs text-slate-500 pb-1">${costo.toFixed(2)}</div>
-                                <div className="flex flex-col shrink-0">
-                                  <Button type="button" variant="ghost" size="icon"
-                                    onClick={() => moverMaterial(index, -1)}
-                                    disabled={index === 0}
-                                    className="h-4 w-8 text-slate-400 hover:text-slate-700 disabled:opacity-20">
-                                    <ChevronUp className="w-3 h-3" />
-                                  </Button>
-                                  <Button type="button" variant="ghost" size="icon"
-                                    onClick={() => moverMaterial(index, 1)}
-                                    disabled={index === formData.materiales_requeridos.length - 1}
-                                    className="h-4 w-8 text-slate-400 hover:text-slate-700 disabled:opacity-20">
-                                    <ChevronDown className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                                <Button type="button" variant="ghost" size="icon"
-                                  onClick={() => removerMaterial(index)}
-                                  className="text-red-400 hover:bg-red-50 h-8 w-8 shrink-0">
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                            {/* Toggle color independiente: para materiales con color fijo global que en este producto varían por combinación */}
-                            {(() => {
-                              const mp = materiasPrimas.find(mp => mp.id === material.materia_prima_id);
-                              if (!mp || !mp.color_fijo) return null;
-                              return (
-                                <div className="flex items-center gap-2 pt-1 pb-0.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => actualizarMaterial(index, 'color_independiente', !material.color_independiente)}
-                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${material.color_independiente ? 'bg-indigo-500' : 'bg-slate-300'}`}
-                                  >
-                                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${material.color_independiente ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                                  </button>
-                                  <span className="text-xs text-slate-600">Color variable en este producto</span>
-                                  {material.color_independiente && (
-                                    <span className="text-xs text-indigo-500 font-medium">— aparece como columna en combinaciones</span>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                            {/* Fila 2: Campos para remisión individual */}
-                            <div className="flex items-center gap-2 pt-1 border-t border-slate-200 pb-1">
-                              <button
-                                type="button"
-                                onClick={() => actualizarMaterial(index, 'en_remision', material.en_remision === false ? true : false)}
-                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${material.en_remision === false ? 'bg-slate-300' : 'bg-green-500'}`}
-                              >
-                                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${material.en_remision === false ? 'translate-x-0.5' : 'translate-x-4'}`} />
-                              </button>
-                              <span className="text-xs text-slate-600">Incluir en remisión</span>
-                            </div>
-                            {material.en_remision !== false && (<>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-1">
-                              <div>
-                                <Label className="text-xs text-slate-400">Nombre en remisión</Label>
-                                <Input
-                                  placeholder="Ej: BOLSILLO, MANGA"
-                                  value={material.nombre_seccion_display || ""}
-                                  onChange={(e) => actualizarMaterial(index, 'nombre_seccion_display', e.target.value)}
-                                  className="h-7 text-xs mt-0.5" />
-                              </div>
-                              <div>
-                                <Label className="text-xs text-slate-400">Unidad en remisión</Label>
-                                <Input
-                                  placeholder="Ej: tiras, pares, mts"
-                                  value={material.unidad_remision || material.etiqueta_cantidad || ""}
-                                  onChange={(e) => actualizarMaterial(index, 'unidad_remision', e.target.value)}
-                                  className="h-7 text-xs mt-0.5" />
-                              </div>
-                              <div>
-                                <Label className="text-xs text-slate-400">Descripción en remisión</Label>
-                                <Input
-                                  placeholder="Ej: tiras tejidas negras"
-                                  value={material.descripcion_remision || ""}
-                                  onChange={(e) => actualizarMaterial(index, 'descripcion_remision', e.target.value)}
-                                  className="h-7 text-xs mt-0.5" />
-                              </div>
-                              <div>
-                                <Label className="text-xs text-slate-400">Fórmula remisión</Label>
-                                <Select
-                                  value={material.remision_formula || 'lineal'}
-                                  onValueChange={(v) => actualizarMaterial(index, 'remision_formula', v)}>
-                                  <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="lineal">N × factor</SelectItem>
-                                    <SelectItem value="ceil_divide">⌈N ÷ divisor⌉</SelectItem>
-                                    <SelectItem value="paso">Escalonado</SelectItem>
-                                    <SelectItem value="sin_cantidad">Sin cantidad</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            {/* Fila 3: Parámetros de fórmula de remisión */}
-                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1 border-t border-dashed border-slate-200">
-                              {(!material.remision_formula || material.remision_formula === 'lineal') && (
-                                <div className="col-span-3 sm:col-span-2">
-                                  <Label className="text-xs text-slate-400">Factor (× N prendas)</Label>
-                                  <Input type="number" min="0.01" step="0.01"
-                                    value={material.piezas_por_unidad ?? 1}
-                                    onChange={(e) => actualizarMaterial(index, 'piezas_por_unidad', e.target.value)}
-                                    className="h-7 text-xs mt-0.5" />
-                                </div>
-                              )}
-                              {material.remision_formula === 'ceil_divide' && (
-                                <div className="col-span-3 sm:col-span-2">
-                                  <Label className="text-xs text-slate-400">Divisor (N ÷ ?)</Label>
-                                  <Input type="number" min="1" step="1"
-                                    value={material.remision_divisor || 3}
-                                    onChange={(e) => actualizarMaterial(index, 'remision_divisor', parseFloat(e.target.value) || 3)}
-                                    className="h-7 text-xs mt-0.5" />
-                                </div>
-                              )}
-                              {material.remision_formula === 'paso' && (<>
-                                <div className="col-span-1">
-                                  <Label className="text-xs text-slate-400">Umbral (N ≤)</Label>
-                                  <Input type="number" min="1" step="1"
-                                    value={material.remision_umbral || 15}
-                                    onChange={(e) => actualizarMaterial(index, 'remision_umbral', parseFloat(e.target.value) || 15)}
-                                    className="h-7 text-xs mt-0.5" />
-                                </div>
-                                <div className="col-span-1">
-                                  <Label className="text-xs text-slate-400">Val. bajo</Label>
-                                  <Input type="number" min="0" step="1"
-                                    value={material.remision_val_bajo || 1}
-                                    onChange={(e) => actualizarMaterial(index, 'remision_val_bajo', parseFloat(e.target.value) || 1)}
-                                    className="h-7 text-xs mt-0.5" />
-                                </div>
-                                <div className="col-span-1">
-                                  <Label className="text-xs text-slate-400">Val. alto</Label>
-                                  <Input type="number" min="0" step="1"
-                                    value={material.remision_val_alto || 2}
-                                    onChange={(e) => actualizarMaterial(index, 'remision_val_alto', parseFloat(e.target.value) || 2)}
-                                    className="h-7 text-xs mt-0.5" />
-                                </div>
-                              </>)}
-                              <div className="col-span-3 sm:col-span-4 flex items-end pb-0.5">
-                                <span className="text-xs text-slate-400 italic">
-                                  {(() => {
-                                    const f = material.remision_formula || 'lineal';
-                                    const N = 12;
-                                    if (f === 'lineal') return `Ej: ${N} prendas → ${N * (material.piezas_por_unidad || 1)} ${material.unidad_remision || 'uds'}`;
-                                    if (f === 'ceil_divide') return `Ej: ${N} prendas → ${Math.ceil(N / (material.remision_divisor || 3))} ${material.unidad_remision || 'mts'}`;
-                                    if (f === 'paso') return `Ej: N≤${material.remision_umbral || 15} → ${material.remision_val_bajo || 1}, N>${material.remision_umbral || 15} → ${material.remision_val_alto || 2}`;
-                                    if (f === 'sin_cantidad') return 'Aparece en remisión sin cantidad';
-                                    return '';
-                                  })()}
-                                </span>
-                              </div>
-                            </div>
-                            </>)}
-                          </div>
-                        );
-                      })
+                      formData.materiales_requeridos.map((material, index) => (
+                        <MaterialRow
+                          key={material.row_id || index}
+                          material={material}
+                          index={index}
+                          total={formData.materiales_requeridos.length}
+                          materiasPrimas={materiasPrimas}
+                          secciones={SECCIONES}
+                          onActualizar={actualizarMaterial}
+                          onRemover={removerMaterial}
+                          onMover={moverMaterial}
+                        />
+                      ))
                     )}
                   </div>
                   <p className="text-xs text-slate-400">💡 La sección/anclaje define qué color toma este material en cada combinación.</p>
