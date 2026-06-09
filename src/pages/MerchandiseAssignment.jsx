@@ -244,7 +244,6 @@ export default function MerchandiseAssignment() {
       Inventory.list(), Product.list(), Producto.list(),
     ]);
 
-    // Reconstruir el mismo mapeo que usa la asignación, con datos frescos
     const posMap = new Map((allProducts || []).map(pp => [pp.id, pp]));
     const freshProductos = (productosData || []).filter(p => p.reference).map(p => {
       const posProduct = p.familia_id ? posMap.get(p.familia_id) : null;
@@ -261,13 +260,33 @@ export default function MerchandiseAssignment() {
       });
     });
 
+    if (Object.keys(unitsByRef).length === 0) {
+      alert("⚠️ No se encontraron ítems con referencia de producto en estas entregas. Nada fue descontado.");
+      return 0;
+    }
+
     let reverted = 0;
+    const noEncontrados = [];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+
     for (const [ref, qty] of Object.entries(unitsByRef)) {
       const prod = freshProductos.find(p => p.reference === ref);
       const productId = prod?._posSku || ref;
 
-      // Buscar en todas las sucursales que tengan este producto
-      const invItems = (allInv || []).filter(inv => inv.product_id === productId);
+      // Buscar por productId mapeado; si no hay resultado, intentar por referencia directa
+      let invItems = (allInv || []).filter(inv => inv.product_id === productId);
+      if (invItems.length === 0 && productId !== ref) {
+        invItems = (allInv || []).filter(inv => inv.product_id === ref);
+      }
+
+      if (invItems.length === 0) {
+        noEncontrados.push(`${ref} (${qty} uds) — no encontrado en inventario`);
+        continue;
+      }
+
+      // Ordenar por mayor stock para descontar del registro real primero
+      invItems = invItems.slice().sort((a, b) => (Number(b.current_stock) || 0) - (Number(a.current_stock) || 0));
+
       let remaining = qty;
       for (const inv of invItems) {
         if (remaining <= 0) break;
@@ -284,12 +303,19 @@ export default function MerchandiseAssignment() {
             movement_type: "merchandise_assignment_revert",
             quantity: -toDeduct,
             reason: `Reversión de asignación de mercancía (ref: ${ref})`,
-            movement_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }),
+            movement_date: today,
           });
           remaining -= toDeduct;
           reverted += toDeduct;
         }
       }
+      if (remaining > 0) {
+        noEncontrados.push(`${ref}: solo se descontaron ${qty - remaining} de ${qty} uds (stock insuficiente)`);
+      }
+    }
+
+    if (noEncontrados.length > 0) {
+      alert(`⚠️ Algunos productos no pudieron descontarse:\n\n${noEncontrados.join('\n')}`);
     }
     return reverted;
   };
