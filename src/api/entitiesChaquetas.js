@@ -11,3 +11,4 @@ export const Compra = base44Chaquetas.entities.Compra;
 export const Factura = base44Chaquetas.entities.Factura;
 export const Pago = base44Chaquetas.entities.Pago;
 export const RecomendacionCalidad = base44Chaquetas.entities.RecomendacionCalidad;
+export const AlertaCalidad = base44Chaquetas.entities.AlertaCalidad;

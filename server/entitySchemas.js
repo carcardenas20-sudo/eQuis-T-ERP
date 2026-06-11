@@ -569,6 +569,18 @@ export const ENTITY_SCHEMAS = {
     indexes: ['activa'],
   },
 
+  AlertaCalidad: {
+    table: 'entity_alerta_calidad',
+    typed: {
+      employee_id: 'TEXT',
+      texto: 'TEXT',
+      categoria: 'TEXT',
+      fecha: 'TIMESTAMPTZ',
+      enviado_por: 'TEXT',
+    },
+    indexes: ['employee_id', 'fecha'],
+  },
+
   // ============================================================
   // SERVICIOS A TERCEROS
   // ============================================================

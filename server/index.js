@@ -430,24 +430,57 @@ app.post('/api/whatsapp/init', requireAuth, async (_req, res) => {
   }
 });
 
+// Helper: enviar mensaje y guardar en historial
+async function enviarYRegistrar({ employee_id, texto, categoria, enviado_por }) {
+  const { rows } = await query(
+    `SELECT data->>'phone' as phone, data->>'name' as name FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
+    [employee_id]
+  );
+  if (!rows.length || !rows[0].phone) throw new Error(`${employee_id}: sin número de celular`);
+
+  const mensaje = `🎯 *Recomendación de calidad — Equis-T*\n\nHola ${rows[0].name},\n\n${texto}\n\n_Equipo de producción_`;
+  await whatsappManager.sendMessage(rows[0].phone, mensaje);
+
+  // Guardar en historial
+  await query(
+    `INSERT INTO entity_alerta_calidad (id, employee_id, texto, categoria, fecha, enviado_por, data, created_date, updated_date)
+     VALUES ($1,$2,$3,$4,NOW(),$5,'{}'::jsonb,NOW(),NOW())`,
+    [crypto.randomUUID(), employee_id, texto, categoria || '', enviado_por || '']
+  );
+  return rows[0].name;
+}
+
 app.post('/api/functions/enviarRecomendacionCalidad', requireAuth, async (req, res) => {
   try {
-    const { employee_id, texto } = req.body;
+    const { employee_id, texto, categoria } = req.body;
     if (!employee_id || !texto) return res.status(400).json({ error: 'employee_id y texto son requeridos' });
+    const nombre = await enviarYRegistrar({ employee_id, texto, categoria, enviado_por: req.user?.email || '' });
+    res.json({ ok: true, nombre });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
-    // Buscar el teléfono del empleado
-    const { rows } = await query(
-      `SELECT data->>'phone' as phone, data->>'name' as name FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
-      [employee_id]
+app.post('/api/functions/enviarRecomendacionTodos', requireAuth, async (req, res) => {
+  try {
+    const { texto, categoria } = req.body;
+    if (!texto) return res.status(400).json({ error: 'texto es requerido' });
+
+    const { rows: empleados } = await query(
+      `SELECT data->>'employee_id' as employee_id FROM entity_employee WHERE is_active = true AND data->>'phone' IS NOT NULL AND data->>'phone' != ''`
     );
-    if (!rows.length || !rows[0].phone) {
-      return res.status(400).json({ error: 'El operario no tiene número de celular registrado' });
+    if (!empleados.length) return res.status(400).json({ error: 'No hay operarios activos con celular registrado' });
+
+    const results = { ok: [], errors: [] };
+    for (const emp of empleados) {
+      try {
+        const nombre = await enviarYRegistrar({ employee_id: emp.employee_id, texto, categoria, enviado_por: req.user?.email || '' });
+        results.ok.push(nombre);
+      } catch (e) {
+        results.errors.push(e.message);
+      }
     }
-
-    const mensaje = `🎯 *Recomendación de calidad — Equis-T*\n\nHola ${rows[0].name},\n\n${texto}\n\n_Equipo de producción_`;
-    await whatsappManager.sendMessage(rows[0].phone, mensaje);
-
-    res.json({ ok: true });
+    res.json({ ok: true, enviados: results.ok.length, errores: results.errors });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { RecomendacionCalidad } from "@/api/entitiesChaquetas";
-import { RefreshCw, Wifi, WifiOff, QrCode, Plus, Trash2, CheckCircle2, AlertCircle, Loader2, MessageCircle } from "lucide-react";
+import { RecomendacionCalidad, AlertaCalidad } from "@/api/entitiesChaquetas";
+import { base44Chaquetas } from "@/api/base44ClientChaquetas";
+import {
+  RefreshCw, Wifi, WifiOff, QrCode, Plus, Trash2, CheckCircle2,
+  AlertCircle, Loader2, MessageCircle, Send, Users, Clock, ChevronDown, ChevronUp
+} from "lucide-react";
 
-const CATEGORIAS = [
-  "Costuras", "Acabados", "Medidas", "Materiales", "Proceso", "General",
-];
+const Employee = base44Chaquetas.entities.Employee;
+
+const CATEGORIAS = ["Costuras", "Acabados", "Medidas", "Materiales", "Proceso", "General"];
+
+const fmtFecha = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+};
 
 export default function AdminWhatsApp() {
   const [status, setStatus] = useState(/** @type {{status:string,qrImage?:string|null}|null} */(null));
   const [recomendaciones, setRecomendaciones] = useState([]);
+  const [empleados, setEmpleados] = useState([]);
+  const [historial, setHistorial] = useState([]);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [iniciando, setIniciando] = useState(false);
 
@@ -18,26 +30,45 @@ export default function AdminWhatsApp() {
   const [formCategoria, setFormCategoria] = useState("General");
   const [saving, setSaving] = useState(false);
 
+  // Envío individual
+  const [envioEmpId, setEnvioEmpId] = useState("");
+  const [envioRecId, setEnvioRecId] = useState("");
+  const [enviandoInd, setEnviandoInd] = useState(false);
+  const [okInd, setOkInd] = useState(false);
+
+  // Broadcast
+  const [bcRecId, setBcRecId] = useState("");
+  const [enviandoBc, setEnviandoBc] = useState(false);
+  const [okBc, setOkBc] = useState(/** @type {{enviados:number,errores:string[]}|null} */(null));
+
+  // Historial
+  const [historialOpen, setHistorialOpen] = useState(false);
+
   const token = localStorage.getItem("token");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
   const loadStatus = async () => {
     try {
       const res = await fetch("/api/whatsapp/status");
-      const data = await res.json();
-      setStatus(data);
+      setStatus(await res.json());
       setLoadingStatus(false);
     } catch { setLoadingStatus(false); }
   };
 
-  const loadRecomendaciones = async () => {
-    const data = await RecomendacionCalidad.list();
-    setRecomendaciones(data || []);
+  const loadAll = async () => {
+    const [recs, emps, hist] = await Promise.all([
+      RecomendacionCalidad.list(),
+      Employee.filter({ is_active: true }),
+      AlertaCalidad.list("-fecha"),
+    ]);
+    setRecomendaciones(recs || []);
+    setEmpleados((emps || []).filter(e => e.phone));
+    setHistorial(hist || []);
   };
 
   useEffect(() => {
     loadStatus();
-    loadRecomendaciones();
+    loadAll();
     const interval = setInterval(loadStatus, 2000);
     return () => clearInterval(interval);
   }, []);
@@ -53,20 +84,59 @@ export default function AdminWhatsApp() {
     setSaving(true);
     await RecomendacionCalidad.create({ texto: formTexto.trim(), categoria: formCategoria, activa: true });
     setFormTexto(""); setFormCategoria("General"); setShowForm(false);
-    await loadRecomendaciones();
+    const recs = await RecomendacionCalidad.list();
+    setRecomendaciones(recs || []);
     setSaving(false);
   };
 
   const handleEliminar = async (id) => {
     if (!confirm("¿Eliminar esta recomendación?")) return;
     await RecomendacionCalidad.delete(id);
-    await loadRecomendaciones();
+    const recs = await RecomendacionCalidad.list();
+    setRecomendaciones(recs || []);
   };
 
   const handleToggle = async (rec) => {
     await RecomendacionCalidad.update(rec.id, { activa: !rec.activa });
-    await loadRecomendaciones();
+    const recs = await RecomendacionCalidad.list();
+    setRecomendaciones(recs || []);
   };
+
+  const handleEnviarIndividual = async () => {
+    if (!envioEmpId || !envioRecId) return;
+    const rec = recomendaciones.find(r => r.id === envioRecId);
+    setEnviandoInd(true);
+    try {
+      const res = await fetch("/api/functions/enviarRecomendacionCalidad", {
+        method: "POST", headers,
+        body: JSON.stringify({ employee_id: envioEmpId, texto: rec.texto, categoria: rec.categoria }),
+      });
+      if (!res.ok) { const d = await res.json(); alert(d.error); }
+      else { setOkInd(true); setEnvioEmpId(""); setEnvioRecId(""); setTimeout(() => setOkInd(false), 2000); await loadAll(); }
+    } catch (e) { alert(e.message); }
+    setEnviandoInd(false);
+  };
+
+  const handleBroadcast = async () => {
+    if (!bcRecId) return;
+    const rec = recomendaciones.find(r => r.id === bcRecId);
+    if (!confirm(`¿Enviar "${rec.texto.slice(0, 60)}..." a TODOS los operarios activos con celular?`)) return;
+    setEnviandoBc(true);
+    try {
+      const res = await fetch("/api/functions/enviarRecomendacionTodos", {
+        method: "POST", headers,
+        body: JSON.stringify({ texto: rec.texto, categoria: rec.categoria }),
+      });
+      const d = await res.json();
+      if (!res.ok) alert(d.error);
+      else { setOkBc(d); setBcRecId(""); setTimeout(() => setOkBc(null), 4000); await loadAll(); }
+    } catch (e) { alert(e.message); }
+    setEnviandoBc(false);
+  };
+
+  const recsActivas = recomendaciones.filter(r => r.activa !== false);
+  const porCategoria = CATEGORIAS.map(cat => ({ cat, items: recomendaciones.filter(r => r.categoria === cat) })).filter(g => g.items.length > 0);
+  const sinCat = recomendaciones.filter(r => !CATEGORIAS.includes(r.categoria));
 
   const StatusBadge = () => {
     if (loadingStatus) return <span className="flex items-center gap-1.5 text-slate-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</span>;
@@ -77,16 +147,9 @@ export default function AdminWhatsApp() {
     return <span className="flex items-center gap-1.5 text-red-600 font-semibold text-sm"><WifiOff className="w-4 h-4" /> Desconectado</span>;
   };
 
-  const porCategoria = CATEGORIAS.map(cat => ({
-    cat,
-    items: recomendaciones.filter(r => r.categoria === cat),
-  })).filter(g => g.items.length > 0);
-
-  const sinCategoria = recomendaciones.filter(r => !CATEGORIAS.includes(r.categoria));
-
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-5">
 
         {/* Header */}
         <div>
@@ -94,20 +157,15 @@ export default function AdminWhatsApp() {
             <MessageCircle className="w-7 h-7 text-green-600" />
             WhatsApp — Recomendaciones de Calidad
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Gestiona la conexión y el catálogo de recomendaciones que el planillador envía a los operarios.
-          </p>
+          <p className="text-slate-500 text-sm mt-1">Gestiona la conexión y el catálogo de recomendaciones que el planillador envía a los operarios.</p>
         </div>
 
         {/* Estado de conexión */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-slate-800">Estado de conexión</h2>
-            <button onClick={loadStatus} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg">
-              <RefreshCw className="w-4 h-4" />
-            </button>
+            <button onClick={loadStatus} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg"><RefreshCw className="w-4 h-4" /></button>
           </div>
-
           <div className="flex items-center justify-between">
             <StatusBadge />
             {status?.status !== "ready" && status?.status !== "initializing" && (
@@ -118,22 +176,81 @@ export default function AdminWhatsApp() {
               </button>
             )}
           </div>
-
-          {/* QR */}
           {status?.status === "qr" && status?.qrImage && (
             <div className="mt-4 flex flex-col items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <p className="text-sm font-semibold text-amber-800">
-                Abre WhatsApp en el celular dedicado → Dispositivos vinculados → Vincular un dispositivo → Escanea este QR
-              </p>
+              <p className="text-sm font-semibold text-amber-800 text-center">WhatsApp → Dispositivos vinculados → Vincular un dispositivo → Escanea</p>
               <img src={status.qrImage} alt="QR WhatsApp" className="w-56 h-56 border-4 border-white shadow-lg rounded-lg" />
-              <p className="text-xs text-amber-600">El QR expira en ~60 segundos. La página se actualiza automáticamente.</p>
+              <p className="text-xs text-amber-600">El QR expira en ~60 segundos. Se actualiza automáticamente.</p>
             </div>
           )}
-
           {status?.status === "ready" && (
             <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-sm text-green-800">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
-              WhatsApp conectado y listo. Los mensajes de recomendaciones de calidad se enviarán automáticamente.
+              Conectado y listo para enviar mensajes.
+            </div>
+          )}
+        </div>
+
+        {/* Enviar a operario individual */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <h2 className="font-semibold text-slate-800 flex items-center gap-2 mb-4">
+            <Send className="w-4 h-4 text-indigo-500" /> Enviar recomendación individual
+          </h2>
+          {okInd ? (
+            <div className="flex items-center gap-2 text-green-700 py-2"><CheckCircle2 className="w-5 h-5" /> ¡Enviado!</div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Operario</label>
+                <select value={envioEmpId} onChange={e => setEnvioEmpId(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="">— Seleccionar operario —</option>
+                  {empleados.map(e => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}
+                </select>
+                {empleados.length === 0 && <p className="text-xs text-amber-600 mt-1">No hay operarios activos con celular registrado.</p>}
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Recomendación</label>
+                <select value={envioRecId} onChange={e => setEnvioRecId(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="">— Seleccionar recomendación —</option>
+                  {recsActivas.map(r => <option key={r.id} value={r.id}>[{r.categoria}] {r.texto.slice(0, 60)}{r.texto.length > 60 ? "…" : ""}</option>)}
+                </select>
+              </div>
+              <button onClick={handleEnviarIndividual} disabled={!envioEmpId || !envioRecId || enviandoInd || status?.status !== "ready"}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                {enviandoInd ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {enviandoInd ? "Enviando..." : "Enviar"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Enviar a todos */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <h2 className="font-semibold text-slate-800 flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-emerald-500" /> Enviar a todos los operarios activos
+          </h2>
+          {okBc ? (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+              ✅ Enviado a {okBc.enviados} operario{okBc.enviados !== 1 ? "s" : ""}.
+              {okBc.errores?.length > 0 && <p className="text-amber-700 mt-1">⚠️ {okBc.errores.join(", ")}</p>}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">Recomendación a enviar</label>
+                <select value={bcRecId} onChange={e => setBcRecId(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="">— Seleccionar recomendación —</option>
+                  {recsActivas.map(r => <option key={r.id} value={r.id}>[{r.categoria}] {r.texto.slice(0, 60)}{r.texto.length > 60 ? "…" : ""}</option>)}
+                </select>
+              </div>
+              <button onClick={handleBroadcast} disabled={!bcRecId || enviandoBc || status?.status !== "ready"}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
+                {enviandoBc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                {enviandoBc ? "Enviando a todos..." : `Enviar a todos (${empleados.length} operarios)`}
+              </button>
             </div>
           )}
         </div>
@@ -147,7 +264,6 @@ export default function AdminWhatsApp() {
               <Plus className="w-3.5 h-3.5" /> Nueva
             </button>
           </div>
-
           {showForm && (
             <div className="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-xl space-y-3">
               <div>
@@ -159,24 +275,19 @@ export default function AdminWhatsApp() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-600 block mb-1">Texto del mensaje *</label>
-                <textarea
-                  value={formTexto}
-                  onChange={e => setFormTexto(e.target.value)}
-                  rows={3}
-                  placeholder="Ej: Asegúrate de que las costuras queden a 1cm del borde y sin hilos sueltos..."
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none"
-                />
+                <textarea value={formTexto} onChange={e => setFormTexto(e.target.value)} rows={3}
+                  placeholder="Ej: Asegúrate de que las costuras queden a 1cm del borde..."
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none" />
               </div>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg">Cancelar</button>
                 <button onClick={handleGuardar} disabled={saving || !formTexto.trim()}
-                  className="px-4 py-1.5 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                  className="px-4 py-1.5 text-sm font-semibold bg-indigo-600 text-white rounded-lg disabled:opacity-50">
                   {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </div>
           )}
-
           {recomendaciones.length === 0 ? (
             <div className="text-center py-10 text-slate-400">
               <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-40" />
@@ -184,7 +295,7 @@ export default function AdminWhatsApp() {
             </div>
           ) : (
             <div className="space-y-4">
-              {[...porCategoria, ...(sinCategoria.length > 0 ? [{ cat: "Sin categoría", items: sinCategoria }] : [])].map(({ cat, items }) => (
+              {[...porCategoria, ...(sinCat.length > 0 ? [{ cat: "Sin categoría", items: sinCat }] : [])].map(({ cat, items }) => (
                 <div key={cat}>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">{cat}</p>
                   <div className="space-y-2">
@@ -202,6 +313,42 @@ export default function AdminWhatsApp() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Historial de envíos */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <button onClick={() => setHistorialOpen(o => !o)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-slate-400" /> Historial de envíos ({historial.length})
+            </h2>
+            {historialOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+          {historialOpen && (
+            <div className="border-t border-slate-100">
+              {historial.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-8">Sin envíos registrados.</p>
+              ) : (
+                <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                  {historial.map(h => {
+                    const emp = empleados.find(e => e.employee_id === h.employee_id);
+                    return (
+                      <div key={h.id} className="px-5 py-3 flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-slate-800">{emp?.name || h.employee_id}</span>
+                            {h.categoria && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-semibold">{h.categoria}</span>}
+                          </div>
+                          <p className="text-xs text-slate-500 truncate mt-0.5">{h.texto}</p>
+                        </div>
+                        <span className="text-xs text-slate-400 shrink-0">{fmtFecha(h.fecha)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
