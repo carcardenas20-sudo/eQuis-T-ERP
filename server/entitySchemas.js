@@ -559,6 +559,16 @@ export const ENTITY_SCHEMAS = {
     indexes: ['key'],
   },
 
+  RecomendacionCalidad: {
+    table: 'entity_recomendacion_calidad',
+    typed: {
+      texto: 'TEXT',
+      categoria: 'TEXT',
+      activa: 'BOOLEAN',
+    },
+    indexes: ['activa'],
+  },
+
   // ============================================================
   // SERVICIOS A TERCEROS
   // ============================================================

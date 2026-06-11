@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from "react";
-import { CheckCircle2, AlertTriangle, Plus, X, ClipboardCheck, RotateCcw } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { CheckCircle2, AlertTriangle, Plus, X, ClipboardCheck, RotateCcw, MessageCircle, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RecomendacionCalidad } from "@/api/entitiesChaquetas";
 
 const getColombiaToday = () => {
   const now = new Date();
@@ -9,6 +10,39 @@ const getColombiaToday = () => {
 
 export default function RouteConteoFisico({ employees, products, deliveries, dispatches = [], devoluciones = [], onSaved }) {
   const today = getColombiaToday();
+
+  // ── Modal recomendación de calidad ────────────────────────────────────────
+  const [modalEmp, setModalEmp] = useState(null); // { employee_id, name }
+  const [recomendaciones, setRecomendaciones] = useState([]);
+  const [recSeleccionada, setRecSeleccionada] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+
+  useEffect(() => {
+    RecomendacionCalidad.filter({ activa: true }).then(data => setRecomendaciones(data || [])).catch(() => {});
+  }, []);
+
+  const handleEnviarRecomendacion = async () => {
+    if (!recSeleccionada || !modalEmp) return;
+    setEnviando(true);
+    try {
+      const rec = recomendaciones.find(r => r.id === recSeleccionada);
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/functions/enviarRecomendacionCalidad", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ employee_id: modalEmp.employee_id, texto: rec.texto }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        alert(d.error || "Error al enviar");
+      } else {
+        setEnviado(true);
+        setTimeout(() => { setEnviado(false); setModalEmp(null); setRecSeleccionada(""); }, 1500);
+      }
+    } catch (e) { alert("Error: " + e.message); }
+    setEnviando(false);
+  };
 
   // Fechas disponibles con entregas O retornos de devoluciones (por date_returned, no date_sent)
   const availableDates = [...new Set([
@@ -397,11 +431,20 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
                     )}
                   </div>
                 </div>
-                {diff?.ingresado && (
-                  diff?.cuadra
-                    ? <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-                    : <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {diff?.ingresado && (
+                    diff?.cuadra
+                      ? <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      : <AlertTriangle className="w-5 h-5 text-red-500" />
+                  )}
+                  <button
+                    onClick={() => { setModalEmp(emp); setRecSeleccionada(""); setEnviado(false); }}
+                    title="Enviar recomendación de calidad"
+                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 active:bg-green-200">
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Recomendar</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -587,6 +630,72 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
           >
             {todosCuadran ? "✅ Confirmar conteo en firme" : "📝 Marcar conteo como realizado"}
           </Button>
+        </div>
+      )}
+
+      {/* ── Modal: enviar recomendación de calidad ── */}
+      {modalEmp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+            {enviado ? (
+              <div className="flex flex-col items-center py-6 gap-3 text-green-700">
+                <CheckCircle2 className="w-14 h-14" />
+                <p className="text-lg font-bold">¡Enviado!</p>
+                <p className="text-sm text-slate-500">Mensaje WhatsApp enviado a {modalEmp.name}</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800 text-base">Recomendación de calidad</h3>
+                  <button onClick={() => setModalEmp(null)} className="text-slate-400 hover:text-slate-600">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+                  <p className="text-xs text-green-700 font-semibold">Operario</p>
+                  <p className="text-sm font-bold text-slate-800">{modalEmp.name}</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Selecciona la recomendación</label>
+                  {recomendaciones.length === 0 ? (
+                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      No hay recomendaciones activas. Agrega algunas en Configuración → WhatsApp.
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                      {recomendaciones.map(rec => (
+                        <button key={rec.id} type="button"
+                          onClick={() => setRecSeleccionada(rec.id)}
+                          className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                            recSeleccionada === rec.id
+                              ? "border-green-500 bg-green-50 text-green-800 font-medium"
+                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                          }`}>
+                          {rec.categoria && <span className="text-[10px] font-bold uppercase text-slate-400 block">{rec.categoria}</span>}
+                          {rec.texto}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setModalEmp(null)}
+                    className="flex-1 py-2.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+                    Cancelar
+                  </button>
+                  <button onClick={handleEnviarRecomendacion}
+                    disabled={!recSeleccionada || enviando}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
+                    {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    {enviando ? "Enviando..." : "Enviar por WhatsApp"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

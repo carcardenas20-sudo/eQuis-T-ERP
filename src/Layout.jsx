@@ -13,7 +13,7 @@ import {
   FileText, Settings, Building2, UserCheck, CreditCard, Receipt, ShoppingBag,
   BookOpen, ArrowRightLeft, ArrowLeftRight, Sparkles, Wallet, BarChart3,
   ListChecks, Factory, Shirt, Palette, Wrench, Truck, Calculator,
-  PackageCheck, TruckIcon, Clock, Warehouse, Eye, Scissors, TrendingUp
+  PackageCheck, TruckIcon, Clock, Warehouse, Eye, Scissors, TrendingUp, MessageCircle
 } from "lucide-react";
 
 const comercialGroups = [
@@ -52,6 +52,7 @@ const comercialGroups = [
   {
     title: "Configuración", items: [
       { title: "Configuración", url: createPageUrl("Settings"), icon: Settings, permissions: ["settings_system", "users_view", "locations_view"] },
+      { title: "WhatsApp Calidad", url: createPageUrl("Admin_WhatsApp"), icon: MessageCircle, permissions: ["settings_system"] },
     ]
   },
 ];

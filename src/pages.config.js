@@ -46,6 +46,9 @@ import Prod_EstadoCuentaPublico from './pages/Prod_EstadoCuentaPublico';
 import Serv_Catalogo from './pages/Serv_Catalogo';
 import Serv_Ordenes from './pages/Serv_Ordenes';
 
+// ── ADMIN / CONFIGURACIÓN ─────────────────────────────────────
+import Admin_WhatsApp from './pages/Admin_WhatsApp';
+
 // ── MÓDULO OPERARIOS (produccionequist) ───────────────────────
 import Op_Dashboard from './pages/Op_Dashboard';
 import Op_DailyOperations from './pages/Op_DailyOperations';
@@ -119,6 +122,9 @@ export const PAGES = {
   "Op_EmployeeProfile": Op_EmployeeProfile,
   "Op_Empleado": Op_Empleado,
   "Op_MerchandiseEntry": Op_MerchandiseEntry,
+
+  // Admin
+  "Admin_WhatsApp": Admin_WhatsApp,
 
   // Análisis
   "Fin_Rentabilidad": Fin_Rentabilidad,

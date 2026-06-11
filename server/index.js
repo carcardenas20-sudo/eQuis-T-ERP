@@ -11,6 +11,7 @@ import { ENTITY_SCHEMAS, buildCreateTableSQL, buildIndexSQL } from './entitySche
 import authRoutes from './routes/auth.js';
 import entityRoutes from './routes/entities.js';
 import uploadRoutes from './routes/upload.js';
+import { whatsappManager } from './whatsapp.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -415,6 +416,43 @@ app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res)
 });
 
 // ─── Serve frontend (React build) ────────────────────────────────────────────
+// ─── WhatsApp ─────────────────────────────────────────────────────────────────
+app.get('/api/whatsapp/status', requireAuth, (_req, res) => {
+  res.json(whatsappManager.getStatus());
+});
+
+app.post('/api/whatsapp/init', requireAuth, async (_req, res) => {
+  try {
+    whatsappManager.init(); // no await — corre en background
+    res.json({ ok: true, message: 'Iniciando WhatsApp...' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/functions/enviarRecomendacionCalidad', requireAuth, async (req, res) => {
+  try {
+    const { employee_id, texto } = req.body;
+    if (!employee_id || !texto) return res.status(400).json({ error: 'employee_id y texto son requeridos' });
+
+    // Buscar el teléfono del empleado
+    const { rows } = await query(
+      `SELECT data->>'phone' as phone, data->>'name' as name FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
+      [employee_id]
+    );
+    if (!rows.length || !rows[0].phone) {
+      return res.status(400).json({ error: 'El operario no tiene número de celular registrado' });
+    }
+
+    const mensaje = `🎯 *Recomendación de calidad — Equis-T*\n\nHola ${rows[0].name},\n\n${texto}\n\n_Equipo de producción_`;
+    await whatsappManager.sendMessage(rows[0].phone, mensaje);
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 const DIST_DIR = join(__dirname, '..', 'dist');
 console.log('🗂️  DIST_DIR:', DIST_DIR);
 app.use(express.static(DIST_DIR));
@@ -842,6 +880,8 @@ async function startWithRetry(maxAttempts = 10, delayMs = 5000) {
       app.listen(PORT, '0.0.0.0', () => {
         console.log(`✅ API server running on port ${PORT}`);
       });
+      // Iniciar WhatsApp en background después de que el servidor esté listo
+      setTimeout(() => whatsappManager.init(), 3000);
       return;
     } catch (err) {
       console.error(`❌ DB init failed (attempt ${attempt}/${maxAttempts}): ${err.message}`);
