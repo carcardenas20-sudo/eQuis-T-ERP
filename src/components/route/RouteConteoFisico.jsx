@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { CheckCircle2, AlertTriangle, Plus, X, ClipboardCheck, RotateCcw, MessageCircle, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RecomendacionCalidad } from "@/api/entitiesChaquetas";
+import { portalClient } from "@/api/portalClient";
 
 const getColombiaToday = () => {
   const now = new Date();
@@ -19,7 +19,7 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
   const [enviado, setEnviado] = useState(false);
 
   useEffect(() => {
-    RecomendacionCalidad.filter({ activa: true }).then(data => setRecomendaciones(data || [])).catch(() => {});
+    portalClient.entities.RecomendacionCalidad.filter({ activa: true }).then(data => setRecomendaciones(data || [])).catch(() => {});
   }, []);
 
   const handleEnviarRecomendacion = async () => {
@@ -27,11 +27,10 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
     setEnviando(true);
     try {
       const rec = recomendaciones.find(r => r.id === recSeleccionada);
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/functions/enviarRecomendacionCalidad", {
+      const res = await fetch("/api/portal/functions/enviarRecomendacionCalidad", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ employee_id: modalEmp.employee_id, texto: rec.texto }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employee_id: modalEmp.employee_id, texto: rec.texto, categoria: rec.categoria }),
       });
       if (!res.ok) {
         const d = await res.json();

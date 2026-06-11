@@ -69,6 +69,8 @@ const PORTAL_PUBLIC_ENTITIES = new Set([
   'CertificadoSolicitud',
   // Traslados entre sucursales
   'Traslado', 'Location', 'Product',
+  // Recomendaciones de calidad (planillador las lee para enviar por WhatsApp)
+  'RecomendacionCalidad',
 ]);
 // Entidades en las que el portal puede escribir
 const PORTAL_WRITE_ENTITIES = new Set([
@@ -121,6 +123,18 @@ app.post('/api/portal-login', async (req, res) => {
   } catch (e) {
     console.error('portal-login error', e);
     res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// ─── Enviar recomendación de calidad desde el portal (planillador, sin auth) ─
+app.post('/api/portal/functions/enviarRecomendacionCalidad', async (req, res) => {
+  try {
+    const { employee_id, texto, categoria } = req.body;
+    if (!employee_id || !texto) return res.status(400).json({ error: 'employee_id y texto son requeridos' });
+    const nombre = await enviarYRegistrar({ employee_id, texto, categoria, enviado_por: 'planillador' });
+    res.json({ ok: true, nombre });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
