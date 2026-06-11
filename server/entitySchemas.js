@@ -565,6 +565,8 @@ export const ENTITY_SCHEMAS = {
       texto: 'TEXT',
       categoria: 'TEXT',
       activa: 'BOOLEAN',
+      header: 'TEXT',
+      footer: 'TEXT',
     },
     indexes: ['activa'],
   },
