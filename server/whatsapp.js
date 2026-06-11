@@ -21,6 +21,7 @@ class WhatsAppManager extends EventEmitter {
     this.client = new Client({
       authStrategy: new LocalAuth({ dataPath: '/tmp/wwebjs_auth' }),
       puppeteer: {
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
