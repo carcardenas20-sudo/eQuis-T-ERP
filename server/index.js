@@ -677,6 +677,14 @@ async function runMigrations(client) {
         `);
         console.log('✅ Migration: AppConfig rows moved to entity_app_config');
       }
+    },
+    {
+      name: 'add_recomendacion_calidad_header_footer',
+      sql: async () => {
+        await client.query(`ALTER TABLE entity_recomendacion_calidad ADD COLUMN IF NOT EXISTS header TEXT`);
+        await client.query(`ALTER TABLE entity_recomendacion_calidad ADD COLUMN IF NOT EXISTS footer TEXT`);
+        console.log('✅ Migration: header + footer columns added to entity_recomendacion_calidad');
+      }
     }
   ];
 
