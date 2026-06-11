@@ -126,7 +126,30 @@ app.post('/api/portal-login', async (req, res) => {
   }
 });
 
-// ─── Enviar recomendación de calidad desde el portal (planillador, sin auth) ─
+// ─── Enviar recomendación de calidad desde el portal ─────────────────────────
+app.post('/api/portal/functions/enviarRecomendacionTodos', async (req, res) => {
+  try {
+    const { texto, categoria } = req.body;
+    if (!texto) return res.status(400).json({ error: 'texto es requerido' });
+    const { rows: empleados } = await query(
+      `SELECT data->>'employee_id' as employee_id FROM entity_employee WHERE is_active = true AND data->>'phone' IS NOT NULL AND data->>'phone' != ''`
+    );
+    if (!empleados.length) return res.status(400).json({ error: 'No hay operarios activos con celular registrado' });
+    const results = { ok: [], errors: [] };
+    for (const emp of empleados) {
+      try {
+        const nombre = await enviarYRegistrar({ employee_id: emp.employee_id, texto, categoria, enviado_por: 'planillador' });
+        results.ok.push(nombre);
+      } catch (e) {
+        results.errors.push(e.message);
+      }
+    }
+    res.json({ ok: true, enviados: results.ok.length, errores: results.errors });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/portal/functions/enviarRecomendacionCalidad', async (req, res) => {
   try {
     const { employee_id, texto, categoria } = req.body;
