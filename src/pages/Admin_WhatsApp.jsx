@@ -7,7 +7,7 @@ const CATEGORIAS = [
 ];
 
 export default function AdminWhatsApp() {
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useState(/** @type {{status:string,qrImage?:string|null}|null} */(null));
   const [recomendaciones, setRecomendaciones] = useState([]);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [iniciando, setIniciando] = useState(false);
@@ -22,12 +22,12 @@ export default function AdminWhatsApp() {
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
   const loadStatus = async () => {
-    setLoadingStatus(true);
     try {
-      const res = await fetch("/api/whatsapp/status", { headers });
-      setStatus(await res.json());
-    } catch { setStatus({ status: "error" }); }
-    setLoadingStatus(false);
+      const res = await fetch("/api/whatsapp/status");
+      const data = await res.json();
+      setStatus(data);
+      setLoadingStatus(false);
+    } catch { setLoadingStatus(false); }
   };
 
   const loadRecomendaciones = async () => {
@@ -38,7 +38,7 @@ export default function AdminWhatsApp() {
   useEffect(() => {
     loadStatus();
     loadRecomendaciones();
-    const interval = setInterval(loadStatus, 5000);
+    const interval = setInterval(loadStatus, 2000);
     return () => clearInterval(interval);
   }, []);
 

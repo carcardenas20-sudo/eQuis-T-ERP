@@ -417,7 +417,7 @@ app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res)
 
 // ─── Serve frontend (React build) ────────────────────────────────────────────
 // ─── WhatsApp ─────────────────────────────────────────────────────────────────
-app.get('/api/whatsapp/status', requireAuth, (_req, res) => {
+app.get('/api/whatsapp/status', (_req, res) => {
   res.json(whatsappManager.getStatus());
 });
 
