@@ -2,7 +2,6 @@ import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode';
 import { EventEmitter } from 'events';
-import { execSync } from 'child_process';
 
 class WhatsAppManager extends EventEmitter {
   constructor() {
@@ -19,17 +18,9 @@ class WhatsAppManager extends EventEmitter {
     this.initCalled = true;
     this.status = 'initializing';
 
-    // Detectar Chromium en el entorno (Railway / local)
-    let executablePath;
-    try {
-      executablePath = execSync('which chromium || which chromium-browser || which google-chrome-stable || which google-chrome')
-        .toString().trim();
-    } catch { executablePath = undefined; }
-
     this.client = new Client({
       authStrategy: new LocalAuth({ dataPath: '/tmp/wwebjs_auth' }),
       puppeteer: {
-        ...(executablePath ? { executablePath } : {}),
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -37,7 +28,6 @@ class WhatsAppManager extends EventEmitter {
           '--disable-gpu',
           '--no-first-run',
           '--no-zygote',
-          '--single-process',
           '--disable-extensions',
         ],
       },
