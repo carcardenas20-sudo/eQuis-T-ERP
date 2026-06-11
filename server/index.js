@@ -132,7 +132,7 @@ app.post('/api/portal/functions/enviarRecomendacionTodos', async (req, res) => {
     const { texto, categoria } = req.body;
     if (!texto) return res.status(400).json({ error: 'texto es requerido' });
     const { rows: empleados } = await query(
-      `SELECT data->>'employee_id' as employee_id FROM entity_employee WHERE is_active = true AND data->>'phone' IS NOT NULL AND data->>'phone' != ''`
+      `SELECT data->>'employee_id' as employee_id FROM entity_employee WHERE is_active = true AND phone IS NOT NULL AND phone != ''`
     );
     if (!empleados.length) return res.status(400).json({ error: 'No hay operarios activos con celular registrado' });
     const results = { ok: [], errors: [] };
@@ -470,7 +470,7 @@ app.post('/api/whatsapp/init', requireAuth, async (_req, res) => {
 // Helper: enviar mensaje y guardar en historial
 async function enviarYRegistrar({ employee_id, texto, categoria, enviado_por }) {
   const { rows } = await query(
-    `SELECT data->>'phone' as phone, data->>'name' as name FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
+    `SELECT phone, name FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
     [employee_id]
   );
   if (!rows.length || !rows[0].phone) throw new Error(`${employee_id}: sin número de celular`);
@@ -504,7 +504,7 @@ app.post('/api/functions/enviarRecomendacionTodos', requireAuth, async (req, res
     if (!texto) return res.status(400).json({ error: 'texto es requerido' });
 
     const { rows: empleados } = await query(
-      `SELECT data->>'employee_id' as employee_id FROM entity_employee WHERE is_active = true AND data->>'phone' IS NOT NULL AND data->>'phone' != ''`
+      `SELECT data->>'employee_id' as employee_id FROM entity_employee WHERE is_active = true AND phone IS NOT NULL AND phone != ''`
     );
     if (!empleados.length) return res.status(400).json({ error: 'No hay operarios activos con celular registrado' });
 
