@@ -17,7 +17,9 @@ class PostgresStore {
     return rows.length > 0;
   }
 
-  async save({ session, path: zipPath }) {
+  async save({ session }) {
+    // RemoteAuth calls save() with only {session} — the ZIP is at dataPath/{session}.zip
+    const zipPath = path.join('/tmp/wwebjs_auth', `${session}.zip`);
     try {
       const data = (await fs.readFile(zipPath)).toString('base64');
       const exists = await this.sessionExists({ session });
