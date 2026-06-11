@@ -129,7 +129,7 @@ app.post('/api/portal-login', async (req, res) => {
 // ─── Enviar recomendación de calidad desde el portal ─────────────────────────
 app.post('/api/portal/functions/enviarRecomendacionTodos', async (req, res) => {
   try {
-    const { texto, categoria } = req.body;
+    const { texto, categoria, header, footer } = req.body;
     if (!texto) return res.status(400).json({ error: 'texto es requerido' });
     const { rows: empleados } = await query(
       `SELECT data->>'employee_id' as employee_id FROM entity_employee WHERE is_active = true AND phone IS NOT NULL AND phone != ''`
@@ -138,7 +138,7 @@ app.post('/api/portal/functions/enviarRecomendacionTodos', async (req, res) => {
     const results = { ok: [], errors: [] };
     for (const emp of empleados) {
       try {
-        const nombre = await enviarYRegistrar({ employee_id: emp.employee_id, texto, categoria, enviado_por: 'planillador' });
+        const nombre = await enviarYRegistrar({ employee_id: emp.employee_id, texto, categoria, enviado_por: 'planillador', header, footer });
         results.ok.push(nombre);
       } catch (e) {
         results.errors.push(e.message);
@@ -152,9 +152,9 @@ app.post('/api/portal/functions/enviarRecomendacionTodos', async (req, res) => {
 
 app.post('/api/portal/functions/enviarRecomendacionCalidad', async (req, res) => {
   try {
-    const { employee_id, texto, categoria } = req.body;
+    const { employee_id, texto, categoria, header, footer } = req.body;
     if (!employee_id || !texto) return res.status(400).json({ error: 'employee_id y texto son requeridos' });
-    const nombre = await enviarYRegistrar({ employee_id, texto, categoria, enviado_por: 'planillador' });
+    const nombre = await enviarYRegistrar({ employee_id, texto, categoria, enviado_por: 'planillador', header, footer });
     res.json({ ok: true, nombre });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -468,14 +468,17 @@ app.post('/api/whatsapp/init', requireAuth, async (_req, res) => {
 });
 
 // Helper: enviar mensaje y guardar en historial
-async function enviarYRegistrar({ employee_id, texto, categoria, enviado_por }) {
+async function enviarYRegistrar({ employee_id, texto, categoria, enviado_por, header, footer }) {
   const { rows } = await query(
     `SELECT phone, name FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
     [employee_id]
   );
   if (!rows.length || !rows[0].phone) throw new Error(`${employee_id}: sin número de celular`);
 
-  const mensaje = `🎯 *Recomendación de calidad — Equis-T*\n\nHola ${rows[0].name},\n\n${texto}\n\n_Equipo de producción_`;
+  const h = (header ?? '🎯 *Recomendación de calidad — Equis-T*').trim();
+  const f = (footer ?? '_Equipo de producción_').trim();
+  const partes = [h, `Hola ${rows[0].name},`, texto, f].filter(Boolean);
+  const mensaje = partes.join('\n\n');
   await whatsappManager.sendMessage(rows[0].phone, mensaje);
 
   // Guardar en historial
@@ -489,9 +492,9 @@ async function enviarYRegistrar({ employee_id, texto, categoria, enviado_por }) 
 
 app.post('/api/functions/enviarRecomendacionCalidad', requireAuth, async (req, res) => {
   try {
-    const { employee_id, texto, categoria } = req.body;
+    const { employee_id, texto, categoria, header, footer } = req.body;
     if (!employee_id || !texto) return res.status(400).json({ error: 'employee_id y texto son requeridos' });
-    const nombre = await enviarYRegistrar({ employee_id, texto, categoria, enviado_por: req.user?.email || '' });
+    const nombre = await enviarYRegistrar({ employee_id, texto, categoria, enviado_por: req.user?.email || '', header, footer });
     res.json({ ok: true, nombre });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -500,7 +503,7 @@ app.post('/api/functions/enviarRecomendacionCalidad', requireAuth, async (req, r
 
 app.post('/api/functions/enviarRecomendacionTodos', requireAuth, async (req, res) => {
   try {
-    const { texto, categoria } = req.body;
+    const { texto, categoria, header, footer } = req.body;
     if (!texto) return res.status(400).json({ error: 'texto es requerido' });
 
     const { rows: empleados } = await query(
@@ -511,7 +514,7 @@ app.post('/api/functions/enviarRecomendacionTodos', requireAuth, async (req, res
     const results = { ok: [], errors: [] };
     for (const emp of empleados) {
       try {
-        const nombre = await enviarYRegistrar({ employee_id: emp.employee_id, texto, categoria, enviado_por: req.user?.email || '' });
+        const nombre = await enviarYRegistrar({ employee_id: emp.employee_id, texto, categoria, enviado_por: req.user?.email || '', header, footer });
         results.ok.push(nombre);
       } catch (e) {
         results.errors.push(e.message);

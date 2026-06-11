@@ -41,6 +41,10 @@ export default function AdminWhatsApp() {
   const [enviandoBc, setEnviandoBc] = useState(false);
   const [okBc, setOkBc] = useState(/** @type {{enviados:number,errores:string[]}|null} */(null));
 
+  // Plantilla del mensaje
+  const [msgHeader, setMsgHeader] = useState("🎯 *Recomendación de calidad — Equis-T*");
+  const [msgFooter, setMsgFooter] = useState("_Equipo de producción_");
+
   // Historial
   const [historialOpen, setHistorialOpen] = useState(false);
 
@@ -109,7 +113,7 @@ export default function AdminWhatsApp() {
     try {
       const res = await fetch("/api/functions/enviarRecomendacionCalidad", {
         method: "POST", headers,
-        body: JSON.stringify({ employee_id: envioEmpId, texto: rec.texto, categoria: rec.categoria }),
+        body: JSON.stringify({ employee_id: envioEmpId, texto: rec.texto, categoria: rec.categoria, header: msgHeader, footer: msgFooter }),
       });
       if (!res.ok) { const d = await res.json(); alert(d.error); }
       else { setOkInd(true); setEnvioEmpId(""); setEnvioRecId(""); setTimeout(() => setOkInd(false), 2000); await loadAll(); }
@@ -125,7 +129,7 @@ export default function AdminWhatsApp() {
     try {
       const res = await fetch("/api/functions/enviarRecomendacionTodos", {
         method: "POST", headers,
-        body: JSON.stringify({ texto: rec.texto, categoria: rec.categoria }),
+        body: JSON.stringify({ texto: rec.texto, categoria: rec.categoria, header: msgHeader, footer: msgFooter }),
       });
       const d = await res.json();
       if (!res.ok) alert(d.error);
@@ -189,6 +193,24 @@ export default function AdminWhatsApp() {
               Conectado y listo para enviar mensajes.
             </div>
           )}
+        </div>
+
+        {/* Plantilla del mensaje */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <h2 className="font-semibold text-slate-800 mb-1">Plantilla del mensaje</h2>
+          <div>
+            <label className="text-xs font-semibold text-slate-500 block mb-1">Encabezado</label>
+            <input value={msgHeader} onChange={e => setMsgHeader(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="Encabezado (dejar vacío para omitir)" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500 block mb-1">Pie</label>
+            <input value={msgFooter} onChange={e => setMsgFooter(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="Pie (dejar vacío para omitir)" />
+          </div>
+          <p className="text-xs text-slate-400">Vista previa: <span className="text-slate-600">{[msgHeader, "Hola {nombre},", "...", msgFooter].filter(Boolean).join(" · ")}</span></p>
         </div>
 
         {/* Enviar a operario individual */}
