@@ -52,7 +52,6 @@ export default function RouteTraslados({ employees, products, dispatches, delive
     setSaving(true);
     const today = getColombiaToday();
     const origen = employees.find(e => e.employee_id === origenId);
-    const prod = selectedItem?.product;
 
     if (tipoDestino === "inventario") {
       // Devolver al inventario: delivery(devolucion_despacho) + restaurar stock

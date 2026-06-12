@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Delivery, Dispatch, Inventory, StockMovement } from "@/api/publicEntities";
-import { Edit2, Save, X, ChevronDown, ChevronUp, PackageCheck, Truck } from "lucide-react";
+import { Edit2, Save, X, ChevronDown, ChevronUp, PackageCheck, Truck, ArrowRightLeft, RotateCcw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const getColombiaToday = () => {
@@ -130,16 +130,22 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
         <div className="divide-y divide-slate-100">
 
           {/* ── Entregas ── */}
-          {todayDeliveries.map(d => (
+          {todayDeliveries.map(d => {
+            const deliveryLabel =
+              d.status === "traslado"            ? { label: "Traslado",          Icon: ArrowRightLeft, color: "bg-amber-100 text-amber-700",  iconColor: "text-amber-500" } :
+              d.status === "devolucion_despacho" ? { label: "Dev. despacho",     Icon: RotateCcw,      color: "bg-blue-100 text-blue-700",    iconColor: "text-blue-500"  } :
+              d.status === "baja"                ? { label: "Baja",              Icon: AlertTriangle,  color: "bg-red-100 text-red-700",      iconColor: "text-red-500"   } :
+                                                   { label: "Entrega",           Icon: PackageCheck,   color: "bg-green-100 text-green-700",  iconColor: "text-green-600" };
+            return (
             <div key={d.id} className="px-4 py-3">
               {/* Cabecera del registro */}
               <div className="flex items-start gap-2">
                 {/* Info izquierda */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <PackageCheck className="w-4 h-4 text-green-600 shrink-0" />
+                    <deliveryLabel.Icon className={`w-4 h-4 shrink-0 ${deliveryLabel.iconColor}`} />
                     <span className="text-sm font-semibold text-slate-800 truncate">{empName(d.employee_id)}</span>
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full shrink-0">Entrega</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${deliveryLabel.color}`}>{deliveryLabel.label}</span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5 ml-6">{(d.delivery_date || '').slice(0, 10)}</p>
                 </div>
@@ -203,15 +209,16 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
                       <span className="font-bold text-slate-800 ml-1">{item.quantity} uds</span>
                     </p>
                   ))}
-                  {d.observations && (
+                  {(d.observations || d.notes) && (
                     <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5 mt-1">
-                      📝 {d.observations}
+                      📝 {d.observations || d.notes}
                     </p>
                   )}
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
 
           {/* ── Despachos ── */}
           {todayDispatches.map(d => {
