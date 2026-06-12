@@ -8,6 +8,8 @@ import RouteOperario from "@/components/route/RouteOperario";
 import RouteDevoluciones from "@/components/route/RouteDevoluciones";
 import RouteConteoFisico from "@/components/route/RouteConteoFisico";
 import RouteTraslados from "@/components/route/RouteTraslados";
+import RouteChecklist from "@/components/route/RouteChecklist";
+import RouteRegistrosHoy from "@/components/route/RouteRegistrosHoy";
 import { portalClient } from "@/api/portalClient";
 
 const ESTADO_CFG = {
@@ -898,7 +900,11 @@ export default function PlantPortal() {
               ) : !planilladorData ? (
                 <div className="text-center py-16 text-slate-400">Sin datos</div>
               ) : planilladorTab === "operaciones" ? (
-                <RouteOperario {...planilladorData} onSaved={loadPlanilladorData} />
+                <>
+                  <RouteChecklist employees={planilladorData.employees} dispatches={planilladorData.dispatches} deliveries={planilladorData.deliveries} />
+                  <RouteOperario {...planilladorData} onSaved={loadPlanilladorData} />
+                  <RouteRegistrosHoy {...planilladorData} onSaved={loadPlanilladorData} />
+                </>
               ) : planilladorTab === "traslados" ? (
                 <RouteTraslados {...planilladorData} onSaved={loadPlanilladorData} />
               ) : planilladorTab === "devoluciones" ? (
