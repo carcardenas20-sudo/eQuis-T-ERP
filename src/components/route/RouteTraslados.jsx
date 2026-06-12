@@ -1,20 +1,23 @@
 import React, { useState, useMemo } from "react";
-import { Delivery, Dispatch } from "@/api/publicEntities";
-import { ArrowRightLeft, CheckCircle2 } from "lucide-react";
+import { Delivery, Dispatch, Inventory, StockMovement } from "@/api/publicEntities";
+import { ArrowRightLeft, CheckCircle2, RotateCcw, User } from "lucide-react";
 
 const getColombiaToday = () => {
   const now = new Date();
   return new Date(now.toLocaleString("en-US", { timeZone: "America/Bogota" })).toISOString().split("T")[0];
 };
 
-export default function RouteTraslados({ employees, products, dispatches, deliveries, onSaved }) {
+export default function RouteTraslados({ employees, products, dispatches, deliveries, inventory, onSaved }) {
   const [origenId, setOrigenId] = useState("");
-  const [destinoId, setDestinoId] = useState("");
   const [productRef, setProductRef] = useState("");
   const [qty, setQty] = useState("");
+  // destino: "operario" | "inventario"
+  const [tipoDestino, setTipoDestino] = useState("operario");
+  const [destinoId, setDestinoId] = useState("");
   const [obs, setObs] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedType, setSavedType] = useState("");
 
   const pendingItems = useMemo(() => {
     if (!origenId) return [];
@@ -40,50 +43,90 @@ export default function RouteTraslados({ employees, products, dispatches, delive
   const selectedItem = pendingItems.find(i => i.product.reference === productRef);
   const maxQty = selectedItem?.pending ?? 0;
   const cantidad = parseInt(qty) || 0;
-  const canSubmit = origenId && destinoId && origenId !== destinoId && productRef && cantidad > 0 && cantidad <= maxQty;
 
-  const handleTraslado = async () => {
+  const canSubmit = origenId && productRef && cantidad > 0 && cantidad <= maxQty &&
+    (tipoDestino === "inventario" || (tipoDestino === "operario" && destinoId && destinoId !== origenId));
+
+  const handleConfirmar = async () => {
     if (!canSubmit) return;
     setSaving(true);
     const today = getColombiaToday();
     const origen = employees.find(e => e.employee_id === origenId);
-    const destino = employees.find(e => e.employee_id === destinoId);
+    const prod = selectedItem?.product;
 
-    await Delivery.create({
-      employee_id: origenId,
-      delivery_date: today,
-      items: [{ product_reference: productRef, quantity: cantidad, unit_price: 0, total_amount: 0 }],
-      total_amount: 0,
-      status: "traslado",
-      notes: `[TRASLADO] Transferido a ${destino?.name || destinoId}${obs ? ' — ' + obs : ''}`,
-    });
-    await Dispatch.create({
-      employee_id: destinoId,
-      product_reference: productRef,
-      quantity: cantidad,
-      dispatch_date: today,
-      status: "despachado",
-      observations: `[TRASLADO] Recibido de ${origen?.name || origenId}${obs ? ' — ' + obs : ''}`,
-    });
+    if (tipoDestino === "inventario") {
+      // Devolver al inventario: delivery(devolucion_despacho) + restaurar stock
+      await Delivery.create({
+        employee_id: origenId,
+        delivery_date: today,
+        items: [{ product_reference: productRef, quantity: cantidad, unit_price: 0, total_amount: 0 }],
+        total_amount: 0,
+        status: "devolucion_despacho",
+        notes: `[DEVOLUCIÓN DESPACHO] Sin fabricar${obs ? ' — ' + obs : ''}`,
+      });
+      const inv = inventory?.find(i => i.product_reference === productRef);
+      if (inv) {
+        const newStock = inv.current_stock + cantidad;
+        await Inventory.update(inv.id, { current_stock: newStock });
+        await StockMovement.create({
+          product_reference: productRef,
+          movement_type: "entrada",
+          quantity: cantidad,
+          movement_date: today,
+          reason: `Devolución de despacho sin fabricar — ${origen?.name || origenId}${obs ? ' — ' + obs : ''}`,
+          previous_stock: inv.current_stock,
+          new_stock: newStock,
+        });
+      }
+      setSavedType("inventario");
+    } else {
+      // Traslado entre operarios
+      const destino = employees.find(e => e.employee_id === destinoId);
+      await Delivery.create({
+        employee_id: origenId,
+        delivery_date: today,
+        items: [{ product_reference: productRef, quantity: cantidad, unit_price: 0, total_amount: 0 }],
+        total_amount: 0,
+        status: "traslado",
+        notes: `[TRASLADO] Transferido a ${destino?.name || destinoId}${obs ? ' — ' + obs : ''}`,
+      });
+      await Dispatch.create({
+        employee_id: destinoId,
+        product_reference: productRef,
+        quantity: cantidad,
+        dispatch_date: today,
+        status: "despachado",
+        observations: `[TRASLADO] Recibido de ${origen?.name || origenId}${obs ? ' — ' + obs : ''}`,
+      });
+      setSavedType("traslado");
+    }
 
     setSaving(false);
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
+      setSavedType("");
       setOrigenId("");
-      setDestinoId("");
       setProductRef("");
       setQty("");
+      setTipoDestino("operario");
+      setDestinoId("");
       setObs("");
       onSaved();
-    }, 1500);
+    }, 1800);
   };
 
   if (saved) return (
-    <div className="flex flex-col items-center py-16 gap-3 text-amber-700">
-      <CheckCircle2 className="w-14 h-14" />
-      <p className="text-xl font-bold">¡Trasladado!</p>
-      <p className="text-sm text-slate-500">Despacho transferido correctamente.</p>
+    <div className="flex flex-col items-center py-16 gap-3">
+      <CheckCircle2 className={`w-14 h-14 ${savedType === "inventario" ? "text-blue-600" : "text-amber-600"}`} />
+      <p className="text-xl font-bold text-slate-800">
+        {savedType === "inventario" ? "¡Devuelto al inventario!" : "¡Trasladado!"}
+      </p>
+      <p className="text-sm text-slate-500">
+        {savedType === "inventario"
+          ? "Las unidades volvieron al stock disponible."
+          : "Despacho transferido al operario destino."}
+      </p>
     </div>
   );
 
@@ -112,7 +155,7 @@ export default function RouteTraslados({ employees, products, dispatches, delive
       {origenId && (
         <div className="bg-white rounded-xl border-2 border-amber-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 bg-amber-50 border-b border-amber-200">
-            <p className="font-bold text-amber-900 text-sm">② Producto a trasladar</p>
+            <p className="font-bold text-amber-900 text-sm">② Producto a mover</p>
           </div>
           <div className="px-4 py-3 space-y-3">
             {pendingItems.length === 0 ? (
@@ -154,20 +197,56 @@ export default function RouteTraslados({ employees, products, dispatches, delive
       {origenId && productRef && cantidad > 0 && (
         <div className="bg-white rounded-xl border-2 border-blue-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 bg-blue-50 border-b border-blue-200">
-            <p className="font-bold text-blue-900 text-sm">③ Operario destino</p>
-            <p className="text-xs text-blue-600 mt-0.5">A quien se le asigna el despacho</p>
+            <p className="font-bold text-blue-900 text-sm">③ Destino</p>
           </div>
           <div className="px-4 py-3 space-y-3">
-            <select
-              value={destinoId}
-              onChange={e => setDestinoId(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-            >
-              <option value="">— Seleccionar operario —</option>
-              {employees.filter(e => e.employee_id !== origenId).map(e => (
-                <option key={e.employee_id} value={e.employee_id}>{e.name}</option>
-              ))}
-            </select>
+
+            {/* Toggle tipo destino */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setTipoDestino("operario")}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                  tipoDestino === "operario"
+                    ? "border-amber-500 bg-amber-50 text-amber-800"
+                    : "border-slate-200 bg-white text-slate-500"
+                }`}
+              >
+                <User className="w-4 h-4" /> Otro operario
+              </button>
+              <button
+                onClick={() => setTipoDestino("inventario")}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                  tipoDestino === "inventario"
+                    ? "border-blue-500 bg-blue-50 text-blue-800"
+                    : "border-slate-200 bg-white text-slate-500"
+                }`}
+              >
+                <RotateCcw className="w-4 h-4" /> Inventario
+              </button>
+            </div>
+
+            {tipoDestino === "inventario" && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
+                <p className="text-xs font-semibold text-blue-800">Devolver sin fabricar</p>
+                <p className="text-xs text-blue-600 mt-0.5">
+                  Las {cantidad} unidades vuelven al stock disponible con historial.
+                </p>
+              </div>
+            )}
+
+            {tipoDestino === "operario" && (
+              <select
+                value={destinoId}
+                onChange={e => setDestinoId(e.target.value)}
+                className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+              >
+                <option value="">— Seleccionar operario destino —</option>
+                {employees.filter(e => e.employee_id !== origenId).map(e => (
+                  <option key={e.employee_id} value={e.employee_id}>{e.name}</option>
+                ))}
+              </select>
+            )}
+
             <textarea
               placeholder="Observaciones (opcional)"
               value={obs}
@@ -180,12 +259,18 @@ export default function RouteTraslados({ employees, products, dispatches, delive
 
       {canSubmit && (
         <button
-          onClick={handleTraslado}
+          onClick={handleConfirmar}
           disabled={saving}
-          className="w-full h-14 bg-amber-600 active:bg-amber-700 text-white text-base font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+          className={`w-full h-14 text-white text-base font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-colors ${
+            tipoDestino === "inventario"
+              ? "bg-blue-600 active:bg-blue-700"
+              : "bg-amber-600 active:bg-amber-700"
+          }`}
         >
-          <ArrowRightLeft className="w-5 h-5" />
-          {saving ? "Trasladando..." : "Confirmar traslado"}
+          {tipoDestino === "inventario"
+            ? <><RotateCcw className="w-5 h-5" /> {saving ? "Devolviendo..." : "Devolver al inventario"}</>
+            : <><ArrowRightLeft className="w-5 h-5" /> {saving ? "Trasladando..." : "Confirmar traslado"}</>
+          }
         </button>
       )}
     </div>
