@@ -2,11 +2,13 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
   Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2,
-  Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2 } from "lucide-react";
+  Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2, MessageCircle, Users } from "lucide-react";
 import TransferReceive from "@/components/transfers/TransferReceive";
 import RouteOperario from "@/components/route/RouteOperario";
 import RouteDevoluciones from "@/components/route/RouteDevoluciones";
 import RouteConteoFisico from "@/components/route/RouteConteoFisico";
+import RouteTraslados from "@/components/route/RouteTraslados";
+import { portalClient } from "@/api/portalClient";
 
 const ESTADO_CFG = {
   pendiente:  { label: "Pendiente",  color: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -322,7 +324,31 @@ export default function PlantPortal() {
   const [planilladorTab, setPlanilladorTab] = useState("operaciones");
   const [planilladorLoading, setPlanilladorLoading] = useState(false);
   const [pinForm, setPinForm] = useState({ employee_id: "", pin: "" });
+  // WA broadcast desde planillador
+  const [waModal, setWaModal] = useState(false);
+  const [waRecs, setWaRecs] = useState([]);
+  const [waBcId, setWaBcId] = useState("");
+  const [waEnviando, setWaEnviando] = useState(false);
+  const [waOk, setWaOk] = useState(null);
   const [pinError, setPinError] = useState("");
+
+  const handleWaBroadcast = async () => {
+    if (!waBcId) return;
+    const rec = waRecs.find(r => r.id === waBcId);
+    if (!confirm(`¿Enviar a TODOS los operarios activos con celular?\n\n"${rec.texto.slice(0, 80)}..."`)) return;
+    setWaEnviando(true);
+    try {
+      const res = await fetch("/api/portal/functions/enviarRecomendacionTodos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texto: rec.texto, categoria: rec.categoria, header: rec.header, footer: rec.footer }),
+      });
+      const d = await res.json();
+      if (!res.ok) alert(d.error);
+      else { setWaOk(d); setWaBcId(""); setTimeout(() => { setWaOk(null); setWaModal(false); }, 3000); }
+    } catch (e) { alert(e.message); }
+    setWaEnviando(false);
+  };
 
   const handlePinLogin = async (pin) => {
     setPinError("");
@@ -336,6 +362,7 @@ export default function PlantPortal() {
       setPlanilladorAuth({ ok: true });
       setPinForm({ employee_id: "", pin: "" });
       loadPlanilladorData();
+      portalClient.entities.RecomendacionCalidad.filter({ activa: true }).then(d => setWaRecs(d || [])).catch(() => {});
     } catch { setPinError("Error de conexión"); }
   };
 
@@ -834,24 +861,31 @@ export default function PlantPortal() {
                   <Unlock className="w-4 h-4 text-violet-600" />
                   <span className="text-sm font-semibold text-violet-800">Planillador activo</span>
                 </div>
-                <button onClick={() => { setPlanilladorAuth(null); setPlanilladorData(null); setPlanilladorTab("operaciones"); }}
-                  className="flex items-center gap-1 text-xs text-violet-600 active:text-violet-800 shrink-0">
-                  <LogOut className="w-3.5 h-3.5" /> Salir
-                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => { setWaModal(true); setWaOk(null); setWaBcId(""); }}
+                    className="flex items-center gap-1 text-xs text-emerald-600 active:text-emerald-800 shrink-0">
+                    <MessageCircle className="w-3.5 h-3.5" /> Mensajes
+                  </button>
+                  <button onClick={() => { setPlanilladorAuth(null); setPlanilladorData(null); setPlanilladorTab("operaciones"); }}
+                    className="flex items-center gap-1 text-xs text-violet-600 active:text-violet-800 shrink-0">
+                    <LogOut className="w-3.5 h-3.5" /> Salir
+                  </button>
+                </div>
               </div>
 
-              {/* Sub-tabs planillador */}
-              <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
+              {/* Sub-tabs planillador — 2×2 */}
+              <div className="grid grid-cols-2 gap-1.5">
                 {[
-                  { id: "operaciones", label: "Operaciones", Icon: Truck },
-                  { id: "devoluciones", label: "Devoluciones", Icon: RotateCcw },
-                  { id: "conteo", label: "Conteo Físico", Icon: PackageCheck },
-                ].map(({ id, label, Icon }) => (
+                  { id: "operaciones",  label: "Operaciones",   Icon: Truck,         color: "bg-blue-600",  active: "bg-blue-600 text-white shadow-sm", inactive: "bg-blue-50 text-blue-700 border border-blue-200" },
+                  { id: "traslados",    label: "Traslados",     Icon: ArrowRightLeft, color: "bg-amber-600", active: "bg-amber-600 text-white shadow-sm", inactive: "bg-amber-50 text-amber-700 border border-amber-200" },
+                  { id: "devoluciones", label: "Devoluciones",  Icon: RotateCcw,      color: "bg-orange-600",active: "bg-orange-600 text-white shadow-sm", inactive: "bg-orange-50 text-orange-700 border border-orange-200" },
+                  { id: "conteo",       label: "Conteo Físico", Icon: PackageCheck,   color: "bg-purple-600",active: "bg-purple-600 text-white shadow-sm", inactive: "bg-purple-50 text-purple-700 border border-purple-200" },
+                ].map(({ id, label, Icon, active, inactive }) => (
                   <button key={id} onClick={() => setPlanilladorTab(id)}
-                    className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg text-[10px] font-semibold leading-tight transition-all
-                      ${planilladorTab === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}>
+                    className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-semibold transition-all
+                      ${planilladorTab === id ? active : inactive}`}>
                     <Icon className="w-4 h-4 shrink-0" />
-                    <span className="text-center">{label}</span>
+                    <span>{label}</span>
                   </button>
                 ))}
               </div>
@@ -865,10 +899,54 @@ export default function PlantPortal() {
                 <div className="text-center py-16 text-slate-400">Sin datos</div>
               ) : planilladorTab === "operaciones" ? (
                 <RouteOperario {...planilladorData} onSaved={loadPlanilladorData} />
+              ) : planilladorTab === "traslados" ? (
+                <RouteTraslados {...planilladorData} onSaved={loadPlanilladorData} />
               ) : planilladorTab === "devoluciones" ? (
                 <RouteDevoluciones {...planilladorData} onSaved={loadPlanilladorData} />
               ) : (
                 <RouteConteoFisico {...planilladorData} onSaved={loadPlanilladorData} />
+              )}
+
+              {/* Modal WA broadcast */}
+              {waModal && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/50">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <MessageCircle className="w-5 h-5 text-emerald-500" /> Mensaje a todos
+                      </h3>
+                      <button onClick={() => setWaModal(false)} className="text-slate-400 active:text-slate-600">
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    {waOk ? (
+                      <div className="text-sm text-green-700 p-3 bg-green-50 border border-green-200 rounded-xl text-center">
+                        ✅ Enviado a {waOk.enviados} operario{waOk.enviados !== 1 ? "s" : ""}.
+                        {waOk.errores?.length > 0 && <p className="text-amber-700 mt-1">⚠️ {waOk.errores.join(", ")}</p>}
+                      </div>
+                    ) : (
+                      <>
+                        <select value={waBcId} onChange={e => setWaBcId(e.target.value)}
+                          className="w-full border border-slate-300 rounded-xl px-3 py-3 text-sm">
+                          <option value="">— Seleccionar mensaje —</option>
+                          {waRecs.map(r => (
+                            <option key={r.id} value={r.id}>[{r.categoria}] {r.texto.slice(0, 55)}{r.texto.length > 55 ? "…" : ""}</option>
+                          ))}
+                        </select>
+                        {waRecs.length === 0 && (
+                          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            Sin mensajes activos. Agrégalos en Configuración → WhatsApp.
+                          </p>
+                        )}
+                        <button onClick={handleWaBroadcast} disabled={!waBcId || waEnviando}
+                          className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold bg-emerald-600 text-white rounded-xl disabled:opacity-50 active:bg-emerald-700">
+                          {waEnviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                          {waEnviando ? "Enviando..." : "Enviar a todos los operarios"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )

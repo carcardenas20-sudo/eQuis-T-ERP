@@ -19,7 +19,7 @@ async function logActivity(params) {
   } catch {}
 }
 
-import { CheckCircle2, Plus, X, ChevronDown, ChevronUp, MessageCircle, Send, Loader2, Users } from "lucide-react";
+import { CheckCircle2, Plus, X, ChevronDown, ChevronUp, MessageCircle, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const getColombiaToday = () => {
@@ -41,10 +41,6 @@ export default function RouteOperario({ employees, products, dispatches, deliver
   const [recSeleccionada, setRecSeleccionada] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
-  const [bcRecId, setBcRecId] = useState("");
-  const [enviandoBc, setEnviandoBc] = useState(false);
-  const [okBc, setOkBc] = useState(null);
-
   useEffect(() => {
     portalClient.entities.RecomendacionCalidad.filter({ activa: true }).then(d => setRecomendaciones(d || [])).catch(() => {});
   }, []);
@@ -63,24 +59,6 @@ export default function RouteOperario({ employees, products, dispatches, deliver
       else { setEnviado(true); setTimeout(() => { setEnviado(false); setModalEmp(null); setRecSeleccionada(""); }, 1500); }
     } catch (e) { alert("Error: " + e.message); }
     setEnviando(false);
-  };
-
-  const handleBroadcast = async () => {
-    if (!bcRecId) return;
-    const rec = recomendaciones.find(r => r.id === bcRecId);
-    if (!confirm(`¿Enviar a TODOS los operarios activos con celular?\n\n"${rec.texto.slice(0, 80)}..."`)) return;
-    setEnviandoBc(true);
-    try {
-      const res = await fetch("/api/portal/functions/enviarRecomendacionTodos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texto: rec.texto, categoria: rec.categoria, header: rec.header, footer: rec.footer }),
-      });
-      const d = await res.json();
-      if (!res.ok) alert(d.error);
-      else { setOkBc(d); setBcRecId(""); setTimeout(() => setOkBc(null), 4000); }
-    } catch (e) { alert(e.message); }
-    setEnviandoBc(false);
   };
 
   const employee = employees.find(e => e.employee_id === employeeId);
@@ -273,44 +251,22 @@ export default function RouteOperario({ employees, products, dispatches, deliver
         </select>
 
         {employeeId && employeeStats && (
-          <div className="mt-3 space-y-2">
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-blue-50 rounded-xl p-3 text-center">
-                <p className="text-xs text-slate-500 mb-0.5">Prom. semanal</p>
-                <p className="font-bold text-blue-700 text-2xl leading-none">{employeeStats.weeklyAvg || '—'}</p>
-                <p className="text-xs text-slate-400 mt-0.5">uds/sem</p>
-              </div>
-              <div className={`rounded-xl p-3 text-center ${
-                employeeStats.performancePct === null ? 'bg-slate-50' :
-                employeeStats.performancePct >= 85 ? 'bg-green-50' :
-                employeeStats.performancePct >= 65 ? 'bg-amber-50' : 'bg-red-50'
-              }`}>
-                <p className="text-xs text-slate-500 mb-0.5">Productividad</p>
-                <p className={`font-bold text-2xl leading-none ${
-                  employeeStats.performancePct === null ? 'text-slate-400' :
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1">
+            <span className="text-xs text-slate-500">
+              Prom: <strong className="text-blue-700">{employeeStats.weeklyAvg || '—'} uds/sem</strong>
+            </span>
+            {employeeStats.performancePct !== null && (
+              <span className="text-xs text-slate-500">
+                Productividad: <strong className={
                   employeeStats.performancePct >= 85 ? 'text-green-700' :
                   employeeStats.performancePct >= 65 ? 'text-amber-700' : 'text-red-700'
-                }`}>{employeeStats.performancePct !== null ? `${employeeStats.performancePct}%` : '—'}</p>
-                <p className="text-xs text-slate-400 mt-0.5">último ciclo</p>
-              </div>
-            </div>
-            {/* Devoluciones abiertas */}
+                }>{employeeStats.performancePct}%</strong>
+              </span>
+            )}
             {employeeStats.openDevs.length > 0 && (
-              <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
-                <p className="text-xs font-semibold text-orange-700 mb-1">
-                  ⚠️ {employeeStats.openDevs.length} devolución{employeeStats.openDevs.length > 1 ? 'es' : ''} pendiente{employeeStats.openDevs.length > 1 ? 's' : ''} de reparación
-                </p>
-                {employeeStats.openDevs.map(d => {
-                  const pend = d.quantity_sent - (d.quantity_returned || 0);
-                  const prod = products.find(p => p.reference === d.product_reference);
-                  return (
-                    <p key={d.id} className="text-xs text-orange-800">
-                      · {prod?.name || d.product_reference}: <span className="font-bold">{pend} uds</span>
-                    </p>
-                  );
-                })}
-              </div>
+              <span className="text-xs font-semibold text-orange-600">
+                ⚠️ {employeeStats.openDevs.length} devol. pendiente{employeeStats.openDevs.length > 1 ? 's' : ''}
+              </span>
             )}
           </div>
         )}
@@ -483,37 +439,6 @@ export default function RouteOperario({ employees, products, dispatches, deliver
           </Button>
         </>
       )}
-
-      {/* Enviar recomendación a todos */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <h3 className="font-semibold text-slate-700 flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-emerald-500" /> Enviar mensaje a todos los operarios
-        </h3>
-        {okBc ? (
-          <div className="text-sm text-green-700 p-3 bg-green-50 border border-green-200 rounded-lg">
-            ✅ Enviado a {okBc.enviados} operario{okBc.enviados !== 1 ? "s" : ""}.
-            {okBc.errores?.length > 0 && <p className="text-amber-700 mt-1">⚠️ {okBc.errores.join(", ")}</p>}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <select value={bcRecId} onChange={e => setBcRecId(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm">
-              <option value="">— Seleccionar recomendación —</option>
-              {recomendaciones.map(r => (
-                <option key={r.id} value={r.id}>[{r.categoria}] {r.texto.slice(0, 60)}{r.texto.length > 60 ? "…" : ""}</option>
-              ))}
-            </select>
-            {recomendaciones.length === 0 && (
-              <p className="text-xs text-amber-600">Sin recomendaciones activas. Agrégalas en Configuración → WhatsApp.</p>
-            )}
-            <button onClick={handleBroadcast} disabled={!bcRecId || enviandoBc}
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold bg-emerald-600 text-white rounded-xl disabled:opacity-50 active:bg-emerald-700">
-              {enviandoBc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
-              {enviandoBc ? "Enviando..." : "Enviar a todos"}
-            </button>
-          </div>
-        )}
-      </div>
 
       {/* Modal recomendación individual */}
       {modalEmp && (
