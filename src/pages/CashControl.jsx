@@ -65,11 +65,13 @@ export default function CashControlPage() {
       const applyDateFilter = filters.dateRange !== 'all';
       const startStr = startDate.toISOString().slice(0, 10);
 
-      // Los gastos siempre se cargan con ventana de 60 días para que ajustes
-      // retroactivos (gastos con fecha anterior) siempre afecten el cierre.
-      const expensesStartDate = new Date(today);
-      expensesStartDate.setDate(expensesStartDate.getDate() - 60);
-      const expensesStartStr = expensesStartDate.toISOString().slice(0, 10);
+      // Ventas, gastos y abonos se cargan siempre con ventana de 60 días.
+      // Esto garantiza que registros corruptos (cash_amount sobreescrito a 0
+      // por un bug anterior) se recalculen y corrijan automáticamente.
+      // El filtro de display se aplica al final sobre controlsArray.
+      const windowStartDate = new Date(today);
+      windowStartDate.setDate(windowStartDate.getDate() - 60);
+      const windowStartStr = windowStartDate.toISOString().slice(0, 10);
 
       let salesFilter = { status: 'completed' };
       let expensesFilter = {};
@@ -77,14 +79,12 @@ export default function CashControlPage() {
         salesFilter.location_id = filters.location;
         expensesFilter.location_id = filters.location;
       }
-      if (applyDateFilter) {
-        salesFilter.sale_date = { $gte: startStr };
-      }
-      expensesFilter.expense_date = { $gte: expensesStartStr };
+      salesFilter.sale_date = { $gte: windowStartStr };
+      expensesFilter.expense_date = { $gte: windowStartStr };
 
       let paymentsFilter = { type: 'credit_payment' };
       if (filters.location !== "all") paymentsFilter.location_id = filters.location;
-      if (applyDateFilter) paymentsFilter.payment_date = { $gte: startStr };
+      paymentsFilter.payment_date = { $gte: windowStartStr };
 
       const [sales, expenses, creditPayments] = await Promise.all([
         Sale.filter(salesFilter),
@@ -136,11 +136,6 @@ export default function CashControlPage() {
       expenses.forEach(expense => {
         const date = toDateOnly(expense.expense_date);
         if (!date) return;
-        // Gastos fuera del rango de ventas NO crean entradas en dataByKey —
-        // si lo hicieran, el loop principal sobreescribiría cash_amount a 0
-        // porque no hay ventas cargadas para esa fecha. El fallback loop
-        // ya une los gastos a controles existentes fuera del rango.
-        if (applyDateFilter && date < startStr) return;
         if (expense.payment_method !== 'cash') return;
         const locationId = expense.location_id || null;
         const key = ensureKey(date, locationId);
@@ -206,7 +201,16 @@ export default function CashControlPage() {
       }
 
       controlsArray.sort((a, b) => new Date(b.control_date) - new Date(a.control_date));
-      setControls(controlsArray);
+
+      // Aplicar filtro de display: mostrar solo el rango elegido + controles abiertos
+      const displayControls = applyDateFilter
+        ? controlsArray.filter(c =>
+            toDateOnly(c.control_date) >= startStr ||
+            !c.cash_collected ||
+            !c.transfers_verified
+          )
+        : controlsArray;
+      setControls(displayControls);
 
       // Auto-expand the most recent pending date on first load
       if (firstLoadRef.current) {
