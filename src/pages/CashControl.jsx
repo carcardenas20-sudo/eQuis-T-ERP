@@ -136,11 +136,15 @@ export default function CashControlPage() {
       expenses.forEach(expense => {
         const date = toDateOnly(expense.expense_date);
         if (!date) return;
+        // Gastos fuera del rango de ventas NO crean entradas en dataByKey —
+        // si lo hicieran, el loop principal sobreescribiría cash_amount a 0
+        // porque no hay ventas cargadas para esa fecha. El fallback loop
+        // ya une los gastos a controles existentes fuera del rango.
+        if (applyDateFilter && date < startStr) return;
+        if (expense.payment_method !== 'cash') return;
         const locationId = expense.location_id || null;
         const key = ensureKey(date, locationId);
-        if (expense.payment_method === 'cash') {
-          dataByKey[key].expenses.push(expense);
-        }
+        dataByKey[key].expenses.push(expense);
       });
 
       const existingControls = await CashControl.list();
