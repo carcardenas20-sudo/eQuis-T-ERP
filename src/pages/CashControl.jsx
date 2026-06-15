@@ -65,6 +65,12 @@ export default function CashControlPage() {
       const applyDateFilter = filters.dateRange !== 'all';
       const startStr = startDate.toISOString().slice(0, 10);
 
+      // Los gastos siempre se cargan con ventana de 60 días para que ajustes
+      // retroactivos (gastos con fecha anterior) siempre afecten el cierre.
+      const expensesStartDate = new Date(today);
+      expensesStartDate.setDate(expensesStartDate.getDate() - 60);
+      const expensesStartStr = expensesStartDate.toISOString().slice(0, 10);
+
       let salesFilter = { status: 'completed' };
       let expensesFilter = {};
       if (filters.location !== "all") {
@@ -73,8 +79,8 @@ export default function CashControlPage() {
       }
       if (applyDateFilter) {
         salesFilter.sale_date = { $gte: startStr };
-        expensesFilter.expense_date = { $gte: startStr };
       }
+      expensesFilter.expense_date = { $gte: expensesStartStr };
 
       let paymentsFilter = { type: 'credit_payment' };
       if (filters.location !== "all") paymentsFilter.location_id = filters.location;
@@ -179,13 +185,20 @@ export default function CashControlPage() {
 
       if (updatePromises.length > 0) await Promise.all(updatePromises);
 
-      // Siempre incluir controles no verificados aunque estén fuera del rango de fechas
+      // Siempre incluir controles no verificados aunque estén fuera del rango de fechas.
+      // Cruzar con los gastos cargados para que ajustes retroactivos se reflejen.
       const controlsInArray = new Set(controlsArray.map(c => c.id));
       for (const control of existingControls) {
         if (controlsInArray.has(control.id)) continue;
         if (control.cash_collected && control.transfers_verified) continue;
         if (filters.location !== "all" && control.location_id !== filters.location) continue;
-        controlsArray.push({ ...control, expenses: [] });
+        const controlDate = toDateOnly(control.control_date);
+        const controlExpenses = expenses.filter(e =>
+          toDateOnly(e.expense_date) === controlDate &&
+          e.payment_method === 'cash' &&
+          (e.location_id || null) === (control.location_id || null)
+        );
+        controlsArray.push({ ...control, expenses: controlExpenses });
       }
 
       controlsArray.sort((a, b) => new Date(b.control_date) - new Date(a.control_date));
