@@ -71,7 +71,8 @@ const PublicRoutes = () => (
 );
 
 const StagingBanner = () => {
-  if (import.meta.env.VITE_APP_ENV !== "staging") return null;
+  const isStaging = typeof window !== "undefined" && window.location.hostname.includes("staging");
+  if (!isStaging) return null;
   return (
     <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-400 text-amber-900 text-center text-xs font-bold py-1 tracking-wide shadow-md">
       ⚠️ ENTORNO DE PRUEBAS — los datos aquí NO son reales
