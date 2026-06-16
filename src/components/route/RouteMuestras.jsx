@@ -448,7 +448,10 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
                     </button>
                   </div>
 
-                  {isExpanded && (
+                  {isExpanded && (() => {
+                    const rQtyNum = parseInt(resultQty) || 0;
+                    const canConfirm = resultStatus === "rechazada" || rQtyNum > 0;
+                    return (
                     <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
                       <div>
                         <label className="text-xs font-semibold text-slate-500 block mb-1.5">
@@ -478,26 +481,54 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
                           <XCircle className="w-4 h-4" /> Rechazada
                         </button>
                       </div>
-                      {resultStatus === "aprobada" && (
-                        <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
-                          <p className="text-xs font-semibold text-green-800">Se creará como operario</p>
-                          <p className="text-xs text-green-600 mt-0.5">
-                            {m.candidate_name} se registrará con ID {nextEmployeeId}
-                            {parseInt(resultQty) > 0 && ` y se le acreditarán ${resultQty} uds como entrega.`}
+
+                      {/* Info según resultado */}
+                      {resultStatus === "aprobada" && rQtyNum === 0 && (
+                        <div className="bg-amber-50 border border-amber-300 rounded-xl px-3 py-2.5">
+                          <p className="text-xs font-semibold text-amber-800">Ingresa las unidades fabricadas</p>
+                          <p className="text-xs text-amber-600 mt-0.5">
+                            Para aprobar se necesita al menos 1 unidad — sin ellas no se puede crear el operario ni acreditar pago.
                           </p>
                         </div>
                       )}
+                      {resultStatus === "aprobada" && rQtyNum > 0 && (
+                        <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 space-y-1">
+                          <p className="text-xs font-semibold text-green-800">Al confirmar:</p>
+                          <p className="text-xs text-green-700">• {m.candidate_name} se registra como operario (ID {nextEmployeeId})</p>
+                          <p className="text-xs text-green-700">• Se le acreditan {rQtyNum} uds como entrega para pago</p>
+                          {m.guia_origin === "operario" && (
+                            <p className="text-xs text-green-700">• La prenda guía se suma como entrega de {empName(m.guia_employee_id)} y entra al inventario</p>
+                          )}
+                          {m.guia_origin === "inventario" && (
+                            <p className="text-xs text-green-700">• La prenda guía vuelve al inventario</p>
+                          )}
+                        </div>
+                      )}
+                      {resultStatus === "rechazada" && rQtyNum > 0 && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 space-y-1">
+                          <p className="text-xs font-semibold text-slate-600">Al confirmar:</p>
+                          <p className="text-xs text-slate-500">• {rQtyNum} uds del candidato entran al inventario</p>
+                          {m.guia_origin === "operario" && (
+                            <p className="text-xs text-slate-500">• La prenda guía se suma como entrega de {empName(m.guia_employee_id)} y entra al inventario</p>
+                          )}
+                          {m.guia_origin === "inventario" && (
+                            <p className="text-xs text-slate-500">• La prenda guía vuelve al inventario</p>
+                          )}
+                        </div>
+                      )}
+
                       <button
                         onClick={() => handleRegistrarResultado(m)}
-                        disabled={saving}
-                        className={`w-full h-12 text-white font-bold rounded-xl disabled:opacity-50 text-sm ${
+                        disabled={saving || !canConfirm}
+                        className={`w-full h-12 text-white font-bold rounded-xl disabled:opacity-40 text-sm ${
                           resultStatus === "aprobada" ? "bg-green-600 active:bg-green-700" : "bg-red-500 active:bg-red-600"
                         }`}
                       >
-                        {saving ? "Guardando..." : `Confirmar resultado`}
+                        {saving ? "Guardando..." : "Confirmar resultado"}
                       </button>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               );
             })}
