@@ -85,6 +85,8 @@
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.171.0",
+    "imapflow": "^1.0.169",
+    "mailparser": "^3.7.2",
     "uuid": "^13.0.0",
     "vaul": "^1.1.2",
     "whatsapp-web.js": "^1.34.7",

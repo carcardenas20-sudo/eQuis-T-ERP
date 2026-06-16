@@ -101,11 +101,19 @@ async function pollEmails() {
     logger: false,
   });
 
+  // Dominios bancarios conocidos para filtrar en el servidor IMAP directamente
+  const BANK_FROM_DOMAINS = ['bancolombia', 'bbva'];
+
   try {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     try {
-      const seqs = await client.search({ seen: false });
+      // Buscar solo emails NO leídos de dominios bancarios — no toca el resto del inbox
+      const orCriteria = BANK_FROM_DOMAINS.map(d => ({ from: d }));
+      const criteria = orCriteria.length === 1
+        ? { seen: false, from: orCriteria[0].from }
+        : { seen: false, or: orCriteria };
+      const seqs = await client.search(criteria);
       if (!seqs.length) return;
 
       for (const seq of seqs) {
@@ -118,9 +126,8 @@ async function pollEmails() {
           const subject = parsed.subject || '';
           const messageId = parsed.messageId || `fallback-${seq}-${Date.now()}`;
 
-          // Solo procesar emails de bancos conocidos
           const rule = BANK_RULES.find(r => r.fromPattern.test(from) || r.fromPattern.test(subject));
-          if (!rule) continue; // No es del banco → no marcar como leído
+          if (!rule) continue;
 
           // Verificar duplicado por Message-ID
           const dup = await query(
