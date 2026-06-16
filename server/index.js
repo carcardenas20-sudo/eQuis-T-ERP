@@ -12,6 +12,7 @@ import authRoutes from './routes/auth.js';
 import entityRoutes from './routes/entities.js';
 import uploadRoutes from './routes/upload.js';
 import { whatsappManager } from './whatsapp.js';
+import { startEmailPoller } from './emailPoller.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -976,6 +977,8 @@ async function startWithRetry(maxAttempts = 10, delayMs = 5000) {
       });
       // Iniciar WhatsApp en background después de que el servidor esté listo
       setTimeout(() => whatsappManager.init(), 3000);
+      // Iniciar poller de emails bancarios
+      setTimeout(() => startEmailPoller(), 5000);
       return;
     } catch (err) {
       console.error(`❌ DB init failed (attempt ${attempt}/${maxAttempts}): ${err.message}`);

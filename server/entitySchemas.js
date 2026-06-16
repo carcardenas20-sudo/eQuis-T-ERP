@@ -648,6 +648,23 @@ export const ENTITY_SCHEMAS = {
     },
     indexes: ['status', 'product_reference', 'muestra_date'],
   },
+
+  TransferenciaDetectada: {
+    table: 'entity_transferencia_detectada',
+    typed: {
+      banco: 'TEXT',
+      monto: 'NUMERIC(14,2)',
+      remitente: 'TEXT',
+      referencia: 'TEXT',
+      fecha_pago: 'TIMESTAMPTZ',
+      estado: "TEXT DEFAULT 'sin_asignar'",
+      email_uid: 'TEXT',
+      email_subject: 'TEXT',
+      email_from: 'TEXT',
+      email_texto: 'TEXT',
+    },
+    indexes: ['banco', 'estado', 'fecha_pago'],
+  },
 };
 
 /**

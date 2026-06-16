@@ -48,6 +48,7 @@ import Serv_Ordenes from './pages/Serv_Ordenes';
 
 // ── ADMIN / CONFIGURACIÓN ─────────────────────────────────────
 import Admin_WhatsApp from './pages/Admin_WhatsApp';
+import TransferenciasRecibidas from './pages/TransferenciasRecibidas';
 
 // ── MÓDULO OPERARIOS (produccionequist) ───────────────────────
 import Op_Dashboard from './pages/Op_Dashboard';
@@ -125,6 +126,7 @@ export const PAGES = {
 
   // Admin
   "Admin_WhatsApp": Admin_WhatsApp,
+  "TransferenciasRecibidas": TransferenciasRecibidas,
 
   // Análisis
   "Fin_Rentabilidad": Fin_Rentabilidad,
