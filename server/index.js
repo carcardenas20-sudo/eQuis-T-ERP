@@ -71,6 +71,8 @@ const PORTAL_PUBLIC_ENTITIES = new Set([
   'Traslado', 'Location', 'Product',
   // Recomendaciones de calidad (planillador las lee para enviar por WhatsApp)
   'RecomendacionCalidad',
+  // Muestras de candidatos
+  'Muestra',
 ]);
 // Entidades en las que el portal puede escribir
 const PORTAL_WRITE_ENTITIES = new Set([
@@ -80,6 +82,8 @@ const PORTAL_WRITE_ENTITIES = new Set([
   'Remision', 'OrdenServicio', // portal planta actualiza estados
   'CertificadoSolicitud',     // operario solicita certificado laboral
   'Traslado',                 // portal crea/gestiona traslados
+  'Muestra',                  // planillador registra muestras de candidatos
+  'Employee',                 // planillador crea empleado al aprobar candidato
 ]);
 // POST /api/portal-login  → recibe employee_id lógico + pin, devuelve datos del empleado
 // Validar PIN del planillador — PIN único compartido guardado en AppConfig

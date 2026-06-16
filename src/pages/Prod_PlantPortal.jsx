@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion } from "@/api/publicEntities";
+import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion, Muestra } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
   Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2,
-  Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2, MessageCircle, Users } from "lucide-react";
+  Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2, MessageCircle, Users, FlaskConical } from "lucide-react";
 import TransferReceive from "@/components/transfers/TransferReceive";
 import RouteOperario from "@/components/route/RouteOperario";
 import RouteDevoluciones from "@/components/route/RouteDevoluciones";
@@ -10,6 +10,7 @@ import RouteConteoFisico from "@/components/route/RouteConteoFisico";
 import RouteTraslados from "@/components/route/RouteTraslados";
 import RouteChecklist from "@/components/route/RouteChecklist";
 import RouteRegistrosHoy from "@/components/route/RouteRegistrosHoy";
+import RouteMuestras from "@/components/route/RouteMuestras";
 import { portalClient } from "@/api/portalClient";
 
 const ESTADO_CFG = {
@@ -371,13 +372,14 @@ export default function PlantPortal() {
   const loadPlanilladorData = async () => {
     setPlanilladorLoading(true);
     try {
-      const [employees, products, dispatches, deliveries, inventory, devoluciones, configs] = await Promise.all([
+      const [employees, products, dispatches, deliveries, inventory, devoluciones, muestras, configs] = await Promise.all([
         Employee.list(),
         Producto.list(),
         Dispatch.list(),
         Delivery.list(),
         Inventory.list(),
         Devolucion.list(),
+        Muestra.list(),
         AppConfig.filter({ key: "pending_row_order" }),
       ]);
       const activeEmps = (employees || []).filter(e => e.is_active);
@@ -394,6 +396,7 @@ export default function PlantPortal() {
         deliveries: deliveries || [],
         inventory: inventory || [],
         devoluciones: devoluciones || [],
+        muestras: muestras || [],
       });
     } catch (e) { console.error("Planillador data error:", e); }
     setPlanilladorLoading(false);
@@ -875,13 +878,14 @@ export default function PlantPortal() {
                 </div>
               </div>
 
-              {/* Sub-tabs planillador — 2×2 */}
+              {/* Sub-tabs planillador — 2×3 */}
               <div className="grid grid-cols-2 gap-1.5">
                 {[
-                  { id: "operaciones",  label: "Operaciones",   Icon: Truck,         color: "bg-blue-600",  active: "bg-blue-600 text-white shadow-sm", inactive: "bg-blue-50 text-blue-700 border border-blue-200" },
-                  { id: "traslados",    label: "Traslados",     Icon: ArrowRightLeft, color: "bg-amber-600", active: "bg-amber-600 text-white shadow-sm", inactive: "bg-amber-50 text-amber-700 border border-amber-200" },
-                  { id: "devoluciones", label: "Devoluciones",  Icon: RotateCcw,      color: "bg-orange-600",active: "bg-orange-600 text-white shadow-sm", inactive: "bg-orange-50 text-orange-700 border border-orange-200" },
-                  { id: "conteo",       label: "Conteo Físico", Icon: PackageCheck,   color: "bg-purple-600",active: "bg-purple-600 text-white shadow-sm", inactive: "bg-purple-50 text-purple-700 border border-purple-200" },
+                  { id: "operaciones",  label: "Operaciones",   Icon: Truck,          active: "bg-blue-600 text-white shadow-sm",   inactive: "bg-blue-50 text-blue-700 border border-blue-200" },
+                  { id: "traslados",    label: "Traslados",     Icon: ArrowRightLeft,  active: "bg-amber-600 text-white shadow-sm",  inactive: "bg-amber-50 text-amber-700 border border-amber-200" },
+                  { id: "devoluciones", label: "Devoluciones",  Icon: RotateCcw,       active: "bg-orange-600 text-white shadow-sm", inactive: "bg-orange-50 text-orange-700 border border-orange-200" },
+                  { id: "conteo",       label: "Conteo Físico", Icon: PackageCheck,    active: "bg-purple-600 text-white shadow-sm", inactive: "bg-purple-50 text-purple-700 border border-purple-200" },
+                  { id: "muestras",     label: "Muestras",      Icon: FlaskConical,    active: "bg-violet-600 text-white shadow-sm", inactive: "bg-violet-50 text-violet-700 border border-violet-200" },
                 ].map(({ id, label, Icon, active, inactive }) => (
                   <button key={id} onClick={() => setPlanilladorTab(id)}
                     className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-semibold transition-all
@@ -909,6 +913,8 @@ export default function PlantPortal() {
                 <RouteTraslados {...planilladorData} onSaved={loadPlanilladorData} />
               ) : planilladorTab === "devoluciones" ? (
                 <RouteDevoluciones {...planilladorData} onSaved={loadPlanilladorData} />
+              ) : planilladorTab === "muestras" ? (
+                <RouteMuestras {...planilladorData} onSaved={loadPlanilladorData} />
               ) : (
                 <RouteConteoFisico {...planilladorData} onSaved={loadPlanilladorData} />
               )}

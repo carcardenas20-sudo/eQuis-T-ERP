@@ -627,6 +627,27 @@ export const ENTITY_SCHEMAS = {
     },
     indexes: ['estado', 'origen_location_id', 'destino_location_id'],
   },
+
+  Muestra: {
+    table: 'entity_muestra',
+    typed: {
+      status: 'TEXT',                    // pendiente | aprobada | rechazada
+      candidate_name: 'TEXT',
+      candidate_phone: 'TEXT',
+      product_reference: 'TEXT',
+      quantity: 'NUMERIC(14,4)',         // unidades que fabricará el candidato
+      muestra_date: 'TEXT',
+      result_date: 'TEXT',
+      result_quantity: 'NUMERIC(14,4)', // unidades que fabricó el candidato
+      guia_origin: 'TEXT',              // operario | inventario
+      guia_employee_id: 'TEXT',
+      guia_quantity: 'NUMERIC(14,4)',
+      source_type: 'TEXT',              // despacho | presupuesto | corte
+      source_employee_id: 'TEXT',
+      location_id: 'TEXT',
+    },
+    indexes: ['status', 'product_reference', 'muestra_date'],
+  },
 };
 
 /**

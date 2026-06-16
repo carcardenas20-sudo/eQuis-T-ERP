@@ -28,3 +28,4 @@ export const TareaPlanta    = p.TareaPlanta;
 export const Traslado       = p.Traslado;
 export const ProductoPOS    = p.Product;
 export const LocationPub    = p.Location;
+export const Muestra        = p.Muestra;
