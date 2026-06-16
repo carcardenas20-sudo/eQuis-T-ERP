@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Muestra, Delivery, Inventory, StockMovement, Employee } from "@/api/publicEntities";
+import { Muestra, Delivery, Dispatch, Inventory, StockMovement, Employee } from "@/api/publicEntities";
 import { CheckCircle2, XCircle, User, Package, ChevronDown, ChevronUp, FlaskConical } from "lucide-react";
 
 const getColombiaToday = () => {
@@ -11,21 +11,21 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
   const [view, setView] = useState("list"); // list | nueva
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
-  const [expandedResult, setExpandedResult] = useState(null); // muestra.id
+  const [expandedResult, setExpandedResult] = useState(null);
 
   // Form nueva muestra
   const [candidateName, setCandidateName] = useState("");
   const [candidatePhone, setCandidatePhone] = useState("");
   const [productRef, setProductRef] = useState("");
   const [qty, setQty] = useState("");
-  const [guiaOrigin, setGuiaOrigin] = useState("inventario"); // operario | inventario
+  const [guiaOrigin, setGuiaOrigin] = useState("inventario");
   const [guiaEmpId, setGuiaEmpId] = useState("");
-  const [sourceType, setSourceType] = useState("corte"); // corte | despacho | presupuesto
+  const [sourceType, setSourceType] = useState("corte");
   const [sourceEmpId, setSourceEmpId] = useState("");
 
   // Form resultado
   const [resultQty, setResultQty] = useState("");
-  const [resultStatus, setResultStatus] = useState("aprobada"); // aprobada | rechazada
+  const [resultStatus, setResultStatus] = useState("aprobada");
 
   const today = getColombiaToday();
 
@@ -33,7 +33,7 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
   const getProd = (ref) => products.find(p => p.reference === ref);
   const empName = (id) => employees.find(e => e.employee_id === id)?.name || id;
 
-  // Operarios con pendientes para el producto seleccionado (para guía), con cantidad disponible
+  // Operarios con pendientes del producto seleccionado (para guía y para source)
   const employeesWithPending = useMemo(() => {
     if (!productRef) return [];
     return employees.map(emp => {
@@ -55,7 +55,7 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
     }).filter(Boolean);
   }, [productRef, employees, dispatches, deliveries]);
 
-  // Generar siguiente employee_id (mismo formato 3 dígitos)
+  // Siguiente employee_id disponible
   const nextEmployeeId = useMemo(() => {
     const used = employees.map(e => parseInt(e.employee_id, 10)).filter(n => !isNaN(n) && n > 0);
     const next = used.length > 0 ? Math.max(...used) + 1 : 1;
@@ -66,10 +66,16 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
     (guiaOrigin === "inventario" || (guiaOrigin === "operario" && guiaEmpId && employeesWithPending.length > 0)) &&
     (sourceType !== "despacho" || sourceEmpId);
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // CREAR MUESTRA
+  // ─────────────────────────────────────────────────────────────────────────
   const handleCrearMuestra = async () => {
     if (!canSubmitNueva) return;
     setSaving(true);
     const cantidad = parseInt(qty);
+    const prod = getProd(productRef);
+    const unitPrice = prod?.manufacturing_price || 0;
+
     try {
       await Muestra.create({
         status: "pendiente",
@@ -85,8 +91,9 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
         source_employee_id: sourceType === "despacho" ? sourceEmpId : null,
       });
 
-      // Si la prenda guía viene del inventario, descontarla al salir
+      // ── Prenda guía ──────────────────────────────────────────────────────
       if (guiaOrigin === "inventario") {
+        // Sale del inventario; vuelve cuando el candidato la retorna (al resultado)
         const inv = getInv(productRef);
         if (inv) {
           const newStock = inv.current_stock - 1;
@@ -101,6 +108,32 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
             new_stock: newStock,
           });
         }
+      } else if (guiaOrigin === "operario") {
+        // El operario entrega la prenda al planillador:
+        // → se le acredita como entrega normal (para pago) y reduce su pendiente
+        // → NO entra al inventario todavía: la prenda está con el candidato para control
+        await Delivery.create({
+          employee_id: guiaEmpId,
+          delivery_date: today,
+          items: [{ product_reference: productRef, quantity: 1, unit_price: unitPrice, total_amount: unitPrice }],
+          total_amount: unitPrice,
+          status: "muestra_guia",
+          notes: `[PRENDA GUÍA EN PRÉSTAMO] Candidato: ${candidateName.trim()}`,
+        });
+      }
+
+      // ── Origen materia prima ─────────────────────────────────────────────
+      if (sourceType === "despacho" && sourceEmpId) {
+        // Las unidades salen del despacho del operario original (reduce su pendiente)
+        // No se pagan: es un traslado de material crudo, no una entrega de producto terminado
+        await Delivery.create({
+          employee_id: sourceEmpId,
+          delivery_date: today,
+          items: [{ product_reference: productRef, quantity: cantidad, unit_price: 0, total_amount: 0 }],
+          total_amount: 0,
+          status: "traslado_muestra",
+          notes: `[MATERIAL PARA MUESTRA] Candidato: ${candidateName.trim()}`,
+        });
       }
 
       setSavedMsg("¡Muestra registrada!");
@@ -117,18 +150,21 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
     setSaving(false);
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // REGISTRAR RESULTADO
+  // ─────────────────────────────────────────────────────────────────────────
   const handleRegistrarResultado = async (m) => {
     const rQty = parseInt(resultQty) || 0;
-    if (rQty < 0) return;
     setSaving(true);
     try {
       const inv = getInv(m.product_reference);
       const prod = getProd(m.product_reference);
       const unitPrice = prod?.manufacturing_price || 0;
+      let stockActual = inv?.current_stock || 0;
 
-      // Unidades fabricadas por el candidato → inventario
+      // ── 1. Prendas fabricadas por el candidato → inventario (SIEMPRE) ───
       if (rQty > 0 && inv) {
-        const newStock = inv.current_stock + rQty;
+        const newStock = stockActual + rQty;
         await Inventory.update(inv.id, { current_stock: newStock });
         await StockMovement.create({
           product_reference: m.product_reference,
@@ -136,58 +172,35 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
           quantity: rQty,
           movement_date: today,
           reason: `Muestra fabricada — candidato: ${m.candidate_name}`,
-          previous_stock: inv.current_stock,
+          previous_stock: stockActual,
           new_stock: newStock,
         });
+        stockActual = newStock;
       }
 
-      // Prenda guía → devolver a inventario y creditar si es de operario
-      if (m.guia_origin === "inventario") {
-        // fue descontada al crear; la devolvemos
-        if (inv) {
-          const stockAhora = rQty > 0 ? inv.current_stock + rQty : inv.current_stock;
-          const newStock = stockAhora + (m.guia_quantity || 1);
-          await Inventory.update(inv.id, { current_stock: newStock });
-          await StockMovement.create({
-            product_reference: m.product_reference,
-            movement_type: "entrada",
-            quantity: m.guia_quantity || 1,
-            movement_date: today,
-            reason: `Devolución prenda guía — muestra candidato: ${m.candidate_name}`,
-            previous_stock: stockAhora,
-            new_stock: newStock,
-          });
-        }
-      } else if (m.guia_origin === "operario" && m.guia_employee_id) {
-        // creditar entrega al operario que prestó la prenda
+      // ── 2. Prenda guía regresa al inventario de asignación (SIEMPRE) ────
+      // • Origen inventario: fue descontada al crear, ahora vuelve
+      // • Origen operario: la Delivery del operario ya se hizo al crear;
+      //   aquí solo se registra que la prenda vuelve al inventario de asignación
+      if (inv) {
         const guiaQty = m.guia_quantity || 1;
-        const guiaUnitPrice = unitPrice;
-        await Delivery.create({
-          employee_id: m.guia_employee_id,
-          delivery_date: today,
-          items: [{ product_reference: m.product_reference, quantity: guiaQty, unit_price: guiaUnitPrice, total_amount: guiaUnitPrice * guiaQty }],
-          total_amount: guiaUnitPrice * guiaQty,
-          status: "entrega",
-          notes: `[PRENDA GUÍA MUESTRA] Candidato: ${m.candidate_name}`,
+        const newStock = stockActual + guiaQty;
+        await Inventory.update(inv.id, { current_stock: newStock });
+        await StockMovement.create({
+          product_reference: m.product_reference,
+          movement_type: "entrada",
+          quantity: guiaQty,
+          movement_date: today,
+          reason: m.guia_origin === "inventario"
+            ? `Devolución prenda guía — muestra candidato: ${m.candidate_name}`
+            : `Prenda guía retornada al inventario — operario: ${empName(m.guia_employee_id)}, candidato: ${m.candidate_name}`,
+          previous_stock: stockActual,
+          new_stock: newStock,
         });
-        // prenda guía → inventario
-        const stockBase = rQty > 0 && inv ? inv.current_stock + rQty : (inv?.current_stock || 0);
-        if (inv) {
-          const newStock = stockBase + guiaQty;
-          await Inventory.update(inv.id, { current_stock: newStock });
-          await StockMovement.create({
-            product_reference: m.product_reference,
-            movement_type: "entrada",
-            quantity: guiaQty,
-            movement_date: today,
-            reason: `Prenda guía muestra → inventario — operario: ${empName(m.guia_employee_id)}`,
-            previous_stock: stockBase,
-            new_stock: newStock,
-          });
-        }
+        stockActual = newStock;
       }
 
-      // Si aprobado: crear empleado + entrega de sus unidades
+      // ── 3. Si aprobado: crear empleado + despacho + entrega para pago ───
       if (resultStatus === "aprobada" && rQty > 0) {
         const newEmp = await Employee.create({
           name: m.candidate_name,
@@ -197,9 +210,21 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
           is_active: true,
           hire_date: today,
         });
-        // Entrega de las unidades fabricadas para pago
+        const empId = newEmp.employee_id || nextEmployeeId;
+
+        // Despacho: registra las unidades que le fueron asignadas al candidato
+        await Dispatch.create({
+          employee_id: empId,
+          product_reference: m.product_reference,
+          quantity: rQty,
+          dispatch_date: today,
+          status: "despachado",
+          observations: `[MUESTRA] Origen: ${m.source_type}${m.source_employee_id ? " — op. " + empName(m.source_employee_id) : ""}`,
+        });
+
+        // Entrega: las unidades que fabricó → acredita al pago
         await Delivery.create({
-          employee_id: newEmp.employee_id || nextEmployeeId,
+          employee_id: empId,
           delivery_date: today,
           items: [{ product_reference: m.product_reference, quantity: rQty, unit_price: unitPrice, total_amount: unitPrice * rQty }],
           total_amount: unitPrice * rQty,
@@ -250,13 +275,11 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
             <p className="font-bold text-violet-900 text-sm">① Candidato</p>
           </div>
           <div className="px-4 py-3 space-y-3">
-            <input
-              type="text" placeholder="Nombre completo *"
+            <input type="text" placeholder="Nombre completo *"
               value={candidateName} onChange={e => setCandidateName(e.target.value)}
               className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base focus:outline-none focus:ring-2 focus:ring-violet-400"
             />
-            <input
-              type="tel" placeholder="Teléfono (opcional)"
+            <input type="tel" placeholder="Teléfono (opcional)"
               value={candidatePhone} onChange={e => setCandidatePhone(e.target.value)}
               className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base focus:outline-none focus:ring-2 focus:ring-violet-400"
             />
@@ -267,11 +290,10 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
         {candidateName.trim() && (
           <div className="bg-white rounded-xl border-2 border-violet-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 bg-violet-50 border-b border-violet-200">
-              <p className="font-bold text-violet-900 text-sm">② Producto y cantidad</p>
+              <p className="font-bold text-violet-900 text-sm">② Producto y cantidad a fabricar</p>
             </div>
             <div className="px-4 py-3 space-y-3">
-              <select
-                value={productRef} onChange={e => { setProductRef(e.target.value); setGuiaEmpId(""); }}
+              <select value={productRef} onChange={e => { setProductRef(e.target.value); setGuiaEmpId(""); setSourceEmpId(""); }}
                 className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
               >
                 <option value="">— Seleccionar referencia —</option>
@@ -280,8 +302,7 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
               {productRef && (
                 <div>
                   <label className="text-xs font-semibold text-slate-500 block mb-1.5">Unidades a fabricar</label>
-                  <input
-                    type="number" min="1" placeholder="0"
+                  <input type="number" min="1" placeholder="0"
                     value={qty} onChange={e => setQty(e.target.value)}
                     className="w-full h-14 border-2 border-slate-300 rounded-xl px-3 text-2xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-violet-400"
                   />
@@ -295,14 +316,14 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
         {productRef && parseInt(qty) > 0 && (
           <div className="bg-white rounded-xl border-2 border-slate-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-              <p className="font-bold text-slate-700 text-sm">③ Origen materia prima</p>
-              <p className="text-xs text-slate-400 mt-0.5">¿De dónde sale el material que fabricará el candidato?</p>
+              <p className="font-bold text-slate-700 text-sm">③ Origen del material a fabricar</p>
+              <p className="text-xs text-slate-400 mt-0.5">¿De dónde sale la materia prima que usará el candidato?</p>
             </div>
             <div className="px-4 py-3 space-y-2">
               {[
                 { id: "corte", label: "Corte individual" },
-                { id: "despacho", label: "Despacho de operario" },
                 { id: "presupuesto", label: "Presupuesto" },
+                { id: "despacho", label: "Despacho de otro operario" },
               ].map(opt => (
                 <button key={opt.id} onClick={() => { setSourceType(opt.id); setSourceEmpId(""); }}
                   className={`w-full text-left px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
@@ -313,12 +334,23 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
                 </button>
               ))}
               {sourceType === "despacho" && (
-                <select value={sourceEmpId} onChange={e => setSourceEmpId(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white mt-1"
-                >
-                  <option value="">— Operario del despacho —</option>
-                  {employees.map(e => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}
-                </select>
+                <>
+                  <select value={sourceEmpId} onChange={e => setSourceEmpId(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white mt-1"
+                  >
+                    <option value="">— Operario original —</option>
+                    {(employeesWithPending.length > 0 ? employeesWithPending : employees).map(e => (
+                      <option key={e.employee_id} value={e.employee_id}>
+                        {e.name}{e.pendingGuia ? ` (${e.pendingGuia} pendientes)` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {sourceEmpId && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                      <p className="text-xs text-slate-500">Al registrar, se descuentan <strong>{qty} uds</strong> del despacho de {empName(sourceEmpId)} sin pago (traslado de material).</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -329,7 +361,7 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
           <div className="bg-white rounded-xl border-2 border-amber-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 bg-amber-50 border-b border-amber-200">
               <p className="font-bold text-amber-900 text-sm">④ Prenda guía</p>
-              <p className="text-xs text-amber-600 mt-0.5">Prenda ya confeccionada que el candidato usará como modelo</p>
+              <p className="text-xs text-amber-600 mt-0.5">Prenda ya confeccionada que el candidato usa como modelo</p>
             </div>
             <div className="px-4 py-3 space-y-2">
               <div className="grid grid-cols-2 gap-2">
@@ -354,41 +386,42 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
                 return (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
                     <p className="text-xs font-semibold text-amber-800">Sale del inventario (1 unidad)</p>
-                    <p className="text-xs text-amber-600 mt-0.5">
-                      Stock disponible: {inv?.current_stock ?? "—"} uds
-                    </p>
+                    <p className="text-xs text-amber-600 mt-0.5">Stock disponible: {inv?.current_stock ?? "—"} uds · Vuelve al inventario cuando el candidato la retorna.</p>
                   </div>
                 );
               })()}
 
               {guiaOrigin === "operario" && (
-                employeesWithPending.length === 0 ? (
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-3">
-                    <p className="text-sm text-slate-500 text-center">
-                      Ningún operario tiene pendientes de este producto
-                    </p>
-                  </div>
-                ) : (
-                  <select value={guiaEmpId} onChange={e => setGuiaEmpId(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                  >
-                    <option value="">— Seleccionar operario —</option>
-                    {employeesWithPending.map(e => (
-                      <option key={e.employee_id} value={e.employee_id}>
-                        {e.name} ({e.pendingGuia} disponibles)
-                      </option>
-                    ))}
-                  </select>
-                )
+                <>
+                  {employeesWithPending.length === 0 ? (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-3">
+                      <p className="text-sm text-slate-500 text-center">Ningún operario tiene pendientes de este producto</p>
+                    </div>
+                  ) : (
+                    <select value={guiaEmpId} onChange={e => setGuiaEmpId(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                    >
+                      <option value="">— Seleccionar operario —</option>
+                      {employeesWithPending.map(e => (
+                        <option key={e.employee_id} value={e.employee_id}>{e.name} ({e.pendingGuia} disponibles)</option>
+                      ))}
+                    </select>
+                  )}
+                  {guiaEmpId && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                      <p className="text-xs font-semibold text-amber-800">Al registrar la muestra:</p>
+                      <p className="text-xs text-amber-700 mt-0.5">• Se le acredita 1 entrega a {empName(guiaEmpId)} (reduce su pendiente y suma al pago)</p>
+                      <p className="text-xs text-amber-700">• La prenda queda con el candidato — entra al inventario cuando la retorna</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
         )}
 
         {canSubmitNueva && (
-          <button
-            onClick={handleCrearMuestra}
-            disabled={saving}
+          <button onClick={handleCrearMuestra} disabled={saving}
             className="w-full h-14 bg-violet-600 active:bg-violet-700 text-white text-base font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <FlaskConical className="w-5 h-5" />
@@ -403,9 +436,7 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
   return (
     <div className="space-y-3">
 
-      {/* Botón nueva muestra */}
-      <button
-        onClick={() => setView("nueva")}
+      <button onClick={() => setView("nueva")}
         className="w-full h-12 bg-violet-600 active:bg-violet-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 text-sm"
       >
         <FlaskConical className="w-4 h-4" /> Nueva muestra
@@ -415,9 +446,7 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
       {pendientes.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 bg-violet-50 border-b border-violet-200">
-            <p className="font-semibold text-violet-800 text-sm">
-              Pendientes ({pendientes.length})
-            </p>
+            <p className="font-semibold text-violet-800 text-sm">Pendientes ({pendientes.length})</p>
           </div>
           <div className="divide-y divide-slate-100">
             {pendientes.map(m => {
@@ -433,15 +462,13 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
                         {prod?.name || m.product_reference} · {m.quantity} uds
                       </p>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Guía: {m.guia_origin === "operario" ? empName(m.guia_employee_id) : "Inventario"} ·
-                        {" "}{m.muestra_date}
+                        Guía: {m.guia_origin === "operario" ? empName(m.guia_employee_id) : "Inventario"}
+                        {m.source_type === "despacho" && m.source_employee_id && ` · Material de: ${empName(m.source_employee_id)}`}
+                        {" · "}{m.muestra_date}
                       </p>
                     </div>
                     <button
-                      onClick={() => {
-                        setExpandedResult(isExpanded ? null : m.id);
-                        setResultQty(""); setResultStatus("aprobada");
-                      }}
+                      onClick={() => { setExpandedResult(isExpanded ? null : m.id); setResultQty(""); setResultStatus("aprobada"); }}
                       className="shrink-0 flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg bg-violet-50 border border-violet-200 text-violet-700 active:bg-violet-100"
                     >
                       Resultado {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -450,83 +477,75 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
 
                   {isExpanded && (() => {
                     const rQtyNum = parseInt(resultQty) || 0;
-                    const canConfirm = resultStatus === "rechazada" || rQtyNum > 0;
+                    const canConfirm = rQtyNum > 0 && (resultStatus === "rechazada" || rQtyNum > 0);
+                    const canApprove = resultStatus === "rechazada" || rQtyNum > 0;
                     return (
-                    <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500 block mb-1.5">
-                          Unidades fabricadas por el candidato
-                        </label>
-                        <input
-                          type="number" min="0" max={m.quantity} placeholder="0"
-                          value={resultQty} onChange={e => setResultQty(e.target.value)}
-                          className="w-full h-12 border-2 border-slate-300 rounded-xl px-3 text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-violet-400"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-500 block mb-1.5">
+                            Unidades fabricadas por el candidato
+                          </label>
+                          <input type="number" min="0" max={m.quantity} placeholder="0"
+                            value={resultQty} onChange={e => setResultQty(e.target.value)}
+                            className="w-full h-12 border-2 border-slate-300 rounded-xl px-3 text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-violet-400"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button onClick={() => setResultStatus("aprobada")}
+                            className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
+                              resultStatus === "aprobada" ? "border-green-500 bg-green-50 text-green-800" : "border-slate-200 bg-white text-slate-500"
+                            }`}
+                          >
+                            <CheckCircle2 className="w-4 h-4" /> Aprobada
+                          </button>
+                          <button onClick={() => setResultStatus("rechazada")}
+                            className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
+                              resultStatus === "rechazada" ? "border-red-500 bg-red-50 text-red-800" : "border-slate-200 bg-white text-slate-500"
+                            }`}
+                          >
+                            <XCircle className="w-4 h-4" /> Rechazada
+                          </button>
+                        </div>
+
+                        {/* Warning: aprobada sin unidades */}
+                        {resultStatus === "aprobada" && rQtyNum === 0 && (
+                          <div className="bg-amber-50 border border-amber-300 rounded-xl px-3 py-2.5">
+                            <p className="text-xs font-semibold text-amber-800">Ingresa las unidades fabricadas</p>
+                            <p className="text-xs text-amber-600 mt-0.5">Para aprobar se necesita al menos 1 unidad.</p>
+                          </div>
+                        )}
+
+                        {/* Resumen de lo que va a pasar */}
+                        {rQtyNum > 0 && (
+                          <div className={`border rounded-xl px-3 py-2.5 space-y-1 ${resultStatus === "aprobada" ? "bg-green-50 border-green-200" : "bg-slate-50 border-slate-200"}`}>
+                            <p className={`text-xs font-semibold ${resultStatus === "aprobada" ? "text-green-800" : "text-slate-600"}`}>Al confirmar:</p>
+                            <p className={`text-xs ${resultStatus === "aprobada" ? "text-green-700" : "text-slate-500"}`}>
+                              • {rQtyNum} uds del candidato entran al inventario de asignación
+                            </p>
+                            <p className={`text-xs ${resultStatus === "aprobada" ? "text-green-700" : "text-slate-500"}`}>
+                              • Prenda guía retorna al inventario
+                              {m.guia_origin === "operario" && ` (la entrega de ${empName(m.guia_employee_id)} ya fue registrada al crear la muestra)`}
+                            </p>
+                            {resultStatus === "aprobada" && (
+                              <>
+                                <p className="text-xs text-green-700">• {m.candidate_name} se crea como operario (ID {nextEmployeeId})</p>
+                                <p className="text-xs text-green-700">• Se le acredita despacho + entrega de {rQtyNum} uds para pago</p>
+                              </>
+                            )}
+                          </div>
+                        )}
+
                         <button
-                          onClick={() => setResultStatus("aprobada")}
-                          className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
-                            resultStatus === "aprobada" ? "border-green-500 bg-green-50 text-green-800" : "border-slate-200 bg-white text-slate-500"
+                          onClick={() => handleRegistrarResultado(m)}
+                          disabled={saving || !canApprove || rQtyNum === 0}
+                          className={`w-full h-12 text-white font-bold rounded-xl disabled:opacity-40 text-sm ${
+                            resultStatus === "aprobada" ? "bg-green-600 active:bg-green-700" : "bg-red-500 active:bg-red-600"
                           }`}
                         >
-                          <CheckCircle2 className="w-4 h-4" /> Aprobada
-                        </button>
-                        <button
-                          onClick={() => setResultStatus("rechazada")}
-                          className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
-                            resultStatus === "rechazada" ? "border-red-500 bg-red-50 text-red-800" : "border-slate-200 bg-white text-slate-500"
-                          }`}
-                        >
-                          <XCircle className="w-4 h-4" /> Rechazada
+                          {saving ? "Guardando..." : "Confirmar resultado"}
                         </button>
                       </div>
-
-                      {/* Info según resultado */}
-                      {resultStatus === "aprobada" && rQtyNum === 0 && (
-                        <div className="bg-amber-50 border border-amber-300 rounded-xl px-3 py-2.5">
-                          <p className="text-xs font-semibold text-amber-800">Ingresa las unidades fabricadas</p>
-                          <p className="text-xs text-amber-600 mt-0.5">
-                            Para aprobar se necesita al menos 1 unidad — sin ellas no se puede crear el operario ni acreditar pago.
-                          </p>
-                        </div>
-                      )}
-                      {resultStatus === "aprobada" && rQtyNum > 0 && (
-                        <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 space-y-1">
-                          <p className="text-xs font-semibold text-green-800">Al confirmar:</p>
-                          <p className="text-xs text-green-700">• {m.candidate_name} se registra como operario (ID {nextEmployeeId})</p>
-                          <p className="text-xs text-green-700">• Se le acreditan {rQtyNum} uds como entrega para pago</p>
-                          {m.guia_origin === "operario" && (
-                            <p className="text-xs text-green-700">• La prenda guía se suma como entrega de {empName(m.guia_employee_id)} y entra al inventario</p>
-                          )}
-                          {m.guia_origin === "inventario" && (
-                            <p className="text-xs text-green-700">• La prenda guía vuelve al inventario</p>
-                          )}
-                        </div>
-                      )}
-                      {resultStatus === "rechazada" && rQtyNum > 0 && (
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 space-y-1">
-                          <p className="text-xs font-semibold text-slate-600">Al confirmar:</p>
-                          <p className="text-xs text-slate-500">• {rQtyNum} uds del candidato entran al inventario</p>
-                          {m.guia_origin === "operario" && (
-                            <p className="text-xs text-slate-500">• La prenda guía se suma como entrega de {empName(m.guia_employee_id)} y entra al inventario</p>
-                          )}
-                          {m.guia_origin === "inventario" && (
-                            <p className="text-xs text-slate-500">• La prenda guía vuelve al inventario</p>
-                          )}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={() => handleRegistrarResultado(m)}
-                        disabled={saving || !canConfirm}
-                        className={`w-full h-12 text-white font-bold rounded-xl disabled:opacity-40 text-sm ${
-                          resultStatus === "aprobada" ? "bg-green-600 active:bg-green-700" : "bg-red-500 active:bg-red-600"
-                        }`}
-                      >
-                        {saving ? "Guardando..." : "Confirmar resultado"}
-                      </button>
-                    </div>
                     );
                   })()}
                 </div>

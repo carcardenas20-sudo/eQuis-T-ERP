@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Delivery, Dispatch, Inventory, StockMovement } from "@/api/publicEntities";
-import { Edit2, Save, X, ChevronDown, ChevronUp, PackageCheck, Truck, ArrowRightLeft, RotateCcw, AlertTriangle } from "lucide-react";
+import { Edit2, Save, X, ChevronDown, ChevronUp, PackageCheck, Truck, ArrowRightLeft, RotateCcw, AlertTriangle, FlaskConical, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const getColombiaToday = () => {
@@ -132,10 +132,12 @@ export default function RouteRegistrosHoy({ employees, products, deliveries, dis
           {/* ── Entregas ── */}
           {todayDeliveries.map(d => {
             const deliveryLabel =
-              d.status === "traslado"            ? { label: "Traslado",          Icon: ArrowRightLeft, color: "bg-amber-100 text-amber-700",  iconColor: "text-amber-500" } :
-              d.status === "devolucion_despacho" ? { label: "Dev. despacho",     Icon: RotateCcw,      color: "bg-blue-100 text-blue-700",    iconColor: "text-blue-500"  } :
-              d.status === "baja"                ? { label: "Baja",              Icon: AlertTriangle,  color: "bg-red-100 text-red-700",      iconColor: "text-red-500"   } :
-                                                   { label: "Entrega",           Icon: PackageCheck,   color: "bg-green-100 text-green-700",  iconColor: "text-green-600" };
+              d.status === "traslado"            ? { label: "Traslado",          Icon: ArrowRightLeft, color: "bg-amber-100 text-amber-700",   iconColor: "text-amber-500"  } :
+              d.status === "devolucion_despacho" ? { label: "Dev. despacho",     Icon: RotateCcw,      color: "bg-blue-100 text-blue-700",     iconColor: "text-blue-500"   } :
+              d.status === "baja"                ? { label: "Baja",              Icon: AlertTriangle,  color: "bg-red-100 text-red-700",       iconColor: "text-red-500"    } :
+              d.status === "muestra_guia"        ? { label: "Prenda guía",       Icon: FlaskConical,   color: "bg-violet-100 text-violet-700", iconColor: "text-violet-500" } :
+              d.status === "traslado_muestra"    ? { label: "Mat. muestra",      Icon: Package,        color: "bg-slate-100 text-slate-600",   iconColor: "text-slate-400"  } :
+                                                   { label: "Entrega",           Icon: PackageCheck,   color: "bg-green-100 text-green-700",   iconColor: "text-green-600"  };
             return (
             <div key={d.id} className="px-4 py-3">
               {/* Cabecera del registro */}
