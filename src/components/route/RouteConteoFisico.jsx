@@ -28,9 +28,10 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
   const [confirmado, setConfirmado] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Entregas del día seleccionado
+  // Entregas del día seleccionado (excluye movimientos internos de muestras y traslados)
+  const EXCLUDED_STATUSES = new Set(["borrador", "muestra_guia", "traslado_muestra"]);
   const selectedDeliveries = deliveries.filter(
-    d => (d.delivery_date || "").slice(0, 10) === selectedDate && d.status !== "borrador"
+    d => (d.delivery_date || "").slice(0, 10) === selectedDate && !EXCLUDED_STATUSES.has(d.status)
   );
 
   // Devoluciones REPARADAS retornadas en el día seleccionado (por date_returned)
