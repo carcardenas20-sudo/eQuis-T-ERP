@@ -62,9 +62,28 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
     return String(next).padStart(3, "0");
   }, [employees]);
 
-  const canSubmitNueva = candidateName.trim() && productRef && parseInt(qty) > 0 &&
+  const guiaOp = employeesWithPending.find(e => e.employee_id === guiaEmpId);
+  const sourceOp = employeesWithPending.find(e => e.employee_id === sourceEmpId);
+  const cantidad = parseInt(qty) || 0;
+  const isSamePerson = guiaOrigin === "operario" && sourceType === "despacho" && !!guiaEmpId && !!sourceEmpId && guiaEmpId === sourceEmpId;
+
+  let pendingWarning = null;
+  if (isSamePerson) {
+    const available = guiaOp?.pendingGuia || 0;
+    if (available < 1 + cantidad) {
+      pendingWarning = `${empName(guiaEmpId)} tiene ${available} pendientes — necesita ${1 + cantidad} (1 guía + ${cantidad} material)`;
+    }
+  } else if (sourceType === "despacho" && sourceEmpId && cantidad > 0) {
+    const sourcePending = sourceOp?.pendingGuia || 0;
+    if (sourcePending < cantidad) {
+      pendingWarning = `${empName(sourceEmpId)} tiene ${sourcePending} pendientes — la muestra necesita ${cantidad}`;
+    }
+  }
+
+  const canSubmitNueva = candidateName.trim() && productRef && cantidad > 0 &&
     (guiaOrigin === "inventario" || (guiaOrigin === "operario" && guiaEmpId && employeesWithPending.length > 0)) &&
-    (sourceType !== "despacho" || sourceEmpId);
+    (sourceType !== "despacho" || sourceEmpId) &&
+    !pendingWarning;
 
   // ─────────────────────────────────────────────────────────────────────────
   // CREAR MUESTRA
@@ -420,14 +439,23 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
           </div>
         )}
 
-        {canSubmitNueva && (
-          <button onClick={handleCrearMuestra} disabled={saving}
-            className="w-full h-14 bg-violet-600 active:bg-violet-700 text-white text-base font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            <FlaskConical className="w-5 h-5" />
-            {saving ? "Registrando..." : "Registrar muestra"}
-          </button>
-        )}
+        {candidateName.trim() && productRef && cantidad > 0 &&
+          (guiaOrigin === "inventario" || (guiaOrigin === "operario" && guiaEmpId && employeesWithPending.length > 0)) &&
+          (sourceType !== "despacho" || sourceEmpId) && (
+            pendingWarning ? (
+              <div className="bg-red-50 border border-red-300 rounded-xl px-4 py-3">
+                <p className="text-sm font-bold text-red-700">Pendientes insuficientes</p>
+                <p className="text-xs text-red-600 mt-1">{pendingWarning}</p>
+              </div>
+            ) : (
+              <button onClick={handleCrearMuestra} disabled={saving}
+                className="w-full h-14 bg-violet-600 active:bg-violet-700 text-white text-base font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <FlaskConical className="w-5 h-5" />
+                {saving ? "Registrando..." : "Registrar muestra"}
+              </button>
+            )
+          )}
       </div>
     );
   }
