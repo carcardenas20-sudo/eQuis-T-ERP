@@ -24,7 +24,7 @@ export default function DeliveredUnits({ deliveries }) {
     const toDate = new Date(date.to);
     toDate.setHours(23, 59, 59, 999);
 
-    const EXCLUDED = new Set(["borrador", "traslado", "devolucion_despacho", "baja", "traslado_muestra"]);
+    const EXCLUDED = new Set(["borrador", "traslado", "devolucion_despacho", "baja", "traslado_muestra", "muestra_guia"]);
     const filteredDeliveries = deliveries.filter(d => {
       const deliveryDate = new Date(d.delivery_date);
       return deliveryDate >= date.from && deliveryDate <= toDate && !EXCLUDED.has(d.status);

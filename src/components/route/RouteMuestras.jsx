@@ -197,11 +197,11 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
         stockActual = newStock;
       }
 
-      // ── 2. Prenda guía regresa al inventario de asignación (SIEMPRE) ────
-      // • Origen inventario: fue descontada al crear, ahora vuelve
-      // • Origen operario: la Delivery del operario ya se hizo al crear;
-      //   aquí solo se registra que la prenda vuelve al inventario de asignación
-      if (inv) {
+      // ── 2. Prenda guía regresa al inventario solo si vino del inventario ───
+      // • Origen inventario: fue descontada al crear → vuelve aquí
+      // • Origen operario: el operario ya cobró vía muestra_guia; la prenda
+      //   queda con el candidato → NO entra al inventario (evita unidad fantasma)
+      if (inv && m.guia_origin === "inventario") {
         const guiaQty = m.guia_quantity || 1;
         const newStock = stockActual + guiaQty;
         await Inventory.update(inv.id, { current_stock: newStock });
