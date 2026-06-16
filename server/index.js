@@ -532,8 +532,17 @@ app.post('/api/functions/enviarRecomendacionTodos', requireAuth, async (req, res
 
 const DIST_DIR = join(__dirname, '..', 'dist');
 console.log('🗂️  DIST_DIR:', DIST_DIR);
-app.use(express.static(DIST_DIR));
+// Assets con hash en el nombre (JS/CSS de Vite): caché larga
+app.use(express.static(DIST_DIR, {
+  setHeaders(res, filePath) {
+    if (/\/assets\//.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  },
+}));
+// index.html y rutas SPA: nunca cachear para que siempre sirva la versión actual
 app.get('/{*path}', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(join(DIST_DIR, 'index.html'));
 });
 
