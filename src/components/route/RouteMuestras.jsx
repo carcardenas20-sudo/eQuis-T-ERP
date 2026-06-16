@@ -33,10 +33,10 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
   const getProd = (ref) => products.find(p => p.reference === ref);
   const empName = (id) => employees.find(e => e.employee_id === id)?.name || id;
 
-  // Operarios con pendientes para el producto seleccionado (para guía)
+  // Operarios con pendientes para el producto seleccionado (para guía), con cantidad disponible
   const employeesWithPending = useMemo(() => {
-    if (!productRef) return employees;
-    return employees.filter(emp => {
+    if (!productRef) return [];
+    return employees.map(emp => {
       const dispatched = dispatches
         .filter(d => d.employee_id === emp.employee_id && d.product_reference === productRef)
         .reduce((s, d) => s + (d.quantity || 0), 0);
@@ -50,8 +50,9 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
           if (d.product_reference === productRef) return s + (d.quantity || 0);
           return s;
         }, 0);
-      return dispatched - delivered > 0;
-    });
+      const pending = dispatched - delivered;
+      return pending > 0 ? { ...emp, pendingGuia: pending } : null;
+    }).filter(Boolean);
   }, [productRef, employees, dispatches, deliveries]);
 
   // Generar siguiente employee_id (mismo formato 3 dígitos)
@@ -62,7 +63,7 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
   }, [employees]);
 
   const canSubmitNueva = candidateName.trim() && productRef && parseInt(qty) > 0 &&
-    (guiaOrigin === "inventario" || (guiaOrigin === "operario" && guiaEmpId)) &&
+    (guiaOrigin === "inventario" || (guiaOrigin === "operario" && guiaEmpId && employeesWithPending.length > 0)) &&
     (sourceType !== "despacho" || sourceEmpId);
 
   const handleCrearMuestra = async () => {
@@ -361,14 +362,24 @@ export default function RouteMuestras({ employees, products, dispatches, deliver
               })()}
 
               {guiaOrigin === "operario" && (
-                <select value={guiaEmpId} onChange={e => setGuiaEmpId(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                >
-                  <option value="">— Seleccionar operario —</option>
-                  {(employeesWithPending.length > 0 ? employeesWithPending : employees).map(e => (
-                    <option key={e.employee_id} value={e.employee_id}>{e.name}</option>
-                  ))}
-                </select>
+                employeesWithPending.length === 0 ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-3">
+                    <p className="text-sm text-slate-500 text-center">
+                      Ningún operario tiene pendientes de este producto
+                    </p>
+                  </div>
+                ) : (
+                  <select value={guiaEmpId} onChange={e => setGuiaEmpId(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl px-3 py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                  >
+                    <option value="">— Seleccionar operario —</option>
+                    {employeesWithPending.map(e => (
+                      <option key={e.employee_id} value={e.employee_id}>
+                        {e.name} ({e.pendingGuia} disponibles)
+                      </option>
+                    ))}
+                  </select>
+                )
               )}
             </div>
           </div>
