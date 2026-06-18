@@ -1,16 +1,3 @@
-/**
- * emailPoller.js
- * Conecta vía IMAP a Gmail cada 60 s, detecta emails de alertas bancarias
- * (Bancolombia, BBVA) y los guarda como TransferenciaDetectada en la BD.
- *
- * Variables de entorno requeridas:
- *   EMAIL_USER     → dirección de Gmail (ej: pagos@gmail.com)
- *   EMAIL_PASSWORD → Contraseña de aplicación de Google (16 caracteres, sin espacios)
- *
- * Para obtener la contraseña de aplicación:
- *   myaccount.google.com → Seguridad → Verificación en 2 pasos → Contraseñas de aplicación
- */
-
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { query } from './db.js';
@@ -19,28 +6,38 @@ import { v4 as uuidv4 } from 'uuid';
 
 const SCHEMA = ENTITY_SCHEMAS.TransferenciaDetectada;
 
-// Convierte formato colombiano "$1.500.000,00" → 1500000
 function parseMontoCOP(str) {
   if (!str) return null;
   let s = str.replace(/[$\s]/g, '');
   if (s.includes('.') && s.includes(',')) {
-    // Formato colombiano: 1.500.000,00 → miles=punto, decimal=coma
     s = s.replace(/\./g, '').replace(',', '.');
   } else if (s.includes(',') && !s.includes('.')) {
-    // Solo comas como miles: 1,500,000
     s = s.replace(/,/g, '');
   } else if (s.includes('.') && !s.includes(',')) {
     const parts = s.split('.');
-    // Si el último segmento no tiene 2 dígitos, son miles: 1.500.000
-    if (parts[parts.length - 1].length !== 2) {
-      s = s.replace(/\./g, '');
-    }
+    if (parts[parts.length - 1].length !== 2) s = s.replace(/\./g, '');
   }
   const n = parseFloat(s);
   return isNaN(n) || n <= 0 ? null : n;
 }
 
-// Parsers por banco — ajustar según formato real de cada email
+function decodeHtmlEntities(str) {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&aacute;/g, 'á').replace(/&Aacute;/g, 'Á')
+    .replace(/&eacute;/g, 'é').replace(/&Eacute;/g, 'É')
+    .replace(/&iacute;/g, 'í').replace(/&Iacute;/g, 'Í')
+    .replace(/&oacute;/g, 'ó').replace(/&Oacute;/g, 'Ó')
+    .replace(/&uacute;/g, 'ú').replace(/&Uacute;/g, 'Ú')
+    .replace(/&ntilde;/g, 'ñ').replace(/&Ntilde;/g, 'Ñ')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code)));
+}
+
 const BANK_RULES = [
   {
     banco: 'bancolombia',
@@ -101,69 +98,83 @@ async function pollEmails() {
     logger: false,
   });
 
-  // Dominios bancarios conocidos para filtrar en el servidor IMAP directamente
   const BANK_FROM_DOMAINS = ['bancolombia', 'bbva'];
 
   try {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     try {
-      // Buscar solo emails NO leídos de dominios bancarios — no toca el resto del inbox
       const orCriteria = BANK_FROM_DOMAINS.map(d => ({ from: d }));
       const criteria = orCriteria.length === 1
         ? { seen: false, from: orCriteria[0].from }
         : { seen: false, or: orCriteria };
-      const seqs = await client.search(criteria);
-      if (!seqs.length) return;
 
-      for (const seq of seqs) {
+      // Usar UIDs para que sean estables aunque cambie el mailbox
+      const uids = await client.search(criteria, { uid: true });
+      if (!uids.length) return;
+
+      for (const uid of uids) {
         try {
-          const msg = await client.fetchOne(String(seq), { source: true });
+          const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
           if (!msg?.source) continue;
 
           const parsed = await simpleParser(msg.source);
           const from = parsed.from?.value?.[0]?.address || '';
           const subject = parsed.subject || '';
-          const messageId = parsed.messageId || `fallback-${seq}-${Date.now()}`;
+          const messageId = parsed.messageId || `fallback-${uid}`;
 
           const rule = BANK_RULES.find(r => r.fromPattern.test(from) || r.fromPattern.test(subject));
-          if (!rule) continue;
+          if (!rule) {
+            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
+            continue;
+          }
 
-          // Verificar duplicado por Message-ID
+          // Verificar duplicado por Message-ID antes de procesar
           const dup = await query(
             `SELECT id FROM ${SCHEMA.table} WHERE email_uid = $1 LIMIT 1`,
             [messageId]
           );
 
-          if (dup.rows.length === 0) {
-            const text = parsed.text ||
-              (parsed.html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-                                 .replace(/<[^>]+>/g, ' ')
-                                 .replace(/\s+/g, ' ');
-
-            const result = rule.parse(text, subject);
-            await saveTransferencia({
-              banco: rule.banco,
-              monto: result?.monto ?? null,
-              remitente: result?.remitente ?? null,
-              referencia: result?.referencia ?? null,
-              fecha_pago: parsed.date?.toISOString() ?? new Date().toISOString(),
-              estado: 'sin_asignar',
-              email_uid: messageId,
-              email_subject: subject,
-              email_from: from,
-              email_texto: text.slice(0, 2000),
-            });
-
-            if (!result) {
-              console.log(`[emailPoller] Sin parsear — "${subject}" | Texto: ${text.slice(0, 200)}`);
-            }
+          if (dup.rows.length > 0) {
+            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
+            continue;
           }
 
-          // Marcar como leído en Gmail para no volver a procesar
-          await client.messageFlagsAdd(String(seq), ['\\Seen']);
+          let text = parsed.text ||
+            (parsed.html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                               .replace(/<[^>]+>/g, ' ')
+                               .replace(/\s+/g, ' ');
+          text = decodeHtmlEntities(text);
+
+          // Solo procesar emails que contengan un monto — ignora logins, bienvenidas, etc.
+          const hasAmount = /\$\s*[\d.,]+/.test(text);
+          if (!hasAmount) {
+            console.log(`[emailPoller] Ignorado (sin monto) — "${subject}"`);
+            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
+            continue;
+          }
+
+          const result = rule.parse(text, subject);
+          await saveTransferencia({
+            banco: rule.banco,
+            monto: result?.monto ?? null,
+            remitente: result?.remitente ?? null,
+            referencia: result?.referencia ?? null,
+            fecha_pago: parsed.date?.toISOString() ?? new Date().toISOString(),
+            estado: 'sin_asignar',
+            email_uid: messageId,
+            email_subject: subject,
+            email_from: from,
+            email_texto: text.slice(0, 2000),
+          });
+
+          if (!result) {
+            console.log(`[emailPoller] Sin parsear — "${subject}" | Texto: ${text.slice(0, 200)}`);
+          }
+
+          await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
         } catch (msgErr) {
-          console.error(`[emailPoller] Error en seq ${seq}:`, msgErr.message);
+          console.error(`[emailPoller] Error en uid ${uid}:`, msgErr.message);
         }
       }
     } finally {
