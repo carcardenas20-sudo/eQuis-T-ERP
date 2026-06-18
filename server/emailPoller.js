@@ -220,7 +220,7 @@ export function startEmailPoller() {
     console.log('[emailPoller] EMAIL_USER/EMAIL_PASSWORD no configurados — desactivado');
     return;
   }
-  console.log(`[emailPoller] Activo — ${user} — revisando cada 60 s`);
+  console.log(`[emailPoller] Activo — ${user} — revisando cada 30 s`);
 
   // Primer ciclo: 30 días para recuperar historial
   runPoll({ days: 30 }).catch(e => console.error('[emailPoller] Error inicial:', e.message));
@@ -228,6 +228,6 @@ export function startEmailPoller() {
   // Ciclos siguientes: 7 días (cubre cualquier email reciente leído o no)
   setInterval(
     () => runPoll({ days: 7 }).catch(e => console.error('[emailPoller] Error poll:', e.message)),
-    60_000
+    30_000
   );
 }
