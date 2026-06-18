@@ -152,9 +152,9 @@ async function pollEmails() {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     try {
-      // Solo emails de los últimos 3 días
+      // 30 días — los filtros requireSubject/requireText previenen falsos positivos
       const since = new Date();
-      since.setDate(since.getDate() - 3);
+      since.setDate(since.getDate() - 30);
 
       // Buscar no leídos de cada banco por separado y unir
       const uidsB = await client.search({ seen: false, since, from: 'bancolombia' }, { uid: true });
