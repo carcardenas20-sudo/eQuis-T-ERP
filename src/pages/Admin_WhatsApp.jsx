@@ -47,7 +47,7 @@ export default function AdminWhatsApp() {
   // Historial
   const [historialOpen, setHistorialOpen] = useState(false);
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("equist_token") || "";
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
   const loadStatus = async () => {
