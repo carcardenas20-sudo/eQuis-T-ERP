@@ -35,6 +35,17 @@ export default function TransferenciasRecibidas() {
     reload();
   };
 
+  const importarHistorial = async () => {
+    const token = localStorage.getItem("equist_token") || "";
+    const res = await fetch("/api/functions/backfillTransferencias", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    alert(data.mensaje || data.error || "Iniciado");
+    setTimeout(reload, 8000);
+  };
+
   const limpiarBasura = async () => {
     if (!confirm("¿Eliminar todos los registros de compras y pagos salientes del backlog?")) return;
     const token = localStorage.getItem("equist_token") || "";
@@ -83,6 +94,9 @@ export default function TransferenciasRecibidas() {
               </button>
             </>
           )}
+          <button onClick={importarHistorial} className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 active:bg-blue-100">
+            Importar historial
+          </button>
           <button onClick={reload} className="p-2 rounded-lg hover:bg-slate-100 active:bg-slate-200">
             <RefreshCw className={`w-5 h-5 text-slate-500 ${loading ? "animate-spin" : ""}`} />
           </button>

@@ -385,6 +385,16 @@ app.delete('/api/functions/borrarBacklogTransferencias', requireAuth, async (req
   }
 });
 
+app.post('/api/functions/backfillTransferencias', requireAuth, async (req, res) => {
+  try {
+    const { backfillEmails } = await import('./emailPoller.js');
+    backfillEmails().catch(e => console.error('[backfill]', e.message));
+    res.json({ ok: true, mensaje: 'Backfill iniciado en segundo plano' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Limpieza: borrar Dispatch huérfanos de lotes auto-creados ────────────────
 app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) => {
   try {
