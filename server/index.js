@@ -374,6 +374,17 @@ app.delete('/api/functions/limpiarTransferenciasBasura', requireAuth, async (req
   }
 });
 
+app.delete('/api/functions/borrarBacklogTransferencias', requireAuth, async (req, res) => {
+  try {
+    const { rowCount } = await query(
+      `DELETE FROM entity_transferencia_detectada WHERE estado = 'sin_asignar'`
+    );
+    res.json({ ok: true, eliminados: rowCount });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Limpieza: borrar Dispatch huérfanos de lotes auto-creados ────────────────
 app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) => {
   try {

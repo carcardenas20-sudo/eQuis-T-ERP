@@ -140,10 +140,13 @@ async function pollEmails() {
     // [Gmail]/All Mail cubre INBOX + Promociones + Social + cualquier etiqueta
     const lock = await client.getMailboxLock('[Gmail]/All Mail');
     try {
+      // Solo emails de los últimos 14 días para no procesar historial antiguo
+      const since = new Date();
+      since.setDate(since.getDate() - 14);
+
       const orCriteria = BANK_FROM_DOMAINS.map(d => ({ from: d }));
-      const criteria = orCriteria.length === 1
-        ? { seen: false, from: orCriteria[0].from }
-        : { seen: false, or: orCriteria };
+      const baseFrom = orCriteria.length === 1 ? orCriteria[0] : { or: orCriteria };
+      const criteria = { seen: false, since, ...baseFrom };
 
       // Usar UIDs para que sean estables aunque cambie el mailbox
       const uids = await client.search(criteria, { uid: true });

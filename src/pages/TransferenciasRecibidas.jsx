@@ -47,6 +47,18 @@ export default function TransferenciasRecibidas() {
     reload();
   };
 
+  const borrarTodo = async () => {
+    if (!confirm(`¿Borrar los ${sinAsignar.length} registros sin procesar? Esto NO borra los procesados.`)) return;
+    const token = localStorage.getItem("equist_token") || "";
+    const res = await fetch("/api/functions/borrarBacklogTransferencias", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    alert(`Borrados: ${data.eliminados ?? 0} registros`);
+    reload();
+  };
+
   const visible = transfers.filter(t => showIgnored || t.estado !== "ignorado");
   const sinAsignar = visible.filter(t => t.estado === "sin_asignar");
   const procesadas = visible.filter(t => t.estado === "asignado");
@@ -62,9 +74,14 @@ export default function TransferenciasRecibidas() {
         </div>
         <div className="flex items-center gap-2">
           {sinAsignar.length > 0 && (
-            <button onClick={limpiarBasura} className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 active:bg-red-100">
-              Limpiar salientes
-            </button>
+            <>
+              <button onClick={limpiarBasura} className="text-xs px-3 py-1.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 active:bg-orange-100">
+                Limpiar salientes
+              </button>
+              <button onClick={borrarTodo} className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 active:bg-red-100">
+                Borrar todo
+              </button>
+            </>
           )}
           <button onClick={reload} className="p-2 rounded-lg hover:bg-slate-100 active:bg-slate-200">
             <RefreshCw className={`w-5 h-5 text-slate-500 ${loading ? "animate-spin" : ""}`} />
