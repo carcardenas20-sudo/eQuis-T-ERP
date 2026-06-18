@@ -6,17 +6,45 @@ import { v4 as uuidv4 } from 'uuid';
 
 const SCHEMA = ENTITY_SCHEMAS.TransferenciaDetectada;
 
+// Formatos soportados:
+//   1.500.000,50  → punto=miles, coma=decimal  → 1500000.50
+//   1,500,000.50  → coma=miles, punto=decimal  → 1500000.50
+//   49.000        → todos los segmentos post-punto tienen 3 dígitos → miles → 49000
+//   49.50         → segmento post-punto tiene 2 dígitos → decimal → 49.50
+//   49,50         → coma única con ≤2 dígitos → decimal → 49.50
+//   1,500,000     → varias comas → miles → 1500000
 function parseMontoCOP(str) {
   if (!str) return null;
-  let s = str.replace(/[$\s]/g, '');
-  if (s.includes('.') && s.includes(',')) {
-    s = s.replace(/\./g, '').replace(',', '.');
-  } else if (s.includes(',') && !s.includes('.')) {
-    s = s.replace(/,/g, '');
-  } else if (s.includes('.') && !s.includes(',')) {
-    const parts = s.split('.');
-    if (parts[parts.length - 1].length !== 2) s = s.replace(/\./g, '');
+  let s = str.replace(/[$\s]/g, '').trim();
+  if (!s || !/\d/.test(s)) return null;
+
+  const lastDot = s.lastIndexOf('.');
+  const lastComma = s.lastIndexOf(',');
+
+  if (lastDot >= 0 && lastComma >= 0) {
+    if (lastComma > lastDot) {
+      // Colombiano 1.500.000,50: punto=miles, coma=decimal
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Anglosajón 1,500,000.50: coma=miles, punto=decimal
+      s = s.replace(/,/g, '');
+    }
+  } else if (lastDot >= 0) {
+    // Solo puntos: si TODOS los segmentos tras el punto tienen exactamente 3 dígitos → miles
+    const segs = s.split('.');
+    if (segs.slice(1).every(p => p.length === 3)) {
+      s = s.replace(/\./g, ''); // 49.000→49000, 1.500.000→1500000
+    }
+    // else: punto decimal  (49.50 queda como 49.50)
+  } else if (lastComma >= 0) {
+    const segs = s.split(',');
+    if (segs.length === 2 && segs[1].length <= 2) {
+      s = s.replace(',', '.'); // 49,50 → 49.50
+    } else {
+      s = s.replace(/,/g, ''); // 1,500,000 → 1500000
+    }
   }
+
   const n = parseFloat(s);
   return isNaN(n) || n <= 0 ? null : n;
 }
@@ -43,7 +71,10 @@ const BANK_RULES = [
     banco: 'bancolombia',
     fromPattern: /bancolombia/i,
     parse(text, subject) {
-      const m = text.match(/\$\s*([\d.,]+)/);
+      // Captura montos bien formados: $49.000 / $1.500.000,50 / $49,50 / $49000
+      // El lookahead negativo (?!\d) evita capturar números de referencia sin separadores
+      const m = text.match(/\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?)(?!\d)/)
+             || text.match(/\$\s*([\d.,]+)/);
       if (!m) return null;
       const monto = parseMontoCOP(m[1]);
       if (!monto) return null;
@@ -59,7 +90,10 @@ const BANK_RULES = [
     fromPattern: /bbva/i,
     skipSubject: /compra|hiciste|enviaste|d[eé]bito|en proceso|bienvenid/i,
     parse(text, subject) {
-      const m = text.match(/\$\s*([\d.,]+)/);
+      // Captura montos bien formados: $49.000 / $1.500.000,50 / $49,50 / $49000
+      // El lookahead negativo (?!\d) evita capturar números de referencia sin separadores
+      const m = text.match(/\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?)(?!\d)/)
+             || text.match(/\$\s*([\d.,]+)/);
       if (!m) return null;
       const monto = parseMontoCOP(m[1]);
       if (!monto) return null;
