@@ -151,10 +151,10 @@ function TransferCard({ t, onProcesar, onIgnorar, processed }) {
             <p className="text-xs text-slate-300 truncate mt-0.5">{t.email_subject}</p>
           )}
 
-          {/* Texto del email para debug (expandible) */}
-          {sinMonto && t.email_texto && (
-            <button onClick={() => setExpanded(e => !e)} className="text-xs text-amber-500 underline mt-1">
-              {expanded ? "Ocultar email" : "Ver texto del email"}
+          {/* Texto del email (siempre disponible para debug) */}
+          {t.email_texto && (
+            <button onClick={() => setExpanded(e => !e)} className="text-xs text-slate-400 underline mt-1">
+              {expanded ? "Ocultar texto" : "Ver texto del email"}
             </button>
           )}
           {expanded && t.email_texto && (

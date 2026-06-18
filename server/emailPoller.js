@@ -137,7 +137,8 @@ async function pollEmails() {
 
   try {
     await client.connect();
-    const lock = await client.getMailboxLock('INBOX');
+    // [Gmail]/All Mail cubre INBOX + Promociones + Social + cualquier etiqueta
+    const lock = await client.getMailboxLock('[Gmail]/All Mail');
     try {
       const orCriteria = BANK_FROM_DOMAINS.map(d => ({ from: d }));
       const criteria = orCriteria.length === 1
