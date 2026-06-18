@@ -201,12 +201,12 @@ async function runPoll({ days, useSeenFilter }) {
       since.setDate(since.getDate() - days);
       const seenOpt = useSeenFilter ? { seen: false } : {};
 
-      // BBVA: filtro de subject en servidor (solo tranferencias entrantes)
+      // BBVA: 'disponible' está en todos los subjects de transferencia entrante
       const uidsV = await client.search(
-        { ...seenOpt, since, from: 'bbva', subject: 'Tu dinero ya est' },
+        { ...seenOpt, since, from: 'bbva', subject: 'disponible' },
         { uid: true }
       );
-      // Bancolombia: filtro de subject en servidor (solo consignaciones/pagos recibidos)
+      // Bancolombia: 'Recibiste' está en todos los subjects de pago/consignación recibida
       const uidsB = await client.search(
         { ...seenOpt, since, from: 'bancolombia', subject: 'Recibiste' },
         { uid: true }
