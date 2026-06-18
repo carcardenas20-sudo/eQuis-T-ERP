@@ -117,10 +117,14 @@ async function processUids(client, uids) {
       const subject = parsed.subject || '';
       const messageId = parsed.messageId || `fallback-${uid}`;
 
-      const rule = BANK_RULES.find(r => r.fromPattern.test(from) || r.fromPattern.test(subject));
-      if (!rule) continue;
+      console.log(`[emailPoller] uid=${uid} from="${from}" subject="${subject}"`);
 
-      if (rule.requireSubject && !rule.requireSubject.test(subject)) continue;
+      const rule = BANK_RULES.find(r => r.fromPattern.test(from) || r.fromPattern.test(subject));
+      if (!rule) { console.log(`[emailPoller]   → sin regla`); continue; }
+
+      if (rule.requireSubject && !rule.requireSubject.test(subject)) {
+        console.log(`[emailPoller]   → subject no coincide`); continue;
+      }
 
       let text = parsed.text ||
         (parsed.html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -128,14 +132,18 @@ async function processUids(client, uids) {
                            .replace(/\s+/g, ' ');
       text = decodeHtmlEntities(text);
 
-      if (rule.requireText && !rule.requireText.test(text)) continue;
-      if (!/\$\s*[\d.,]+/.test(text)) continue;
+      if (rule.requireText && !rule.requireText.test(text)) {
+        console.log(`[emailPoller]   → requireText no coincide`); continue;
+      }
+      if (!/\$\s*[\d.,]+/.test(text)) {
+        console.log(`[emailPoller]   → sin monto`); continue;
+      }
 
       const dup = await query(
         `SELECT id FROM ${SCHEMA.table} WHERE email_uid = $1 LIMIT 1`,
         [messageId]
       );
-      if (dup.rows.length > 0) continue;
+      if (dup.rows.length > 0) { console.log(`[emailPoller]   → duplicado`); continue; }
 
       const result = rule.parse(text, subject);
       await saveTransferencia({
@@ -184,19 +192,13 @@ async function runPoll({ days }) {
       const since = new Date();
       since.setDate(since.getDate() - days);
 
-      const uidsV = await client.search(
-        { since, from: 'bbva', subject: 'disponible' },
-        { uid: true }
-      );
-      const uidsB = await client.search(
-        { since, from: 'bancolombia', subject: 'Recibiste' },
-        { uid: true }
-      );
+      const uidsV = await client.search({ since, from: 'bbva' }, { uid: true });
+      const uidsB = await client.search({ since, from: 'bancolombia' }, { uid: true });
 
       const allUids = [...new Set([...uidsV, ...uidsB])].slice(0, MAX_EMAILS_PER_RUN);
       if (!allUids.length) return;
 
-      console.log(`[emailPoller] ${allUids.length} emails encontrados (${days} días)`);
+      console.log(`[emailPoller] BBVA:${uidsV.length} Bancolombia:${uidsB.length} → procesando ${allUids.length}`);
       await processUids(client, allUids, false);
     } finally {
       lock.release();
