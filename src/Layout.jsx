@@ -13,7 +13,7 @@ import {
   FileText, Settings, Building2, UserCheck, CreditCard, Receipt, ShoppingBag,
   BookOpen, ArrowRightLeft, ArrowLeftRight, Sparkles, Wallet, BarChart3,
   ListChecks, Factory, Shirt, Palette, Wrench, Truck, Calculator,
-  PackageCheck, TruckIcon, Clock, Warehouse, Eye, Scissors, TrendingUp, MessageCircle
+  PackageCheck, TruckIcon, Clock, Warehouse, Eye, Scissors, TrendingUp, MessageCircle, Banknote
 } from "lucide-react";
 
 const comercialGroups = [
@@ -46,6 +46,7 @@ const comercialGroups = [
       { title: "Cuentas por Pagar", url: createPageUrl("AccountsPayable"), icon: CreditCard, permissions: ["accounts_payable_view"] },
       { title: "Control de Efectivo", url: createPageUrl("CashControl"), icon: Wallet, permissions: ["accounting_view_transactions"] },
       { title: "Cuentas Bancarias", url: createPageUrl("BankAccounts"), icon: Building2, permissions: ["accounting_view_transactions"] },
+      { title: "Transferencias Recibidas", url: createPageUrl("TransferenciasRecibidas"), icon: Banknote, permissions: ["accounting_view_transactions"] },
       { title: "Reportes", url: createPageUrl("Reports"), icon: BarChart3, permissions: ["reports_basic"] },
     ]
   },
