@@ -70,37 +70,49 @@ const BANK_RULES = [
   {
     banco: 'bancolombia',
     fromPattern: /bancolombia/i,
+    // Solo procesar si dice "recibiste" — filtra pagos salientes
+    requireText: /recibiste/i,
     parse(text, subject) {
-      // Captura montos bien formados: $49.000 / $1.500.000,50 / $49,50 / $49000
-      // El lookahead negativo (?!\d) evita capturar números de referencia sin separadores
-      const m = text.match(/\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?)(?!\d)/)
-             || text.match(/\$\s*([\d.,]+)/);
+      // "Recibiste una consignacion por $578.000 desde el corresponsal X"
+      // "recibiste un pago de NOMBRE por $1.00 en tu cuenta"
+      const m = text.match(/por\s*\$\s*([\d.,]+)/i);
       if (!m) return null;
       const monto = parseMontoCOP(m[1]);
       if (!monto) return null;
+
       const remitente =
-        text.match(/(?:te transfer[ií]|de parte de|ordenante|nombre del remitente)[:\s]+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]{2,40}?)(?:\n|<|\r|$)/i)
-          ?.[1]?.trim() || null;
-      const referencia = text.match(/(?:referencia|comprobante)[:\s]*([A-Z0-9]{6,})/i)?.[1] || null;
+        // Pago con llave: "recibiste un pago de NOMBRE por"
+        text.match(/recibiste un pago de\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]+?)\s+por/i)?.[1]?.trim()
+        // Consignación corresponsal: "desde el corresponsal NOMBRE en"
+        || text.match(/desde el corresponsal\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s\-]+?)\s+en\s/i)?.[1]?.trim()
+        || null;
+
+      // Número de llave como referencia
+      const referencia = text.match(/llave\s+(\d{6,})/i)?.[1] || null;
       return { monto, remitente, referencia };
     },
   },
   {
     banco: 'bbva',
     fromPattern: /bbva/i,
+    // Ignorar notificaciones de pagos salientes
     skipSubject: /compra|hiciste|enviaste|d[eé]bito|en proceso|bienvenid/i,
     parse(text, subject) {
-      // Captura montos bien formados: $49.000 / $1.500.000,50 / $49,50 / $49000
-      // El lookahead negativo (?!\d) evita capturar números de referencia sin separadores
-      const m = text.match(/\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?)(?!\d)/)
+      // "Valor recibido\n$ 25.000,00"  o  "Valor recibido\n$ 1,00"
+      const m = text.match(/Valor recibido\s*\$\s*([\d.,]+)/i)
              || text.match(/\$\s*([\d.,]+)/);
       if (!m) return null;
       const monto = parseMontoCOP(m[1]);
       if (!monto) return null;
+
+      // "Persona que envía\nNOMBRE APELLIDO"
       const remitente =
-        text.match(/(?:remitente|ordenante)[:\s]+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]{2,40}?)(?:\n|$)/i)
-          ?.[1]?.trim() || null;
-      return { monto, remitente, referencia: null };
+        text.match(/Persona que env[íi]a\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]+?)(?:\s{2,}|Tipo de llave|$)/i)?.[1]?.trim()
+        || null;
+
+      // "Código de operación\n12371166..."
+      const referencia = text.match(/C[oó]digo de operaci[oó]n\s*(\d{10,})/i)?.[1] || null;
+      return { monto, remitente, referencia };
     },
   },
 ];
@@ -175,6 +187,19 @@ async function pollEmails() {
             continue;
           }
 
+          let text = parsed.text ||
+            (parsed.html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                               .replace(/<[^>]+>/g, ' ')
+                               .replace(/\s+/g, ' ');
+          text = decodeHtmlEntities(text);
+
+          // Bancolombia: solo procesar si el texto contiene "recibiste" (ingreso)
+          if (rule.requireText && !rule.requireText.test(text)) {
+            console.log(`[emailPoller] Ignorado (no es ingreso) — "${subject}"`);
+            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
+            continue;
+          }
+
           // Verificar duplicado por Message-ID antes de procesar
           const dup = await query(
             `SELECT id FROM ${SCHEMA.table} WHERE email_uid = $1 LIMIT 1`,
@@ -185,12 +210,6 @@ async function pollEmails() {
             await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
             continue;
           }
-
-          let text = parsed.text ||
-            (parsed.html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-                               .replace(/<[^>]+>/g, ' ')
-                               .replace(/\s+/g, ' ');
-          text = decodeHtmlEntities(text);
 
           // Solo procesar emails que contengan un monto — ignora logins, bienvenidas, etc.
           const hasAmount = /\$\s*[\d.,]+/.test(text);
