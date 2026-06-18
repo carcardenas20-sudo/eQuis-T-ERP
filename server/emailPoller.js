@@ -176,6 +176,8 @@ async function processUids(client, uids, useSeenFilter) {
   }
 }
 
+const MAX_EMAILS_PER_RUN = 25;
+
 async function runPoll({ days, useSeenFilter }) {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASSWORD;
@@ -194,26 +196,24 @@ async function runPoll({ days, useSeenFilter }) {
       since.setDate(since.getDate() - days);
       const seenOpt = useSeenFilter ? { seen: false } : {};
 
-      // BBVA: filtro de subject en servidor — solo descarga transferencias entrantes
+      // BBVA: filtro de subject en servidor (solo tranferencias entrantes)
       const uidsV = await client.search(
         { ...seenOpt, since, from: 'bbva', subject: 'Tu dinero ya est' },
         { uid: true }
       );
-      // Bancolombia: sin filtro de subject (subject varía por tipo de notificación)
+      // Bancolombia: filtro de subject en servidor (solo consignaciones/pagos recibidos)
       const uidsB = await client.search(
-        { ...seenOpt, since, from: 'bancolombia' },
+        { ...seenOpt, since, from: 'bancolombia', subject: 'Recibiste' },
         { uid: true }
       );
 
-      const allUids = [...new Set([...uidsV, ...uidsB])];
-      if (!allUids.length) {
-        await client.logout();
-        return;
-      }
+      const allUids = [...new Set([...uidsV, ...uidsB])].slice(0, MAX_EMAILS_PER_RUN);
+      if (!allUids.length) return;
 
       console.log(`[emailPoller] ${useSeenFilter ? 'Poll' : 'Backfill'}: ${allUids.length} emails`);
       await processUids(client, allUids, useSeenFilter);
     } finally {
+      // Siempre liberar el lock ANTES de logout
       lock.release();
     }
     await client.logout();

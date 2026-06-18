@@ -88,7 +88,7 @@ class WhatsAppManager extends EventEmitter {
       authStrategy: new RemoteAuth({
         clientId: 'equist',
         store: this.store,
-        backupSyncIntervalMs: 60_000, // guarda sesión cada 1 minuto
+        backupSyncIntervalMs: 15_000, // guarda sesión cada 15 s (protege contra crash temprano)
         dataPath: '/tmp/wwebjs_auth',
       }),
       puppeteer: {
@@ -145,7 +145,8 @@ class WhatsAppManager extends EventEmitter {
     this.client.on('auth_failure', () => {
       this.status = 'disconnected';
       this.initCalled = false;
-      console.log('❌ WhatsApp: fallo de autenticación — re-escanea el QR');
+      console.log('❌ WhatsApp: fallo de autenticación — reintentando en 15 s');
+      setTimeout(() => this.init(), 15_000);
     });
 
     try {
@@ -154,6 +155,8 @@ class WhatsAppManager extends EventEmitter {
       console.error('WhatsApp init error:', e.message);
       this.status = 'disconnected';
       this.initCalled = false;
+      // Reintentar para que no quede muerto si Puppeteer falla al arrancar
+      setTimeout(() => this.init(), 20_000);
     }
   }
 

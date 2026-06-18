@@ -1010,7 +1010,7 @@ async function startWithRetry(maxAttempts = 10, delayMs = 5000) {
       });
       // Iniciar WhatsApp en background después de que el servidor esté listo
       setTimeout(() => whatsappManager.init(), 3000);
-      // Iniciar poller de emails bancarios (import dinámico para no bloquear el arranque)
+      // Iniciar poller de emails bancarios — se demora 40 s para no competir con Puppeteer al arrancar
       setTimeout(async () => {
         try {
           const { startEmailPoller } = await import('./emailPoller.js');
@@ -1018,7 +1018,7 @@ async function startWithRetry(maxAttempts = 10, delayMs = 5000) {
         } catch (e) {
           console.error('[emailPoller] No se pudo cargar:', e.message);
         }
-      }, 5000);
+      }, 40_000);
       return;
     } catch (err) {
       console.error(`❌ DB init failed (attempt ${attempt}/${maxAttempts}): ${err.message}`);
