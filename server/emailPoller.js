@@ -95,9 +95,9 @@ const BANK_RULES = [
   {
     banco: 'bbva',
     fromPattern: /bbva/i,
-    // Ignorar pagos salientes — "Tu envío con llave fue exitoso", "Compra Exitosa", etc.
-    skipSubject: /compra|hiciste|enviaste|d[eé]bito|en proceso|bienvenid|env[ií]o|exitoso/i,
-    // Solo procesar si el email dice "Valor recibido" (transferencia entrante)
+    // El subject de transferencias entrantes BBVA es siempre este — es el filtro principal
+    requireSubject: /Tu dinero ya est[aá] disponible/i,
+    // Doble seguro: el cuerpo debe decir "Valor recibido"
     requireText: /Valor recibido/i,
     parse(text, subject) {
       // "Valor recibido $ 25.000,00"  o  "Valor recibido $ 1,00"
@@ -150,22 +150,20 @@ async function pollEmails() {
 
   try {
     await client.connect();
-    // [Gmail]/All Mail cubre INBOX + Promociones + Social + cualquier etiqueta
-    const lock = await client.getMailboxLock('[Gmail]/All Mail');
+    const lock = await client.getMailboxLock('INBOX');
     try {
-      // Solo emails de los últimos 14 días para no procesar historial antiguo
+      // Solo emails de los últimos 3 días
       const since = new Date();
-      since.setDate(since.getDate() - 14);
+      since.setDate(since.getDate() - 3);
 
-      const orCriteria = BANK_FROM_DOMAINS.map(d => ({ from: d }));
-      const baseFrom = orCriteria.length === 1 ? orCriteria[0] : { or: orCriteria };
-      const criteria = { seen: false, since, ...baseFrom };
+      // Buscar no leídos de cada banco por separado y unir
+      const uidsB = await client.search({ seen: false, since, from: 'bancolombia' }, { uid: true });
+      const uidsV = await client.search({ seen: false, since, from: 'bbva' }, { uid: true });
+      const allUids = [...new Set([...uidsB, ...uidsV])];
 
-      // Usar UIDs para que sean estables aunque cambie el mailbox
-      const uids = await client.search(criteria, { uid: true });
-      if (!uids.length) return;
+      if (!allUids.length) return;
 
-      for (const uid of uids) {
+      for (const uid of allUids) {
         try {
           const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
           if (!msg?.source) continue;
@@ -181,9 +179,9 @@ async function pollEmails() {
             continue;
           }
 
-          // Saltar notificaciones de pagos salientes (compras, transferencias enviadas)
-          if (rule.skipSubject?.test(subject)) {
-            console.log(`[emailPoller] Ignorado (salida) — "${subject}"`);
+          // Si el banco requiere un subject específico, ignorar cualquier otro
+          if (rule.requireSubject && !rule.requireSubject.test(subject)) {
+            console.log(`[emailPoller] Ignorado (subject no coincide) — "${subject}"`);
             await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
             continue;
           }
