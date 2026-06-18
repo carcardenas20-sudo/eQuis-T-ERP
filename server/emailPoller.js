@@ -169,24 +169,38 @@ async function processUids(client, uids) {
 
 const MAX_EMAILS_PER_RUN = 30;
 
-// Sin seen:false — confiamos en el duplicate check de DB por messageId.
-// Los filtros de subject en servidor limitan lo que se descarga a ~10 emails.
-async function runPoll({ days }) {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASSWORD;
-  if (!user || !pass) return;
+// Conexión IMAP persistente — se crea una vez y se reutiliza en todos los ciclos.
+// Gmail tolera bien conexiones largas; lo que no tolera es abrir/cerrar cada 30s.
+let imapClient = null;
+
+async function getClient(user, pass) {
+  if (imapClient?.usable) return imapClient;
+
+  if (imapClient) { try { imapClient.close(); } catch {} imapClient = null; }
 
   const client = new ImapFlow({
     host: 'imap.gmail.com', port: 993, secure: true,
     auth: { user, pass }, logger: false,
   });
-
-  client.on('error', (err) => {
-    console.error('[emailPoller] IMAP error event:', err.message);
+  client.on('error', err => {
+    console.error('[emailPoller] IMAP error:', err.message);
+    imapClient = null;
   });
+  client.on('close', () => { imapClient = null; });
+
+  await client.connect();
+  imapClient = client;
+  console.log('[emailPoller] IMAP conectado');
+  return client;
+}
+
+async function runPoll({ days }) {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASSWORD;
+  if (!user || !pass) return;
 
   try {
-    await client.connect();
+    const client = await getClient(user, pass);
     const lock = await client.getMailboxLock('INBOX');
     try {
       const since = new Date();
@@ -194,23 +208,22 @@ async function runPoll({ days }) {
 
       const uidsV = await client.search({ since, from: 'bbva' }, { uid: true });
       const uidsB = await client.search({ since, from: 'bancolombia' }, { uid: true });
-
       const allUids = [...new Set([...uidsV, ...uidsB])].slice(0, MAX_EMAILS_PER_RUN);
-      if (!allUids.length) return;
 
-      console.log(`[emailPoller] BBVA:${uidsV.length} Bancolombia:${uidsB.length} → procesando ${allUids.length}`);
-      await processUids(client, allUids, false);
+      if (allUids.length) {
+        console.log(`[emailPoller] BBVA:${uidsV.length} Bancolombia:${uidsB.length} → procesando ${allUids.length}`);
+        await processUids(client, allUids);
+      }
     } finally {
       lock.release();
     }
-    await client.logout();
+    // Sin logout — mantener la conexión abierta para el próximo ciclo
   } catch (err) {
-    console.error('[emailPoller] Error IMAP:', err.message);
-    try { client.close(); } catch {}
+    console.error('[emailPoller] Error poll:', err.message);
+    if (imapClient) { try { imapClient.close(); } catch {} imapClient = null; }
   }
 }
 
-// Exportada para el endpoint manual "Importar historial"
 export async function backfillEmails() {
   return runPoll({ days: 30 });
 }
@@ -224,10 +237,8 @@ export function startEmailPoller() {
   }
   console.log(`[emailPoller] Activo — ${user} — revisando cada 30 s`);
 
-  // Primer ciclo: 30 días para recuperar historial
   runPoll({ days: 30 }).catch(e => console.error('[emailPoller] Error inicial:', e.message));
 
-  // Ciclos siguientes: 7 días (cubre cualquier email reciente leído o no)
   setInterval(
     () => runPoll({ days: 7 }).catch(e => console.error('[emailPoller] Error poll:', e.message)),
     30_000
