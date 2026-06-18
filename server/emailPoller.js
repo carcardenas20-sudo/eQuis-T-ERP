@@ -95,12 +95,13 @@ const BANK_RULES = [
   {
     banco: 'bbva',
     fromPattern: /bbva/i,
-    // Ignorar notificaciones de pagos salientes
-    skipSubject: /compra|hiciste|enviaste|d[eé]bito|en proceso|bienvenid/i,
+    // Ignorar pagos salientes — "Tu envío con llave fue exitoso", "Compra Exitosa", etc.
+    skipSubject: /compra|hiciste|enviaste|d[eé]bito|en proceso|bienvenid|env[ií]o|exitoso/i,
+    // Solo procesar si el email dice "Valor recibido" (transferencia entrante)
+    requireText: /Valor recibido/i,
     parse(text, subject) {
-      // "Valor recibido\n$ 25.000,00"  o  "Valor recibido\n$ 1,00"
-      const m = text.match(/Valor recibido\s*\$\s*([\d.,]+)/i)
-             || text.match(/\$\s*([\d.,]+)/);
+      // "Valor recibido $ 25.000,00"  o  "Valor recibido $ 1,00"
+      const m = text.match(/Valor recibido\s*\$\s*([\d.,]+)/i);
       if (!m) return null;
       const monto = parseMontoCOP(m[1]);
       if (!monto) return null;
