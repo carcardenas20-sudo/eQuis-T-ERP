@@ -106,7 +106,7 @@ async function saveTransferencia(data) {
 // Procesa una lista de UIDs en el mailbox abierto.
 // useSeenFilter=true marca como leído después de procesar (polling normal).
 // useSeenFilter=false no marca (backfill — deja el estado de Gmail intacto).
-async function processUids(client, uids, useSeenFilter) {
+async function processUids(client, uids) {
   for (const uid of uids) {
     try {
       const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
@@ -120,11 +120,7 @@ async function processUids(client, uids, useSeenFilter) {
       const rule = BANK_RULES.find(r => r.fromPattern.test(from) || r.fromPattern.test(subject));
       if (!rule) continue;
 
-      if (rule.requireSubject && !rule.requireSubject.test(subject)) {
-        console.log(`[emailPoller] Ignorado (subject) — "${subject}"`);
-        if (useSeenFilter) await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
-        continue;
-      }
+      if (rule.requireSubject && !rule.requireSubject.test(subject)) continue;
 
       let text = parsed.text ||
         (parsed.html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -132,25 +128,14 @@ async function processUids(client, uids, useSeenFilter) {
                            .replace(/\s+/g, ' ');
       text = decodeHtmlEntities(text);
 
-      if (rule.requireText && !rule.requireText.test(text)) {
-        console.log(`[emailPoller] Ignorado (no ingreso) — "${subject}"`);
-        if (useSeenFilter) await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
-        continue;
-      }
-
-      if (!/\$\s*[\d.,]+/.test(text)) {
-        if (useSeenFilter) await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
-        continue;
-      }
+      if (rule.requireText && !rule.requireText.test(text)) continue;
+      if (!/\$\s*[\d.,]+/.test(text)) continue;
 
       const dup = await query(
         `SELECT id FROM ${SCHEMA.table} WHERE email_uid = $1 LIMIT 1`,
         [messageId]
       );
-      if (dup.rows.length > 0) {
-        if (useSeenFilter) await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
-        continue;
-      }
+      if (dup.rows.length > 0) continue;
 
       const result = rule.parse(text, subject);
       await saveTransferencia({
@@ -168,17 +153,17 @@ async function processUids(client, uids, useSeenFilter) {
 
       if (!result) console.log(`[emailPoller] Sin parsear — "${subject}" | ${text.slice(0, 150)}`);
 
-      if (useSeenFilter) await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
-
     } catch (e) {
       console.error(`[emailPoller] Error uid ${uid}:`, e.message);
     }
   }
 }
 
-const MAX_EMAILS_PER_RUN = 25;
+const MAX_EMAILS_PER_RUN = 30;
 
-async function runPoll({ days, useSeenFilter }) {
+// Sin seen:false — confiamos en el duplicate check de DB por messageId.
+// Los filtros de subject en servidor limitan lo que se descarga a ~10 emails.
+async function runPoll({ days }) {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASSWORD;
   if (!user || !pass) return;
@@ -188,7 +173,6 @@ async function runPoll({ days, useSeenFilter }) {
     auth: { user, pass }, logger: false,
   });
 
-  // Sin este listener, un error async de ImapFlow crashea el proceso entero
   client.on('error', (err) => {
     console.error('[emailPoller] IMAP error event:', err.message);
   });
@@ -199,26 +183,22 @@ async function runPoll({ days, useSeenFilter }) {
     try {
       const since = new Date();
       since.setDate(since.getDate() - days);
-      const seenOpt = useSeenFilter ? { seen: false } : {};
 
-      // BBVA: 'disponible' está en todos los subjects de transferencia entrante
       const uidsV = await client.search(
-        { ...seenOpt, since, from: 'bbva', subject: 'disponible' },
+        { since, from: 'bbva', subject: 'disponible' },
         { uid: true }
       );
-      // Bancolombia: 'Recibiste' está en todos los subjects de pago/consignación recibida
       const uidsB = await client.search(
-        { ...seenOpt, since, from: 'bancolombia', subject: 'Recibiste' },
+        { since, from: 'bancolombia', subject: 'Recibiste' },
         { uid: true }
       );
 
       const allUids = [...new Set([...uidsV, ...uidsB])].slice(0, MAX_EMAILS_PER_RUN);
       if (!allUids.length) return;
 
-      console.log(`[emailPoller] ${useSeenFilter ? 'Poll' : 'Backfill'}: ${allUids.length} emails`);
-      await processUids(client, allUids, useSeenFilter);
+      console.log(`[emailPoller] ${allUids.length} emails encontrados (${days} días)`);
+      await processUids(client, allUids, false);
     } finally {
-      // Siempre liberar el lock ANTES de logout
       lock.release();
     }
     await client.logout();
@@ -228,9 +208,9 @@ async function runPoll({ days, useSeenFilter }) {
   }
 }
 
-// Exportada para poder llamarla desde el endpoint de backfill
+// Exportada para el endpoint manual "Importar historial"
 export async function backfillEmails() {
-  return runPoll({ days: 30, useSeenFilter: false });
+  return runPoll({ days: 30 });
 }
 
 export function startEmailPoller() {
@@ -242,11 +222,12 @@ export function startEmailPoller() {
   }
   console.log(`[emailPoller] Activo — ${user} — revisando cada 60 s`);
 
-  // Backfill inicial: busca 30 días sin filtro seen (recupera historial)
-  backfillEmails().catch(e => console.error('[emailPoller] Backfill error:', e.message));
+  // Primer ciclo: 30 días para recuperar historial
+  runPoll({ days: 30 }).catch(e => console.error('[emailPoller] Error inicial:', e.message));
 
-  // Polling normal: solo no leídos de los últimos 3 días
-  const poll = () => runPoll({ days: 3, useSeenFilter: true })
-    .catch(e => console.error('[emailPoller] Poll error:', e.message));
-  setInterval(poll, 60_000);
+  // Ciclos siguientes: 7 días (cubre cualquier email reciente leído o no)
+  setInterval(
+    () => runPoll({ days: 7 }).catch(e => console.error('[emailPoller] Error poll:', e.message)),
+    60_000
+  );
 }
