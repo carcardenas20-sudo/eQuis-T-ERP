@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { TransferenciaDetectada } from "@/entities/all";
-import { BanknoteIcon, RefreshCw, Check, X, AlertCircle } from "lucide-react";
+import { BanknoteIcon, RefreshCw, Check, X, AlertCircle, ShoppingCart, CreditCard } from "lucide-react";
+import { createPageUrl } from "@/utils";
 
 const BANCO_LABELS = {
   bancolombia: { label: "Bancolombia", color: "bg-yellow-100 text-yellow-800" },
@@ -10,6 +12,7 @@ const BANCO_LABELS = {
 };
 
 export default function TransferenciasRecibidas() {
+  const navigate = useNavigate();
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showIgnored, setShowIgnored] = useState(false);
@@ -23,10 +26,18 @@ export default function TransferenciasRecibidas() {
 
   useEffect(() => { reload(); }, []);
 
-  const procesar = async (t) => {
-    if (!confirm(`¿Marcar como procesada la transferencia de $${Number(t.monto || 0).toLocaleString()} de ${t.remitente || "desconocido"}?`)) return;
-    await TransferenciaDetectada.update(t.id, { estado: "asignado" });
-    reload();
+  const irAlPos = (t) => {
+    sessionStorage.setItem("transferencia_pendiente", JSON.stringify({
+      id: t.id, monto: t.monto, remitente: t.remitente, banco: t.banco
+    }));
+    navigate(createPageUrl("POS"));
+  };
+
+  const irACreditos = (t) => {
+    sessionStorage.setItem("transferencia_pendiente", JSON.stringify({
+      id: t.id, monto: t.monto, remitente: t.remitente, banco: t.banco
+    }));
+    navigate(createPageUrl("Credits"));
   };
 
   const ignorar = async (t) => {
@@ -108,7 +119,7 @@ export default function TransferenciasRecibidas() {
         <div className="space-y-2">
           <p className="text-sm font-semibold text-slate-600">Sin procesar ({sinAsignar.length})</p>
           {sinAsignar.map(t => (
-            <TransferCard key={t.id} t={t} onProcesar={() => procesar(t)} onIgnorar={() => ignorar(t)} />
+            <TransferCard key={t.id} t={t} onFacturar={() => irAlPos(t)} onAbonar={() => irACreditos(t)} onIgnorar={() => ignorar(t)} />
           ))}
         </div>
       )}
@@ -143,7 +154,7 @@ export default function TransferenciasRecibidas() {
   );
 }
 
-function TransferCard({ t, onProcesar, onIgnorar, processed }) {
+function TransferCard({ t, onFacturar, onAbonar, onIgnorar, processed }) {
   const [expanded, setExpanded] = useState(false);
   const banco = BANCO_LABELS[t.banco] || { label: t.banco || "Desconocido", color: "bg-slate-100 text-slate-600" };
   const sinMonto = !t.monto || Number(t.monto) === 0;
@@ -197,18 +208,24 @@ function TransferCard({ t, onProcesar, onIgnorar, processed }) {
 
         {/* Botones */}
         {!processed && (
-          <div className="flex gap-1 shrink-0">
+          <div className="flex flex-col gap-1 shrink-0">
             <button
-              onClick={onProcesar}
+              onClick={onFacturar}
+              className="flex items-center gap-1 text-xs font-bold px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 active:bg-indigo-800"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" /> Facturar
+            </button>
+            <button
+              onClick={onAbonar}
               className="flex items-center gap-1 text-xs font-bold px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800"
             >
-              <Check className="w-3.5 h-3.5" /> Procesar
+              <CreditCard className="w-3.5 h-3.5" /> Abonar
             </button>
             <button
               onClick={onIgnorar}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50"
+              className="w-full flex items-center justify-center py-1.5 rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}

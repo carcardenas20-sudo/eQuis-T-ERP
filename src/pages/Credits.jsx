@@ -37,12 +37,18 @@ export default function CreditsPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
+  const [pendingTransferencia, setPendingTransferencia] = useState(null);
   
   const [filters, setFilters] = useState({
     search: "",
     status: "all",
     dateRange: "all"
   });
+
+  useEffect(() => {
+    const t = sessionStorage.getItem("transferencia_pendiente");
+    if (t) try { setPendingTransferencia(JSON.parse(t)); } catch {}
+  }, []);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -151,10 +157,19 @@ export default function CreditsPage() {
     setShowPaymentModal(true);
   };
 
-  const handlePaymentSaved = () => {
+  const handlePaymentSaved = async () => {
     setShowPaymentModal(false);
     setSelectedCredit(null);
     loadCredits();
+    // Si venía de una transferencia detectada, marcarla como asignada
+    if (pendingTransferencia) {
+      try {
+        const { TransferenciaDetectada } = await import("@/entities/all");
+        await TransferenciaDetectada.update(pendingTransferencia.id, { estado: "asignado" });
+      } catch {}
+      sessionStorage.removeItem("transferencia_pendiente");
+      setPendingTransferencia(null);
+    }
   };
 
   const totalCredits = credits.length;
@@ -179,6 +194,17 @@ export default function CreditsPage() {
 
   return (
     <div className="p-3 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+      {pendingTransferencia && (
+        <div className="mb-4 bg-green-600 text-white rounded-xl px-4 py-3 flex items-center justify-between text-sm">
+          <span>
+            <strong>Transferencia pendiente:</strong> ${Number(pendingTransferencia.monto || 0).toLocaleString("es-CO")}
+            {pendingTransferencia.remitente ? ` de ${pendingTransferencia.remitente}` : ""}
+            {" · Selecciona un crédito y registra el abono — se pre-llenará como Transferencia."}
+          </span>
+          <button onClick={() => { sessionStorage.removeItem("transferencia_pendiente"); setPendingTransferencia(null); }}
+            className="ml-4 opacity-70 hover:opacity-100 font-bold">✕</button>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
@@ -468,6 +494,8 @@ export default function CreditsPage() {
             setShowPaymentModal(false);
             setSelectedCredit(null);
           }}
+          initialMethod={pendingTransferencia ? "transfer" : undefined}
+          initialAmount={pendingTransferencia ? pendingTransferencia.monto : undefined}
         />
       )}
     </div>

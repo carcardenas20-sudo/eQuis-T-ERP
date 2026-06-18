@@ -22,9 +22,11 @@ const paymentMethods = [
   { id: 'qr', name: 'QR', icon: Landmark }
 ];
 
-export default function PaymentModal({ credit, onSave, onCancel }) {
-  const [paymentAmount, setPaymentAmount] = useState(credit.pending_amount);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+export default function PaymentModal({ credit, onSave, onCancel, initialMethod, initialAmount }) {
+  const [paymentAmount, setPaymentAmount] = useState(
+    initialAmount != null ? Math.min(Number(initialAmount), credit.pending_amount) : credit.pending_amount
+  );
+  const [paymentMethod, setPaymentMethod] = useState(initialMethod || "cash");
   const [bankAccountId, setBankAccountId] = useState("");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");

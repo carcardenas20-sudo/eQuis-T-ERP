@@ -35,12 +35,12 @@ const paymentMethods = [
   { id: 'credit', name: 'Crédito', icon: Landmark, color: 'bg-sky-500' },
 ];
 
-export default function PaymentModal({ total, onConfirm, onCancel, isProcessing, customer }) {
+export default function PaymentModal({ total, onConfirm, onCancel, isProcessing, customer, initialMethod }) {
   const [payments, setPayments] = useState([]);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [creditError, setCreditError] = useState("");
   const [currentPayment, setCurrentPayment] = useState({
-    method: 'cash',
+    method: initialMethod || 'cash',
     amount: total,
     reference: '',
     bank_account: ''
