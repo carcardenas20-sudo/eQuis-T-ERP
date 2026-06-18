@@ -152,13 +152,14 @@ async function pollEmails() {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     try {
-      // 30 días — los filtros requireSubject/requireText previenen falsos positivos
+      // 30 días — sin filtro seen:false porque emails anteriores ya fueron marcados
+      // como leídos por corridas previas del poller aunque no se guardaran bien.
+      // El chequeo de duplicados por email_uid (messageId) en BD previene re-guardados.
       const since = new Date();
       since.setDate(since.getDate() - 30);
 
-      // Buscar no leídos de cada banco por separado y unir
-      const uidsB = await client.search({ seen: false, since, from: 'bancolombia' }, { uid: true });
-      const uidsV = await client.search({ seen: false, since, from: 'bbva' }, { uid: true });
+      const uidsB = await client.search({ since, from: 'bancolombia' }, { uid: true });
+      const uidsV = await client.search({ since, from: 'bbva' }, { uid: true });
       const allUids = [...new Set([...uidsB, ...uidsV])];
 
       if (!allUids.length) return;
@@ -175,14 +176,12 @@ async function pollEmails() {
 
           const rule = BANK_RULES.find(r => r.fromPattern.test(from) || r.fromPattern.test(subject));
           if (!rule) {
-            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
             continue;
           }
 
           // Si el banco requiere un subject específico, ignorar cualquier otro
           if (rule.requireSubject && !rule.requireSubject.test(subject)) {
             console.log(`[emailPoller] Ignorado (subject no coincide) — "${subject}"`);
-            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
             continue;
           }
 
@@ -195,7 +194,6 @@ async function pollEmails() {
           // Bancolombia: solo procesar si el texto contiene "recibiste" (ingreso)
           if (rule.requireText && !rule.requireText.test(text)) {
             console.log(`[emailPoller] Ignorado (no es ingreso) — "${subject}"`);
-            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
             continue;
           }
 
@@ -206,7 +204,6 @@ async function pollEmails() {
           );
 
           if (dup.rows.length > 0) {
-            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
             continue;
           }
 
@@ -214,7 +211,6 @@ async function pollEmails() {
           const hasAmount = /\$\s*[\d.,]+/.test(text);
           if (!hasAmount) {
             console.log(`[emailPoller] Ignorado (sin monto) — "${subject}"`);
-            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
             continue;
           }
 
@@ -236,7 +232,6 @@ async function pollEmails() {
             console.log(`[emailPoller] Sin parsear — "${subject}" | Texto: ${text.slice(0, 200)}`);
           }
 
-          await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
         } catch (msgErr) {
           console.error(`[emailPoller] Error en uid ${uid}:`, msgErr.message);
         }
