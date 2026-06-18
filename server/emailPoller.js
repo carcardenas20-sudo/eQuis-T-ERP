@@ -188,6 +188,11 @@ async function runPoll({ days, useSeenFilter }) {
     auth: { user, pass }, logger: false,
   });
 
+  // Sin este listener, un error async de ImapFlow crashea el proceso entero
+  client.on('error', (err) => {
+    console.error('[emailPoller] IMAP error event:', err.message);
+  });
+
   try {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
