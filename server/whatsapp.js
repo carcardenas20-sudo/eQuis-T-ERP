@@ -88,7 +88,7 @@ class WhatsAppManager extends EventEmitter {
       authStrategy: new RemoteAuth({
         clientId: 'equist',
         store: this.store,
-        backupSyncIntervalMs: 15_000, // guarda sesión cada 15 s (protege contra crash temprano)
+        backupSyncIntervalMs: 60_000,
         dataPath: '/tmp/wwebjs_auth',
       }),
       puppeteer: {
