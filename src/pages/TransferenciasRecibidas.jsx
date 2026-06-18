@@ -35,6 +35,18 @@ export default function TransferenciasRecibidas() {
     reload();
   };
 
+  const limpiarBasura = async () => {
+    if (!confirm("¿Eliminar todos los registros de compras y pagos salientes del backlog?")) return;
+    const token = localStorage.getItem("equist_token") || "";
+    const res = await fetch("/api/functions/limpiarTransferenciasBasura", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    alert(`Eliminados: ${data.eliminados ?? 0} registros`);
+    reload();
+  };
+
   const visible = transfers.filter(t => showIgnored || t.estado !== "ignorado");
   const sinAsignar = visible.filter(t => t.estado === "sin_asignar");
   const procesadas = visible.filter(t => t.estado === "asignado");
@@ -48,9 +60,16 @@ export default function TransferenciasRecibidas() {
           <h1 className="text-xl font-bold text-slate-900">Transferencias recibidas</h1>
           <p className="text-sm text-slate-500">Detectadas automáticamente desde el email bancario</p>
         </div>
-        <button onClick={reload} className="p-2 rounded-lg hover:bg-slate-100 active:bg-slate-200">
-          <RefreshCw className={`w-5 h-5 text-slate-500 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          {sinAsignar.length > 0 && (
+            <button onClick={limpiarBasura} className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 active:bg-red-100">
+              Limpiar salientes
+            </button>
+          )}
+          <button onClick={reload} className="p-2 rounded-lg hover:bg-slate-100 active:bg-slate-200">
+            <RefreshCw className={`w-5 h-5 text-slate-500 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       {/* Sin procesar */}

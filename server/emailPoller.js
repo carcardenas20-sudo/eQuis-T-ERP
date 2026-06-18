@@ -57,6 +57,7 @@ const BANK_RULES = [
   {
     banco: 'bbva',
     fromPattern: /bbva/i,
+    skipSubject: /compra|hiciste|enviaste|d[eé]bito|en proceso|bienvenid/i,
     parse(text, subject) {
       const m = text.match(/\$\s*([\d.,]+)/);
       if (!m) return null;
@@ -125,6 +126,13 @@ async function pollEmails() {
 
           const rule = BANK_RULES.find(r => r.fromPattern.test(from) || r.fromPattern.test(subject));
           if (!rule) {
+            await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
+            continue;
+          }
+
+          // Saltar notificaciones de pagos salientes (compras, transferencias enviadas)
+          if (rule.skipSubject?.test(subject)) {
+            console.log(`[emailPoller] Ignorado (salida) — "${subject}"`);
             await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
             continue;
           }

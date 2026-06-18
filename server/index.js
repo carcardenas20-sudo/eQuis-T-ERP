@@ -361,6 +361,19 @@ app.delete('/api/functions/revertirBaja/:id', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Limpieza: borrar transferencias basura (correo saliente BBVA/Bancolombia) ─
+app.delete('/api/functions/limpiarTransferenciasBasura', requireAuth, async (req, res) => {
+  try {
+    const { rowCount } = await query(
+      `DELETE FROM entity_transferencia_detectada
+       WHERE email_subject ~* 'compra|hiciste|enviaste|en proceso|bienvenid|canales digitales'`
+    );
+    res.json({ ok: true, eliminados: rowCount });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Limpieza: borrar Dispatch huérfanos de lotes auto-creados ────────────────
 app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) => {
   try {
