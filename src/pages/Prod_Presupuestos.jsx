@@ -71,6 +71,7 @@ const [showSugerencias, setShowSugerencias] = useState(false);
     try {
       const wasApproved = editingPresupuesto?.id && editingPresupuesto.estado !== 'aprobado' && data.estado === 'aprobado';
       const isNewApproved = !editingPresupuesto?.id && data.estado === 'aprobado';
+      const isEditingApproved = editingPresupuesto?.id && editingPresupuesto.estado === 'aprobado' && data.estado === 'aprobado';
 
       let presupuestoActualizado;
       if (editingPresupuesto?.id) {
@@ -127,6 +128,51 @@ const [showSugerencias, setShowSugerencias] = useState(false);
           }
         } catch (err) {
           console.error("Error creando stock al aprobar presupuesto:", err);
+        }
+      }
+
+      // Edición de presupuesto ya aprobado: registrar delta si cambiaron cantidades
+      if (isEditingApproved) {
+        try {
+          const [inventoryItems, allSM] = await Promise.all([Inventory.list(), StockMovement.list()]);
+          const presNum = data.numero_presupuesto || presupuestoActualizado.numero_presupuesto || '';
+          const today = new Date().toISOString().split('T')[0];
+
+          for (const productoItem of (data.productos || [])) {
+            const producto = productos.find(p => p.id === productoItem.producto_id);
+            if (!producto || !producto.reference) continue;
+
+            const totalNuevo = (productoItem.combinaciones || []).reduce((sum, comb) =>
+              sum + (comb.tallas_cantidades || []).reduce((s, tc) => s + (tc.cantidad || 0), 0), 0);
+
+            // Cuánto se registró en SM para este presupuesto + referencia
+            const smExistente = (allSM || [])
+              .filter(sm => sm.product_reference === producto.reference && sm.reason === `Presupuesto aprobado ${presNum}`)
+              .reduce((s, sm) => s + (Number(sm.quantity) || 0), 0);
+
+            const delta = totalNuevo - smExistente;
+            if (delta === 0) continue;
+
+            const existing = (inventoryItems || []).find(inv => inv.product_reference === producto.reference);
+            const prevStock = existing ? (Number(existing.current_stock) || 0) : 0;
+            const newStock = Math.max(0, prevStock + delta);
+
+            await StockMovement.create({
+              product_reference: producto.reference,
+              movement_type: delta > 0 ? "entrada" : "salida",
+              quantity: Math.abs(delta),
+              movement_date: today,
+              reason: `Ajuste presupuesto ${presNum} (edición: ${smExistente} → ${totalNuevo})`,
+              previous_stock: prevStock,
+              new_stock: newStock,
+            });
+
+            if (existing) {
+              await Inventory.update(existing.id, { current_stock: newStock });
+            }
+          }
+        } catch (err) {
+          console.error("Error registrando delta de edición de presupuesto:", err);
         }
       }
 
