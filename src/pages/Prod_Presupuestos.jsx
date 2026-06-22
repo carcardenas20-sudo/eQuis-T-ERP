@@ -82,7 +82,7 @@ const [showSugerencias, setShowSugerencias] = useState(false);
       // Al aprobar: crear stock en inventario de operarios por cada producto
       if (wasApproved || isNewApproved) {
         try {
-          const inventoryItems = await Inventory.list();
+          const [inventoryItems, allSM] = await Promise.all([Inventory.list(), StockMovement.list()]);
           const presNum = data.numero_presupuesto || presupuestoActualizado.numero_presupuesto || '';
           const today = new Date().toISOString().split('T')[0];
 
@@ -93,6 +93,13 @@ const [showSugerencias, setShowSugerencias] = useState(false);
             const totalUnidades = (productoItem.combinaciones || []).reduce((sum, comb) =>
               sum + (comb.tallas_cantidades || []).reduce((s, tc) => s + (tc.cantidad || 0), 0), 0);
             if (totalUnidades <= 0) continue;
+
+            // Idempotencia: no duplicar si ya existe SM para este presupuesto + referencia
+            const yaExiste = (allSM || []).some(sm =>
+              sm.product_reference === producto.reference &&
+              sm.reason === `Presupuesto aprobado ${presNum}`
+            );
+            if (yaExiste) continue;
 
             const existing = (inventoryItems || []).find(inv => inv.product_reference === producto.reference);
             const prevStock = existing ? (Number(existing.current_stock) || 0) : 0;
