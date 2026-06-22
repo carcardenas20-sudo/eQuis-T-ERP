@@ -408,42 +408,27 @@ app.post('/api/functions/recalcularStockProduccion', requireAuth, async (req, re
       GROUP BY ref
     `);
 
-    // 2. Devoluciones registradas en entity_devolucion (unidades que operarios retornan)
-    const { rows: devoluciones } = await query(`
-      SELECT product_reference AS ref,
-             COALESCE(SUM(quantity_returned), 0) AS total
-      FROM entity_devolucion
-      WHERE product_reference IS NOT NULL
-        AND quantity_returned > 0
-      GROUP BY product_reference
-    `);
-
-    // 3. Registros de inventario de producción (identificados por product_reference en JSONB)
+    // 2. Registros de inventario de producción (identificados por product_reference en JSONB)
     const { rows: invRecords } = await query(`
       SELECT id, current_stock, data->>'product_reference' AS ref
       FROM entity_inventory
       WHERE data->>'product_reference' IS NOT NULL
     `);
 
-    // Construir mapas
-    const mapNeto        = Object.fromEntries(smNeto.map(r        => [r.ref, parseFloat(r.net)   || 0]));
-    const mapDevoluciones = Object.fromEntries(devoluciones.map(r => [r.ref, parseFloat(r.total) || 0]));
-    const invMap         = Object.fromEntries(invRecords.map(r    => [r.ref, r]));
+    // entity_devolucion = correcciones de calidad de prendas terminadas,
+    // NO afectan el stock de producción — se excluye intencionalmente
 
-    const allRefs = new Set([
-      ...Object.keys(mapNeto),
-      ...Object.keys(mapDevoluciones),
-      ...Object.keys(invMap),
-    ]);
+    const mapNeto = Object.fromEntries(smNeto.map(r => [r.ref, parseFloat(r.net) || 0]));
+    const invMap  = Object.fromEntries(invRecords.map(r => [r.ref, r]));
+
+    const allRefs = new Set([...Object.keys(mapNeto), ...Object.keys(invMap)]);
 
     const detalle = [];
     for (const ref of allRefs) {
       const inv = invMap[ref];
       if (!inv) continue;
 
-      const neto       = mapNeto[ref]        || 0;
-      const devolucion = mapDevoluciones[ref] || 0;
-      const nuevoStock = Math.max(0, neto + devolucion);
+      const nuevoStock = Math.max(0, mapNeto[ref] || 0);
       const stockAntes = parseFloat(inv.current_stock) || 0;
 
       await query(
@@ -458,8 +443,7 @@ app.post('/api/functions/recalcularStockProduccion', requireAuth, async (req, re
         antes:       Math.round(stockAntes),
         despues:     Math.round(nuevoStock),
         diff:        Math.round(nuevoStock - stockAntes),
-        neto_sm:     Math.round(neto),
-        devoluciones: Math.round(devolucion),
+        neto_sm: Math.round(nuevoStock),
       });
     }
 
