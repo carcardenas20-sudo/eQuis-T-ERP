@@ -395,6 +395,177 @@ app.post('/api/functions/backfillTransferencias', requireAuth, async (req, res) 
   }
 });
 
+// ─── Recalcular stock de producción ──────────────────────────────────────────
+app.post('/api/functions/recalcularStockProduccion', requireAuth, async (req, res) => {
+  try {
+    // 1. Entradas registradas en entity_stock_movement (movement_type='entrada')
+    const { rows: entradas } = await query(`
+      SELECT data->>'product_reference' AS ref,
+             COALESCE(SUM(quantity), 0)  AS total
+      FROM entity_stock_movement
+      WHERE movement_type = 'entrada'
+        AND data->>'product_reference' IS NOT NULL
+      GROUP BY ref
+    `);
+
+    // 2. Salidas de entity_dispatch (fuente autoritativa de despachos)
+    const { rows: despachos } = await query(`
+      SELECT product_reference AS ref,
+             COALESCE(SUM(quantity), 0) AS total
+      FROM entity_dispatch
+      WHERE product_reference IS NOT NULL
+      GROUP BY product_reference
+    `);
+
+    // 3. Devoluciones (operarios devuelven unidades)
+    const { rows: devoluciones } = await query(`
+      SELECT product_reference AS ref,
+             COALESCE(SUM(quantity_returned), 0) AS total
+      FROM entity_devolucion
+      WHERE product_reference IS NOT NULL
+        AND quantity_returned > 0
+      GROUP BY product_reference
+    `);
+
+    // 4. Registros de inventario de producción (identificados por product_reference en JSONB)
+    const { rows: invRecords } = await query(`
+      SELECT id, current_stock, data->>'product_reference' AS ref
+      FROM entity_inventory
+      WHERE data->>'product_reference' IS NOT NULL
+    `);
+
+    // Construir mapas
+    const mapEntradas    = Object.fromEntries(entradas.map(r    => [r.ref, parseFloat(r.total) || 0]));
+    const mapDespachos   = Object.fromEntries(despachos.map(r   => [r.ref, parseFloat(r.total) || 0]));
+    const mapDevoluciones = Object.fromEntries(devoluciones.map(r => [r.ref, parseFloat(r.total) || 0]));
+    const invMap         = Object.fromEntries(invRecords.map(r  => [r.ref, r]));
+
+    const allRefs = new Set([
+      ...Object.keys(mapEntradas),
+      ...Object.keys(mapDespachos),
+      ...Object.keys(mapDevoluciones),
+      ...Object.keys(invMap),
+    ]);
+
+    const detalle = [];
+    for (const ref of allRefs) {
+      const inv = invMap[ref];
+      if (!inv) continue; // No hay registro de inventario para esta ref, saltar
+
+      const entrada    = mapEntradas[ref]    || 0;
+      const despacho   = mapDespachos[ref]   || 0;
+      const devolucion = mapDevoluciones[ref] || 0;
+      const nuevoStock = Math.max(0, entrada - despacho + devolucion);
+      const stockAntes = parseFloat(inv.current_stock) || 0;
+
+      await query(
+        `UPDATE entity_inventory
+         SET current_stock = $1, updated_date = NOW()
+         WHERE id = $2`,
+        [nuevoStock, inv.id]
+      );
+
+      detalle.push({
+        ref,
+        antes:       Math.round(stockAntes),
+        despues:     Math.round(nuevoStock),
+        diff:        Math.round(nuevoStock - stockAntes),
+        entradas:    Math.round(entrada),
+        despachos:   Math.round(despacho),
+        devoluciones: Math.round(devolucion),
+      });
+    }
+
+    console.log(`[recalcularStock] ${detalle.length} referencias actualizadas`);
+    res.json({ ok: true, actualizados: detalle.length, detalle });
+  } catch (e) {
+    console.error('[recalcularStock]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Confirmaciones Bancarias ─────────────────────────────────────────────────
+
+app.get('/api/confirmaciones', requireAuth, async (req, res) => {
+  try {
+    const { estado, limit = '100' } = req.query;
+    const params = [];
+    const conditions = [];
+    if (estado && estado !== 'todas') {
+      params.push(estado);
+      conditions.push(`estado = $${params.length}`);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const { rows } = await query(
+      `SELECT id, fecha_hora, banco_origen, cuenta_destino, monto, nombre_emisor, referencia,
+              estado, venta_vinculada_id, credito_vinculado_id, vinculado_por_user_id,
+              email_uid, email_from, created_date
+       FROM entity_confirmacion_bancaria
+       ${where}
+       ORDER BY fecha_hora DESC
+       LIMIT ${Math.min(parseInt(limit) || 100, 200)}`,
+      params
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/confirmaciones/mock', requireAuth, async (req, res) => {
+  try {
+    const { banco_origen = 'bancolombia', monto, nombre_emisor, referencia = '', cuenta_destino = '' } = req.body;
+    if (!monto || !nombre_emisor) return res.status(400).json({ error: 'monto y nombre_emisor son requeridos' });
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await query(
+      `INSERT INTO entity_confirmacion_bancaria
+         (id, fecha_hora, banco_origen, cuenta_destino, monto, nombre_emisor, referencia, estado, data, created_date, updated_date)
+       VALUES ($1, NOW(), $2, $3, $4, $5, $6, 'pendiente', '{}', $7, $7)`,
+      [id, banco_origen, cuenta_destino, parseFloat(monto), nombre_emisor, referencia, now]
+    );
+    res.json({ ok: true, id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/confirmaciones/:id/vincular', requireAuth, async (req, res) => {
+  try {
+    const { venta_id, credito_id } = req.body;
+    const userId = req.user?.id || req.user?.email || 'system';
+    const { rowCount } = await query(
+      `UPDATE entity_confirmacion_bancaria
+       SET estado = 'vinculada',
+           venta_vinculada_id = $1,
+           credito_vinculado_id = $2,
+           vinculado_por_user_id = $3,
+           updated_date = NOW()
+       WHERE id = $4 AND estado = 'pendiente'`,
+      [venta_id || null, credito_id || null, userId, req.params.id]
+    );
+    if (rowCount === 0) return res.status(400).json({ error: 'Confirmación no encontrada o ya procesada' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/confirmaciones/:id/descartar', requireAuth, async (req, res) => {
+  try {
+    const { rowCount } = await query(
+      `UPDATE entity_confirmacion_bancaria
+       SET estado = 'descartada', updated_date = NOW()
+       WHERE id = $1 AND estado = 'pendiente'`,
+      [req.params.id]
+    );
+    if (rowCount === 0) return res.status(400).json({ error: 'Confirmación no encontrada o ya procesada' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Limpieza: borrar Dispatch huérfanos de lotes auto-creados ────────────────
 app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) => {
   try {

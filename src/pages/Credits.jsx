@@ -46,7 +46,7 @@ export default function CreditsPage() {
   });
 
   useEffect(() => {
-    const t = sessionStorage.getItem("transferencia_pendiente");
+    const t = sessionStorage.getItem("confirmacion_pendiente") || sessionStorage.getItem("transferencia_pendiente");
     if (t) try { setPendingTransferencia(JSON.parse(t)); } catch {}
   }, []);
 
@@ -161,12 +161,18 @@ export default function CreditsPage() {
     setShowPaymentModal(false);
     setSelectedCredit(null);
     loadCredits();
-    // Si venía de una transferencia detectada, marcarla como asignada
+    // Vincular la confirmación bancaria si venía de una
+    const linkedCreditId = selectedCredit?.id;
     if (pendingTransferencia) {
       try {
-        const { TransferenciaDetectada } = await import("@/entities/all");
-        await TransferenciaDetectada.update(pendingTransferencia.id, { estado: "asignado" });
+        const token = localStorage.getItem("equist_token") || "";
+        await fetch(`/api/confirmaciones/${pendingTransferencia.id}/vincular`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ credito_id: linkedCreditId }),
+        });
       } catch {}
+      sessionStorage.removeItem("confirmacion_pendiente");
       sessionStorage.removeItem("transferencia_pendiente");
       setPendingTransferencia(null);
     }
@@ -197,12 +203,17 @@ export default function CreditsPage() {
       {pendingTransferencia && (
         <div className="mb-4 bg-green-600 text-white rounded-xl px-4 py-3 flex items-center justify-between text-sm">
           <span>
-            <strong>Transferencia pendiente:</strong> ${Number(pendingTransferencia.monto || 0).toLocaleString("es-CO")}
-            {pendingTransferencia.remitente ? ` de ${pendingTransferencia.remitente}` : ""}
+            <strong>Confirmación bancaria:</strong> ${Number(pendingTransferencia.monto || 0).toLocaleString("es-CO")}
+            {(pendingTransferencia.nombre_emisor || pendingTransferencia.remitente)
+              ? ` de ${pendingTransferencia.nombre_emisor || pendingTransferencia.remitente}`
+              : ""}
             {" · Selecciona un crédito y registra el abono — se pre-llenará como Transferencia."}
           </span>
-          <button onClick={() => { sessionStorage.removeItem("transferencia_pendiente"); setPendingTransferencia(null); }}
-            className="ml-4 opacity-70 hover:opacity-100 font-bold">✕</button>
+          <button onClick={() => {
+            sessionStorage.removeItem("confirmacion_pendiente");
+            sessionStorage.removeItem("transferencia_pendiente");
+            setPendingTransferencia(null);
+          }} className="ml-4 opacity-70 hover:opacity-100 font-bold">✕</button>
         </div>
       )}
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">

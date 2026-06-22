@@ -665,6 +665,26 @@ export const ENTITY_SCHEMAS = {
     },
     indexes: ['banco', 'estado', 'fecha_pago'],
   },
+
+  ConfirmacionBancaria: {
+    table: 'entity_confirmacion_bancaria',
+    typed: {
+      fecha_hora: 'TIMESTAMPTZ DEFAULT NOW()',
+      banco_origen: 'TEXT',
+      cuenta_destino: 'TEXT',
+      monto: 'NUMERIC(14,2)',
+      nombre_emisor: 'TEXT',
+      referencia: 'TEXT',
+      estado: "TEXT DEFAULT 'pendiente'",
+      venta_vinculada_id: 'TEXT',
+      credito_vinculado_id: 'TEXT',
+      vinculado_por_user_id: 'TEXT',
+      email_uid: 'TEXT',
+      email_subject: 'TEXT',
+      email_from: 'TEXT',
+    },
+    indexes: ['estado', 'fecha_hora', 'venta_vinculada_id'],
+  },
 };
 
 /**

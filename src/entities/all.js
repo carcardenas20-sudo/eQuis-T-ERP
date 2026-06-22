@@ -72,3 +72,4 @@ export const InventoryAudit = makeEntity('InventoryAudit');
 export const InventoryAuditItem = makeEntity('InventoryAuditItem');
 export const FixedExpense = makeEntity('FixedExpense');
 export const TransferenciaDetectada = makeEntity('TransferenciaDetectada');
+export const ConfirmacionBancaria = makeEntity('ConfirmacionBancaria');

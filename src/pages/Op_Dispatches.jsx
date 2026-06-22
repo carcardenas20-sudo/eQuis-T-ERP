@@ -21,6 +21,8 @@ export default function Dispatches() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingDispatch, setEditingDispatch] = useState(null);
+  const [recalculando, setRecalculando] = useState(false);
+  const [recalcResultado, setRecalcResultado] = useState(null);
   const [date, setDate] = useState({
     from: subDays(new Date(), 29), // Por defecto los últimos 30 días
     to: new Date(),
@@ -295,6 +297,26 @@ export default function Dispatches() {
     return new Date(dateString + 'T00:00:00');
   };
 
+  const handleRecalcularStock = async () => {
+    if (!window.confirm('¿Recalcular el stock de producción?\nEsto actualizará los valores basándose en entradas registradas, despachos y devoluciones históricas.')) return;
+    setRecalculando(true);
+    setRecalcResultado(null);
+    try {
+      const token = localStorage.getItem('equist_token') || '';
+      const res = await fetch('/api/functions/recalcularStockProduccion', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRecalcResultado(data);
+      await loadData();
+    } catch (e) {
+      alert('Error al recalcular: ' + e.message);
+    }
+    setRecalculando(false);
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
@@ -312,11 +334,49 @@ export default function Dispatches() {
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">Despachos</h1>
               <p className="text-slate-600 text-sm sm:text-base">Material entregado a empleados para manufactura</p>
             </div>
-            <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700 shrink-0">
-              <Plus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Nuevo Despacho</span>
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                variant="outline"
+                onClick={handleRecalcularStock}
+                disabled={recalculando}
+                className="border-amber-300 text-amber-700 hover:bg-amber-50 text-xs"
+                title="Recalcula current_stock desde historial de entradas, despachos y devoluciones"
+              >
+                {recalculando ? (
+                  <span className="animate-spin mr-1">⟳</span>
+                ) : (
+                  <Package className="w-4 h-4 sm:mr-1" />
+                )}
+                <span className="hidden sm:inline">{recalculando ? 'Calculando...' : 'Recalcular Stock'}</span>
+              </Button>
+              <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Nuevo Despacho</span>
+              </Button>
+            </div>
           </div>
+
+          {recalcResultado && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-semibold text-amber-800">
+                  ✓ Stock recalculado — {recalcResultado.actualizados} referencias actualizadas
+                </p>
+                <button onClick={() => setRecalcResultado(null)} className="text-amber-500 hover:text-amber-700 text-xs">✕</button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                {recalcResultado.detalle.map(d => (
+                  <div key={d.ref} className="bg-white border border-amber-100 rounded-lg px-2 py-1.5">
+                    <p className="font-medium text-slate-700 text-xs">{d.ref}</p>
+                    <p className="text-xs text-slate-500">
+                      {d.antes} → <strong className={d.diff < 0 ? 'text-red-600' : 'text-green-600'}>{d.despues}</strong>
+                      <span className="ml-1 text-slate-400">({d.diff > 0 ? '+' : ''}{d.diff})</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>

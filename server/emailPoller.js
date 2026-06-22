@@ -4,7 +4,7 @@ import { query } from './db.js';
 import { ENTITY_SCHEMAS, splitRecord } from './entitySchemas.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const SCHEMA = ENTITY_SCHEMAS.TransferenciaDetectada;
+const SCHEMA = ENTITY_SCHEMAS.ConfirmacionBancaria;
 
 function parseMontoCOP(str) {
   if (!str) return null;
@@ -100,7 +100,7 @@ async function saveTransferencia(data) {
     `INSERT INTO ${SCHEMA.table} (${colNames.join(', ')}) VALUES (${placeholders})`,
     colValues
   );
-  console.log(`[emailPoller] Guardada: ${data.banco} $${data.monto} de "${data.remitente || '?'}"`);
+  console.log(`[emailPoller] Guardada: ${data.banco_origen} $${data.monto} de "${data.nombre_emisor || '?'}"`);
 }
 
 // Procesa una lista de UIDs en el mailbox abierto.
@@ -147,16 +147,15 @@ async function processUids(client, uids) {
 
       const result = rule.parse(text, subject);
       await saveTransferencia({
-        banco: rule.banco,
+        banco_origen: rule.banco,
         monto: result?.monto ?? null,
-        remitente: result?.remitente ?? null,
+        nombre_emisor: result?.remitente ?? null,
         referencia: result?.referencia ?? null,
-        fecha_pago: parsed.date?.toISOString() ?? new Date().toISOString(),
-        estado: 'sin_asignar',
+        fecha_hora: parsed.date?.toISOString() ?? new Date().toISOString(),
+        estado: 'pendiente',
         email_uid: messageId,
         email_subject: subject,
         email_from: from,
-        email_texto: text.slice(0, 2000),
       });
 
       if (!result) console.log(`[emailPoller] Sin parsear — "${subject}" | ${text.slice(0, 150)}`);

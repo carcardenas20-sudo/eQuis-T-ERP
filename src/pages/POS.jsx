@@ -89,6 +89,12 @@ export default function POS() {
   const [showHoldCart, setShowHoldCart] = useState(false);
   const [showDiscountPin, setShowDiscountPin] = useState(false);
   const [postSaleInfo, setPostSaleInfo] = useState(null);
+  const [pendingTransferencia, setPendingTransferencia] = useState(null);
+
+  useEffect(() => {
+    const t = sessionStorage.getItem("confirmacion_pendiente") || sessionStorage.getItem("transferencia_pendiente");
+    if (t) try { setPendingTransferencia(JSON.parse(t)); } catch {}
+  }, []);
 
   useEffect(() => {
     if (isSessionLoading) return;
@@ -531,6 +537,23 @@ export default function POS() {
       } : {};
       setPostSaleInfo({ sale, items: enrichedItems, companyInfo });
 
+      // Vincular la confirmación bancaria si venía de una
+      const tRaw = sessionStorage.getItem("confirmacion_pendiente") || sessionStorage.getItem("transferencia_pendiente");
+      if (tRaw) {
+        try {
+          const { id: tid } = JSON.parse(tRaw);
+          const token = localStorage.getItem("equist_token") || "";
+          await fetch(`/api/confirmaciones/${tid}/vincular`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ venta_id: sale.id }),
+          });
+          sessionStorage.removeItem("confirmacion_pendiente");
+          sessionStorage.removeItem("transferencia_pendiente");
+          setPendingTransferencia(null);
+        } catch {}
+      }
+
     } catch (error) {
       console.error("Error processing sale:", error);
       alert("Error al procesar la venta: " + (error.message || "Inténtalo de nuevo."));
@@ -588,6 +611,23 @@ export default function POS() {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
+
+        {pendingTransferencia && (
+          <div className="bg-indigo-600 text-white px-4 py-2 flex items-center justify-between text-sm">
+            <span>
+              <strong>Confirmación bancaria:</strong> ${Number(pendingTransferencia.monto || 0).toLocaleString("es-CO")}
+              {(pendingTransferencia.nombre_emisor || pendingTransferencia.remitente)
+                ? ` de ${pendingTransferencia.nombre_emisor || pendingTransferencia.remitente}`
+                : ""}
+              {" · El pago se pre-seleccionará como Transferencia al cobrar."}
+            </span>
+            <button onClick={() => {
+              sessionStorage.removeItem("confirmacion_pendiente");
+              sessionStorage.removeItem("transferencia_pendiente");
+              setPendingTransferencia(null);
+            }} className="ml-4 opacity-70 hover:opacity-100 text-white font-bold">✕</button>
+          </div>
+        )}
 
         {isAdmin && locations.length > 0 && (
           <div className="hidden lg:block bg-white border-b border-slate-200 p-3 sm:p-4">
@@ -882,6 +922,7 @@ export default function POS() {
           onConfirm={processSale}
           onCancel={() => setShowPayment(false)}
           isProcessing={isProcessing}
+          initialMethod={pendingTransferencia ? 'transfer' : undefined}
         />
       )}
 
