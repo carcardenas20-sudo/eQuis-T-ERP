@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Presupuesto, Producto, MateriaPrima, Color, Remision, Operacion } from "@/api/entitiesChaquetas";
-import { Inventory, StockMovement } from "@/entities/all";
+import { Inventory, StockMovement, AccountPayable } from "@/entities/all";
 import { base44 } from "@/api/base44Combined";
 const TareaPlanta = base44.entities.TareaPlanta;
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -229,6 +229,50 @@ const [showSugerencias, setShowSugerencias] = useState(false);
           }
         } catch (err) {
           console.error("Error creando tareas de planta:", err);
+        }
+      }
+
+      // Al aprobar: crear cuenta por pagar para ojaletear externo (idempotente)
+      if (wasApproved || isNewApproved) {
+        try {
+          const presNum = data.numero_presupuesto || presupuestoActualizado.numero_presupuesto || '';
+          const PROVEEDOR_OJALETEAR = '0c2eaa41-083c-4156-8ec2-73a2f01954f4'; // Claudia Montoya
+
+          for (const productoItem of (data.productos || [])) {
+            const oj = productoItem.ojaletear;
+            if (!oj || oj.tipo !== 'externo') continue;
+
+            const totalUds = (productoItem.combinaciones || []).reduce((s, c) =>
+              s + (c.tallas_cantidades || []).reduce((ss, tc) => ss + (Number(tc.cantidad) || 0), 0), 0);
+            if (totalUds <= 0) continue;
+
+            const precioUnit = Number(oj.precio_unit) || 80;
+            const total = totalUds * precioUnit;
+
+            // Idempotencia: no duplicar si ya existe para este presupuesto
+            const existentes = await AccountPayable.filter({ supplier_id: PROVEEDOR_OJALETEAR });
+            const yaExiste = (existentes || []).some(ap => ap.data?.presupuesto_id === presupuestoActualizado.id);
+            if (yaExiste) continue;
+
+            await AccountPayable.create({
+              supplier_id: PROVEEDOR_OJALETEAR,
+              status: 'pending',
+              pending_amount: total,
+              paid_amount: 0,
+              data: {
+                type: 'servicio_ojaletear',
+                presupuesto_id: presupuestoActualizado.id,
+                presupuesto_numero: presNum,
+                cantidad: totalUds,
+                precio_unit: precioUnit,
+                total_amount: total,
+                description: `Ojaletear ${totalUds} uds — ${presNum}`,
+                supplier_name: 'Claudia Montoya',
+              },
+            });
+          }
+        } catch (err) {
+          console.error("Error creando cuenta por pagar ojaletear:", err);
         }
       }
 

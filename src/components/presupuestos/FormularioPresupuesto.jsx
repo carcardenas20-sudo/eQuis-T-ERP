@@ -516,6 +516,52 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                                   });
                                 }}
                               />
+
+                              {/* Ojaletear */}
+                              {(() => {
+                                const oj = item.ojaletear || { tipo: 'ninguno', precio_unit: 80 };
+                                const setOj = (patch) => setFormData(prev => {
+                                  const np = [...prev.productos];
+                                  np[prodIndex] = { ...np[prodIndex], ojaletear: { ...oj, ...patch } };
+                                  return { ...prev, productos: np };
+                                });
+                                const totalOj = totalAsignado * (Number(oj.precio_unit) || 0);
+                                return (
+                                  <div className="mt-3 pt-3 border-t border-slate-100">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                      <span className="text-xs font-medium text-slate-600">Ojaletear:</span>
+                                      {['ninguno','externo','planta'].map(op => (
+                                        <label key={op} className="flex items-center gap-1 cursor-pointer">
+                                          <input type="radio" name={`oj-${item.id}`} value={op}
+                                            checked={oj.tipo === op}
+                                            onChange={() => setOj({ tipo: op })}
+                                            className="accent-indigo-600" />
+                                          <span className="text-xs text-slate-700 capitalize">
+                                            {op === 'ninguno' ? 'Ninguno' : op === 'externo' ? 'Externo (Claudia Montoya)' : 'En planta'}
+                                          </span>
+                                        </label>
+                                      ))}
+                                      {oj.tipo === 'externo' && (
+                                        <div className="flex items-center gap-2 ml-auto">
+                                          <span className="text-xs text-slate-500">$</span>
+                                          <input type="number" min="0" value={oj.precio_unit}
+                                            onChange={e => setOj({ precio_unit: Number(e.target.value) })}
+                                            className="w-20 h-7 px-2 border border-slate-200 rounded text-xs text-right" />
+                                          <span className="text-xs text-slate-500">/ud</span>
+                                          {totalAsignado > 0 && (
+                                            <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                                              = ${totalOj.toLocaleString('es-CO')}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {oj.tipo === 'planta' && (
+                                        <span className="text-xs text-slate-400 ml-auto">Se realiza internamente</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </CardContent>
                           </Card>
                         );
