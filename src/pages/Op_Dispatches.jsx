@@ -298,7 +298,7 @@ export default function Dispatches() {
   };
 
   const handleRecalcularStock = async () => {
-    if (!window.confirm('¿Recalcular el stock de producción?\nEsto actualizará los valores basándose en entradas registradas, despachos y devoluciones históricas.')) return;
+    if (!window.confirm('¿Recalcular el stock de producción?\nEsto actualizará los valores basándose en movimientos de stock registrados y devoluciones.')) return;
     setRecalculando(true);
     setRecalcResultado(null);
     try {
@@ -340,7 +340,7 @@ export default function Dispatches() {
                 onClick={handleRecalcularStock}
                 disabled={recalculando}
                 className="border-amber-300 text-amber-700 hover:bg-amber-50 text-xs"
-                title="Recalcula current_stock desde historial de entradas, despachos y devoluciones"
+                title="Recalcula current_stock desde movimientos de stock registrados y devoluciones"
               >
                 {recalculando ? (
                   <span className="animate-spin mr-1">⟳</span>

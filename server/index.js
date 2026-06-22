@@ -398,26 +398,17 @@ app.post('/api/functions/backfillTransferencias', requireAuth, async (req, res) 
 // ─── Recalcular stock de producción ──────────────────────────────────────────
 app.post('/api/functions/recalcularStockProduccion', requireAuth, async (req, res) => {
   try {
-    // 1. Entradas registradas en entity_stock_movement (movement_type='entrada')
-    const { rows: entradas } = await query(`
+    // 1. Stock neto por ref desde entity_stock_movement (la única fuente consistente —
+    //    entity_dispatch tiene historial pre-tracking que no cuadra con las entradas)
+    const { rows: smNeto } = await query(`
       SELECT data->>'product_reference' AS ref,
-             COALESCE(SUM(quantity), 0)  AS total
+             COALESCE(SUM(CASE WHEN movement_type='entrada' THEN quantity ELSE -quantity END), 0) AS net
       FROM entity_stock_movement
-      WHERE movement_type = 'entrada'
-        AND data->>'product_reference' IS NOT NULL
+      WHERE data->>'product_reference' IS NOT NULL
       GROUP BY ref
     `);
 
-    // 2. Salidas de entity_dispatch (fuente autoritativa de despachos)
-    const { rows: despachos } = await query(`
-      SELECT product_reference AS ref,
-             COALESCE(SUM(quantity), 0) AS total
-      FROM entity_dispatch
-      WHERE product_reference IS NOT NULL
-      GROUP BY product_reference
-    `);
-
-    // 3. Devoluciones (operarios devuelven unidades)
+    // 2. Devoluciones registradas en entity_devolucion (unidades que operarios retornan)
     const { rows: devoluciones } = await query(`
       SELECT product_reference AS ref,
              COALESCE(SUM(quantity_returned), 0) AS total
@@ -427,7 +418,7 @@ app.post('/api/functions/recalcularStockProduccion', requireAuth, async (req, re
       GROUP BY product_reference
     `);
 
-    // 4. Registros de inventario de producción (identificados por product_reference en JSONB)
+    // 3. Registros de inventario de producción (identificados por product_reference en JSONB)
     const { rows: invRecords } = await query(`
       SELECT id, current_stock, data->>'product_reference' AS ref
       FROM entity_inventory
@@ -435,14 +426,12 @@ app.post('/api/functions/recalcularStockProduccion', requireAuth, async (req, re
     `);
 
     // Construir mapas
-    const mapEntradas    = Object.fromEntries(entradas.map(r    => [r.ref, parseFloat(r.total) || 0]));
-    const mapDespachos   = Object.fromEntries(despachos.map(r   => [r.ref, parseFloat(r.total) || 0]));
+    const mapNeto        = Object.fromEntries(smNeto.map(r        => [r.ref, parseFloat(r.net)   || 0]));
     const mapDevoluciones = Object.fromEntries(devoluciones.map(r => [r.ref, parseFloat(r.total) || 0]));
-    const invMap         = Object.fromEntries(invRecords.map(r  => [r.ref, r]));
+    const invMap         = Object.fromEntries(invRecords.map(r    => [r.ref, r]));
 
     const allRefs = new Set([
-      ...Object.keys(mapEntradas),
-      ...Object.keys(mapDespachos),
+      ...Object.keys(mapNeto),
       ...Object.keys(mapDevoluciones),
       ...Object.keys(invMap),
     ]);
@@ -450,12 +439,11 @@ app.post('/api/functions/recalcularStockProduccion', requireAuth, async (req, re
     const detalle = [];
     for (const ref of allRefs) {
       const inv = invMap[ref];
-      if (!inv) continue; // No hay registro de inventario para esta ref, saltar
+      if (!inv) continue;
 
-      const entrada    = mapEntradas[ref]    || 0;
-      const despacho   = mapDespachos[ref]   || 0;
+      const neto       = mapNeto[ref]        || 0;
       const devolucion = mapDevoluciones[ref] || 0;
-      const nuevoStock = Math.max(0, entrada - despacho + devolucion);
+      const nuevoStock = Math.max(0, neto + devolucion);
       const stockAntes = parseFloat(inv.current_stock) || 0;
 
       await query(
@@ -470,8 +458,7 @@ app.post('/api/functions/recalcularStockProduccion', requireAuth, async (req, re
         antes:       Math.round(stockAntes),
         despues:     Math.round(nuevoStock),
         diff:        Math.round(nuevoStock - stockAntes),
-        entradas:    Math.round(entrada),
-        despachos:   Math.round(despacho),
+        neto_sm:     Math.round(neto),
         devoluciones: Math.round(devolucion),
       });
     }
