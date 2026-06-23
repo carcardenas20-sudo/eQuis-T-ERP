@@ -532,7 +532,7 @@ export default function FormularioPresupuesto({ presupuesto, productos, materias
                                       <span className="text-xs font-medium text-slate-600">Ojaletear:</span>
                                       {['ninguno','externo','planta'].map(op => (
                                         <label key={op} className="flex items-center gap-1 cursor-pointer">
-                                          <input type="radio" name={`oj-${item.id}`} value={op}
+                                          <input type="radio" name={`oj-${item.id || prodIndex}`} value={op}
                                             checked={oj.tipo === op}
                                             onChange={() => setOj({ tipo: op })}
                                             className="accent-indigo-600" />

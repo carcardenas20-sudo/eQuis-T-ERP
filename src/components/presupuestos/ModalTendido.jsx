@@ -246,8 +246,7 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
     onGenerate(Object.values(productoGroups).filter(g => g.combinaciones.length > 0), tendidoConfig);
   };
 
-  const handleNext = () => filasValidas.length > 0 && coloresValidos.length > 0
-    ? setPaso(2) : handleGenerate();
+  const handleNext = () => hasPorSecciones ? setPaso(2) : handleGenerate();
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -565,9 +564,14 @@ export default function ModalTendido({ productos, colores, materiasPrimas, onGen
               <ChevronRight className="w-4 h-4" />
             </Button>
           ) : (
-            <Button disabled={!allMapped} onClick={handleGenerate} className="bg-green-600 hover:bg-green-700">
-              Generar Presupuesto
-            </Button>
+            <div className="flex items-center gap-3">
+              {!allMapped && (
+                <p className="text-xs text-amber-600">Asigna hojas a al menos una combinación de color</p>
+              )}
+              <Button disabled={!allMapped} onClick={handleGenerate} className="bg-green-600 hover:bg-green-700">
+                Generar Presupuesto
+              </Button>
+            </div>
           )}
         </div>
       </div>
