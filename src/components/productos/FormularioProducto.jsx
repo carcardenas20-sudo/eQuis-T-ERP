@@ -163,18 +163,21 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
   const DRAFT_KEY = `producto_draft_${producto?.id || 'nuevo'}`;
 
   const [formData, setFormData] = useState(() => {
-    // Intentar recuperar borrador guardado
-    try {
-      const draft = localStorage.getItem(DRAFT_KEY);
-      if (draft) {
-        const parsed = JSON.parse(draft);
-        // Solo restaurar si el borrador es más reciente que hace 24h
-        if (parsed._savedAt && Date.now() - parsed._savedAt < 24 * 60 * 60 * 1000) {
-          const { _savedAt, ...data } = parsed;
-          return data;
+    // Solo restaurar borrador para productos NUEVOS (sin id).
+    // Para edición, siempre usar los datos guardados — el borrador excluye
+    // combinaciones_predefinidas y restaurarlo deja el formulario incompleto.
+    if (!producto?.id) {
+      try {
+        const draft = localStorage.getItem(DRAFT_KEY);
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          if (parsed._savedAt && Date.now() - parsed._savedAt < 24 * 60 * 60 * 1000) {
+            const { _savedAt, ...data } = parsed;
+            return data;
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     return producto ? {
       ...producto,
@@ -203,8 +206,9 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
   });
 
   const [hasDraft, setHasDraft] = useState(() => {
+    if (producto?.id) return false; // solo aplica a productos nuevos
     try {
-      const draft = localStorage.getItem(`producto_draft_${producto?.id || 'nuevo'}`);
+      const draft = localStorage.getItem(`producto_draft_nuevo`);
       if (!draft) return false;
       const parsed = JSON.parse(draft);
       return !!(parsed._savedAt && Date.now() - parsed._savedAt < 24 * 60 * 60 * 1000);
@@ -213,9 +217,11 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
 
   const isFirstRender = useRef(true);
 
-  // Auto-guardar en localStorage — excluye combinaciones_predefinidas para evitar bloquear
-  // el hilo con JSON grandes; usa setTimeout(0) para no interferir con el render actual
+  // Auto-guardar borrador solo para productos NUEVOS (sin id).
+  // Para edición nunca guardar borrador — el draft excluye combinaciones_predefinidas
+  // y restaurarlo en la próxima apertura deja el formulario inconsistente.
   useEffect(() => {
+    if (producto?.id) return; // no guardar borrador al editar
     if (isFirstRender.current) { isFirstRender.current = false; return; }
     const timer = setTimeout(() => {
       setTimeout(() => {
@@ -322,9 +328,10 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
 
   const esCopia = producto && !producto.id && producto.nombre?.includes(' - Copia');
 
-  const SECCIONES = formData.tipo_diseno === 'fondo_entero'
+  const SECCIONES = useMemo(() => formData.tipo_diseno === 'fondo_entero'
     ? [{ key: 'fondo_entero', label: 'Fondo Entero' }, { key: 'forro', label: 'Forro' }, { key: 'contraste', label: 'Contraste' }, { key: 'color_propio', label: 'Color Propio' }]
-    : [{ key: 'superior', label: 'Superior' }, { key: 'central', label: 'Central' }, { key: 'inferior', label: 'Inferior' }, { key: 'forro', label: 'Forro' }, { key: 'contraste', label: 'Contraste' }, { key: 'color_propio', label: 'Color Propio' }];
+    : [{ key: 'superior', label: 'Superior' }, { key: 'central', label: 'Central' }, { key: 'inferior', label: 'Inferior' }, { key: 'forro', label: 'Forro' }, { key: 'contraste', label: 'Contraste' }, { key: 'color_propio', label: 'Color Propio' }],
+  [formData.tipo_diseno]);
 
   return (
     <motion.div
