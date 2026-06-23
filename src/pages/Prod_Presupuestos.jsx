@@ -256,18 +256,19 @@ const [showSugerencias, setShowSugerencias] = useState(false);
 
             await AccountPayable.create({
               supplier_id: PROVEEDOR_OJALETEAR,
+              supplier_name: 'Claudia Montoya',
+              description: `Ojaletear ${totalUds} uds — ${presNum}`,
+              type: 'servicio_ojaletear',
+              category: 'otros',
               status: 'pending',
+              total_amount: total,
               pending_amount: total,
               paid_amount: 0,
               data: {
-                type: 'servicio_ojaletear',
                 presupuesto_id: presupuestoActualizado.id,
                 presupuesto_numero: presNum,
                 cantidad: totalUds,
                 precio_unit: precioUnit,
-                total_amount: total,
-                description: `Ojaletear ${totalUds} uds — ${presNum}`,
-                supplier_name: 'Claudia Montoya',
               },
             });
           }

@@ -87,6 +87,7 @@ export default function PayableList({ payables, locations, onEdit, onDelete, onP
     const types = {
       purchase: { label: "Compra", color: "bg-purple-100 text-purple-800" },
       recurring_expense: { label: "Gasto Recurrente", color: "bg-orange-100 text-orange-800" },
+      servicio_ojaletear: { label: "Ojaletear", color: "bg-teal-100 text-teal-800" },
       other: { label: "Otro", color: "bg-gray-100 text-gray-800" }
     };
     
