@@ -64,7 +64,7 @@ const PORTAL_PUBLIC_ENTITIES = new Set([
   // Planillador (lectura + escritura)
   'Delivery', 'Dispatch', 'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog',
   // Portal planta (lectura + escritura estado)
-  'Remision', 'OrdenServicio', 'Operacion', 'Presupuesto',
+  'Remision', 'OrdenServicio', 'Operacion', 'Presupuesto', 'TareaPlanta',
   // Certificados laborales
   'CertificadoSolicitud',
   // Traslados entre sucursales
@@ -79,7 +79,7 @@ const PORTAL_WRITE_ENTITIES = new Set([
   'PaymentRequest',           // operario solicita pago
   'Delivery', 'Dispatch',     // planillador registra entregas/despachos
   'Inventory', 'StockMovement', 'Devolucion', 'ActivityLog', 'AppConfig',
-  'Remision', 'OrdenServicio', // portal planta actualiza estados
+  'Remision', 'OrdenServicio', 'TareaPlanta', // portal planta actualiza estados
   'CertificadoSolicitud',     // operario solicita certificado laboral
   'Traslado',                 // portal crea/gestiona traslados
   'Muestra',                  // planillador registra muestras de candidatos
