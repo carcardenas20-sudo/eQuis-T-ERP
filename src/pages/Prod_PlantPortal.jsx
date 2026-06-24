@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion, Muestra } from "@/api/publicEntities";
+import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion, Muestra, TareaPlanta } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
   Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2,
   Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2, MessageCircle, Users, FlaskConical } from "lucide-react";
@@ -144,6 +144,74 @@ function PresupuestoOpCard({ presupuesto, opId, estado, productoMap, onCambiarEs
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Tarjeta de tarea de planta (combinación individual) ─────────────────────
+function TareaCard({ tarea, onUpdate }) {
+  const [loading, setLoading] = useState(false);
+  const isListo = tarea.estado === "listo";
+  const isEnProceso = tarea.estado === "en_proceso";
+
+  const cambiarEstado = async (nuevoEstado) => {
+    setLoading(true);
+    try {
+      await TareaPlanta.update(tarea.id, { estado: nuevoEstado });
+      onUpdate();
+    } catch (e) { alert("Error: " + e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className={`bg-white rounded-xl border shadow-sm ${isListo ? "border-green-200" : "border-slate-200"}`}>
+      <div className="px-3 py-2.5">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div className="flex items-start gap-2 min-w-0">
+            {isListo
+              ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+              : <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0 mt-0.5" />}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate">{tarea.producto_nombre}</p>
+              {tarea.combinacion_nombre && (
+                <p className="text-xs text-slate-500 truncate">{tarea.combinacion_nombre}</p>
+              )}
+            </div>
+          </div>
+          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 shrink-0">
+            {tarea.total_unidades} uds
+          </span>
+        </div>
+
+        {(tarea.tallas_cantidades || []).length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {tarea.tallas_cantidades.map((tc, k) => (
+              <div key={k} className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-center min-w-[32px]">
+                <p className="text-[10px] text-slate-400 leading-none">{tc.talla}</p>
+                <p className="text-xs font-bold text-slate-800 leading-none mt-0.5">{tc.cantidad}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <EstadoBadge estado={tarea.estado || "pendiente"} />
+          {!isListo && (
+            <>
+              {(tarea.estado === "pendiente" || !tarea.estado) && (
+                <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 active:bg-blue-100 disabled:opacity-50">
+                  <Play className="w-3 h-3" /> Iniciar
+                </button>
+              )}
+              <button onClick={() => cambiarEstado("listo")} disabled={loading}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 active:bg-green-100 disabled:opacity-50">
+                <Check className="w-3 h-3" /> Listo
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -320,6 +388,7 @@ export default function PlantPortal() {
   const [loading, setLoading] = useState(true);
   const [tabId, setTabId] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState("activos");
+  const [tareas, setTareas] = useState(/** @type {any[]} */ ([]));
 
   // ── Planillador ───────────────────────────────────────────────────────────────
   const [planilladorAuth, setPlanilladorAuth] = useState(/** @type {any|null} */ (null));
@@ -405,18 +474,20 @@ export default function PlantPortal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [opsData, presData, prodData, tendData, cfgData] = await Promise.all([
+      const [opsData, presData, prodData, tendData, cfgData, tareasData] = await Promise.all([
         Operacion.list("orden_procesamiento"),
         Presupuesto.filter({ estado: "aprobado" }),
         Producto.list(),
         Remision.filter({ tipo_remision: "tendido" }),
         AppConfig.filter({ key: "proceso_planta_estados" }),
+        TareaPlanta.list(),
       ]);
       const activas = (opsData || []).filter(o => o.activa !== false);
       setOperaciones(activas);
       setPresupuestos(presData || []);
       setProductos(prodData || []);
       setTendidos(tendData || []);
+      setTareas((tareasData || []).filter(t => t.estado !== "cancelado"));
       setTabId(prev => prev ?? (activas[0]?.id || "tendidos"));
 
       const cfg = (cfgData || [])[0] || null;
@@ -485,9 +556,16 @@ export default function PlantPortal() {
   const servicioMap = useMemo(() =>
     Object.fromEntries(servicios.map(s => [s.id, s])), [servicios]);
 
+  // Presupuesto IDs que tienen al menos una TareaPlanta
+  const presIdsConTareas = useMemo(() =>
+    new Set(tareas.map(t => t.presupuesto_id).filter(Boolean)),
+  [tareas]);
+
   // Presupuestos que tienen al menos un producto con esta operación requerida
+  // (solo usados como fallback para presupuestos sin TareaPlanta)
   const presupuestosDeOp = (opId) =>
     presupuestos.filter(pres =>
+      !presIdsConTareas.has(pres.id) &&
       (pres.productos || []).some(item =>
         (productoMap[item.producto_id]?.operaciones_requeridas || []).includes(opId)
       )
@@ -522,9 +600,12 @@ export default function PlantPortal() {
   };
 
   const countPendOp = (opId) => {
-    const p = presupuestosDeOp(opId).filter(p => getEstadoPres(p, opId) !== "listo").length;
+    const tareasOp = tareas.filter(t => t.operacion_id === opId);
+    const pendTareas = tareasOp.length > 0
+      ? tareasOp.filter(t => (t.estado || "pendiente") !== "listo").length
+      : presupuestosDeOp(opId).filter(p => getEstadoPres(p, opId) !== "listo").length;
     const o = ordenesDeOp(opId).filter(o => o.estado !== "listo" && o.estado !== "lista").length;
-    return p + o;
+    return pendTareas + o;
   };
 
   const pendTendidos = tendidos.filter(t => t.estado !== "listo").length;
@@ -591,15 +672,29 @@ export default function PlantPortal() {
 
   const tendidosFiltrados = tendidos.filter(t => filtrar(t.estado || "pendiente"));
 
-  const presFiltrados = tabId && tabId !== "tendidos"
-    ? presupuestosDeOp(tabId).filter(p => filtrar(getEstadoPres(p, tabId))) : [];
+  const esTabOperacion = tabId && tabId !== "tendidos" && tabId !== "traslados" && tabId !== "planillador";
+
+  // TareaPlanta-based rendering (presupuestos con tareas generadas)
+  const tareasFiltradas = esTabOperacion
+    ? tareas.filter(t => t.operacion_id === tabId && filtrar(t.estado || "pendiente"))
+    : [];
+
+  const tareasPorPres = tareasFiltradas.reduce((map, t) => {
+    const key = t.presupuesto_numero || t.presupuesto_id || "—";
+    if (!map[key]) map[key] = [];
+    map[key].push(t);
+    return map;
+  }, {});
+
+  // Fallback: presupuestos without TareaPlanta (legacy or newly approved without combis)
+  const presFiltrados = (tabId && esTabOperacion)
+    ? presupuestosDeOp(tabId).filter(p => filtrar(getEstadoPres(p, tabId)))
+    : [];
 
   const ordFiltradas = tabId && tabId !== "tendidos"
     ? ordenesDeOp(tabId).filter(o => filtrar(o.estado === "lista" ? "listo" : (o.estado || "pendiente"))) : [];
 
-  const hayContenido = presFiltrados.length > 0 || ordFiltradas.length > 0;
-
-  const esTabOperacion = tabId && tabId !== "tendidos" && tabId !== "traslados" && tabId !== "planillador";
+  const hayContenido = tareasFiltradas.length > 0 || presFiltrados.length > 0 || ordFiltradas.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-safe w-full overflow-x-hidden">
@@ -975,8 +1070,25 @@ export default function PlantPortal() {
           </div>
         ) : (
           <>
+            {/* TareaPlanta-based cards (per-combination state tracking) */}
+            {tareasFiltradas.length > 0 && (
+              <div className="space-y-4">
+                {Object.entries(tareasPorPres).map(([presNumero, tareaGrupo]) => (
+                  <div key={presNumero} className="space-y-2">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">{presNumero}</p>
+                    {tareaGrupo.map(t => (
+                      <TareaCard key={t.id} tarea={t} onUpdate={loadData} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Legacy: presupuestos sin TareaPlanta */}
             {presFiltrados.length > 0 && (
               <div className="space-y-2">
+                {tareasFiltradas.length > 0 && (
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">Sin tareas asignadas</p>
+                )}
                 {presFiltrados.map(pres => (
                   <PresupuestoOpCard
                     key={pres.id}
