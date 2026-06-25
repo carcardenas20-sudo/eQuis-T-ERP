@@ -238,39 +238,42 @@ const [showSugerencias, setShowSugerencias] = useState(false);
           const presNum = data.numero_presupuesto || presupuestoActualizado.numero_presupuesto || '';
           const PROVEEDOR_OJALETEAR = '0c2eaa41-083c-4156-8ec2-73a2f01954f4'; // Claudia Montoya
 
-          for (const productoItem of (data.productos || [])) {
-            const oj = productoItem.ojaletear;
-            if (!oj || oj.tipo !== 'externo') continue;
+          // Idempotencia: no duplicar si ya existe para este presupuesto
+          const existentes = await AccountPayable.filter({ supplier_id: PROVEEDOR_OJALETEAR });
+          const yaExiste = (existentes || []).some(ap => ap.data?.presupuesto_id === presupuestoActualizado.id);
 
-            const totalUds = (productoItem.combinaciones || []).reduce((s, c) =>
-              s + (c.tallas_cantidades || []).reduce((ss, tc) => ss + (Number(tc.cantidad) || 0), 0), 0);
-            if (totalUds <= 0) continue;
+          if (!yaExiste) {
+            // Sumar todas las unidades de todos los productos con ojaletear externo
+            let totalUds = 0;
+            let precioUnit = 80;
+            for (const productoItem of (data.productos || [])) {
+              const oj = productoItem.ojaletear;
+              if (!oj || oj.tipo !== 'externo') continue;
+              precioUnit = Number(oj.precio_unit) || 80;
+              totalUds += (productoItem.combinaciones || []).reduce((s, c) =>
+                s + (c.tallas_cantidades || []).reduce((ss, tc) => ss + (Number(tc.cantidad) || 0), 0), 0);
+            }
 
-            const precioUnit = Number(oj.precio_unit) || 80;
-            const total = totalUds * precioUnit;
-
-            // Idempotencia: no duplicar si ya existe para este presupuesto
-            const existentes = await AccountPayable.filter({ supplier_id: PROVEEDOR_OJALETEAR });
-            const yaExiste = (existentes || []).some(ap => ap.data?.presupuesto_id === presupuestoActualizado.id);
-            if (yaExiste) continue;
-
-            await AccountPayable.create({
-              supplier_id: PROVEEDOR_OJALETEAR,
-              supplier_name: 'Claudia Montoya',
-              description: `Ojaletear ${totalUds} uds — ${presNum}`,
-              type: 'servicio_ojaletear',
-              category: 'otros',
-              status: 'pending',
-              total_amount: total,
-              pending_amount: total,
-              paid_amount: 0,
-              data: {
-                presupuesto_id: presupuestoActualizado.id,
-                presupuesto_numero: presNum,
-                cantidad: totalUds,
-                precio_unit: precioUnit,
-              },
-            });
+            if (totalUds > 0) {
+              const total = totalUds * precioUnit;
+              await AccountPayable.create({
+                supplier_id: PROVEEDOR_OJALETEAR,
+                supplier_name: 'Claudia Montoya',
+                description: `Ojaletear ${totalUds} uds — ${presNum}`,
+                type: 'servicio_ojaletear',
+                category: 'otros',
+                status: 'pending',
+                total_amount: total,
+                pending_amount: total,
+                paid_amount: 0,
+                data: {
+                  presupuesto_id: presupuestoActualizado.id,
+                  presupuesto_numero: presNum,
+                  cantidad: totalUds,
+                  precio_unit: precioUnit,
+                },
+              });
+            }
           }
         } catch (err) {
           console.error("Error creando cuenta por pagar ojaletear:", err);
