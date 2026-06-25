@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion, Muestra, TareaPlanta } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
   Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2,
-  Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2, MessageCircle, Users, FlaskConical, Settings } from "lucide-react";
+  Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2, MessageCircle, Users, FlaskConical } from "lucide-react";
 import TransferReceive from "@/components/transfers/TransferReceive";
 import RouteOperario from "@/components/route/RouteOperario";
 import RouteDevoluciones from "@/components/route/RouteDevoluciones";
@@ -487,7 +487,6 @@ export default function PlantPortal() {
   const [tareas, setTareas] = useState(/** @type {any[]} */ ([]));
   const [opConfig, setOpConfig] = useState(/** @type {Record<string,{agrupacion:string,orden:string}>} */ ({}));
   const [opConfigId, setOpConfigId] = useState(/** @type {string|null} */ (null));
-  const [showConfig, setShowConfig] = useState(false);
 
   // ── Planillador ───────────────────────────────────────────────────────────────
   const [planilladorAuth, setPlanilladorAuth] = useState(/** @type {any|null} */ (null));
@@ -699,20 +698,6 @@ export default function PlantPortal() {
 
   const getOpCfg = (opId) => opConfig[opId] || { agrupacion: "presupuesto", orden: "fecha" };
 
-  const saveOpConfig = async (newConfig) => {
-    try {
-      if (opConfigId) {
-        await AppConfig.update(opConfigId, { value: JSON.stringify(newConfig) });
-      } else {
-        const created = await AppConfig.create({ key: "portal_planta_op_config", value: JSON.stringify(newConfig) });
-        setOpConfigId(created.id);
-      }
-      setOpConfig(newConfig);
-    } catch (e) {
-      alert("Error guardando configuración: " + e.message);
-    }
-  };
-
   const filtrar = (estado) => {
     if (filtroEstado === "activos") return estado !== "listo";
     if (filtroEstado === "listos") return estado === "listo";
@@ -844,14 +829,9 @@ export default function PlantPortal() {
             </div>
             <span className="font-bold text-slate-900 text-sm">Portal de Planta</span>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setShowConfig(true)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
-              <Settings className="w-4 h-4" />
-            </button>
-            <button onClick={loadData} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            </button>
-          </div>
+          <button onClick={loadData} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
         </div>
 
         {/* Tabs en grid 2 columnas */}
@@ -1261,61 +1241,6 @@ export default function PlantPortal() {
         )}
       </div>
 
-      {/* ── Modal configuración de operaciones ─────────────────────────── */}
-      {showConfig && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={() => setShowConfig(false)}>
-          <div className="bg-white rounded-t-2xl w-full p-5 space-y-4 max-h-[80vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <Settings className="w-4 h-4 text-slate-500" /> Configurar operaciones
-              </h3>
-              <button onClick={() => setShowConfig(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {operaciones.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-4">No hay operaciones configuradas</p>
-            )}
-
-            {operaciones.map(op => {
-              const c = getOpCfg(op.id);
-              const update = (patch) => saveOpConfig({ ...opConfig, [op.id]: { ...c, ...patch } });
-              return (
-                <div key={op.id} className="pb-4 border-b border-slate-100 last:border-0">
-                  <p className="font-semibold text-sm text-slate-700 mb-2">{op.nombre}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[11px] font-medium text-slate-500 block mb-1">Agrupación</label>
-                      <select value={c.agrupacion || "presupuesto"} onChange={e => update({ agrupacion: e.target.value })}
-                        className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white">
-                        <option value="presupuesto">Por presupuesto</option>
-                        <option value="referencia">Por referencia</option>
-                        <option value="individual">Individual</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-medium text-slate-500 block mb-1">Orden</label>
-                      <select value={c.orden || "fecha"} onChange={e => update({ orden: e.target.value })}
-                        className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white">
-                        <option value="fecha">Fecha</option>
-                        <option value="unidades_desc">Mayor cantidad</option>
-                        <option value="nombre">Nombre</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            <button onClick={() => setShowConfig(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-800 text-white text-sm font-semibold">
-              Listo
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Presupuesto, Producto, MateriaPrima, Color, Remision } from "@/api/entitiesChaquetas";
-import { Dispatch } from "@/entities/all";
+import { Presupuesto, Producto, MateriaPrima, Color, Remision, Operacion } from "@/api/entitiesChaquetas";
+import { Dispatch, AppConfig } from "@/entities/all";
 import { calcularCantidadRemision } from "@/components/utils/remisionUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Plus, ChevronDown, ChevronUp, RefreshCw,
-  CheckCircle2, AlertCircle, PackageCheck, X, Scissors, Eye, Printer, Trash2, Zap
+  CheckCircle2, AlertCircle, PackageCheck, X, Scissors, Eye, Printer, Trash2, Zap, Settings
 } from "lucide-react";
 
 // Calcula materiales proporcionales para un lote
@@ -101,6 +101,9 @@ export default function Asignaciones() {
   const [deletingLoteId, setDeletingLoteId] = useState(null);
   const [recalculating, setRecalculating] = useState(false);
   const [tamanoLotePorCombo, setTamanoLotePorCombo] = useState({});
+  const [operaciones, setOperaciones] = useState([]);
+  const [opConfig, setOpConfig] = useState({});
+  const [opConfigId, setOpConfigId] = useState(null);
 
   // Form
   const [showForm, setShowForm] = useState(false);
@@ -115,11 +118,13 @@ export default function Asignaciones() {
   const loadBase = async () => {
     setLoading(true);
     try {
-      const [presData, prodData, mpData, colData] = await Promise.all([
+      const [presData, prodData, mpData, colData, opsData, opCfgData] = await Promise.all([
         Presupuesto.list("-created_date"),
         Producto.list(),
         MateriaPrima.list(),
         Color.list(),
+        Operacion.list("orden_procesamiento"),
+        AppConfig.filter({ key: "portal_planta_op_config" }),
       ]);
       const aprobados = (presData || []).filter(p => p.estado === "aprobado");
       setPresupuestos(aprobados);
@@ -127,6 +132,10 @@ export default function Asignaciones() {
       setMateriasPrimas(mpData || []);
       setColores(colData || []);
       if (aprobados.length > 0) setSelectedId(prev => prev || aprobados[0].id);
+      setOperaciones((opsData || []).filter(o => o.activa !== false));
+      const opCfg = (opCfgData || [])[0] || null;
+      setOpConfigId(opCfg?.id || null);
+      try { setOpConfig(opCfg ? JSON.parse(opCfg.value) : {}); } catch { setOpConfig({}); }
     } catch (err) {
       console.error(err);
     }
@@ -417,6 +426,22 @@ export default function Asignaciones() {
     }
     setSaving(false);
   };
+
+  const saveOpConfig = async (newConfig) => {
+    try {
+      if (opConfigId) {
+        await AppConfig.update(opConfigId, { value: JSON.stringify(newConfig) });
+      } else {
+        const created = await AppConfig.create({ key: "portal_planta_op_config", value: JSON.stringify(newConfig) });
+        setOpConfigId(created.id);
+      }
+      setOpConfig(newConfig);
+    } catch (e) {
+      alert("Error guardando configuración: " + e.message);
+    }
+  };
+
+  const getOpCfg = (opId) => opConfig[opId] || { agrupacion: "presupuesto", orden: "fecha" };
 
   if (loading) return (
     <div className="p-8 flex justify-center">
@@ -749,6 +774,52 @@ export default function Asignaciones() {
           </div>
         </div>
       )}
+
+        {/* ── Configuración Portal Planta ───────────────────────────────────── */}
+        {operaciones.length > 0 && (
+          <Card className="border-slate-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2 text-slate-700">
+                <Settings className="w-4 h-4 text-slate-500" />
+                Configuración Portal Planta
+              </CardTitle>
+              <p className="text-xs text-slate-400 mt-0.5">Define cómo se agrupan y ordenan las tareas en cada operación del portal.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {operaciones.map(op => {
+                const c = getOpCfg(op.id);
+                const update = (patch) => saveOpConfig({ ...opConfig, [op.id]: { ...c, ...patch } });
+                return (
+                  <div key={op.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+                    <p className="text-sm font-medium text-slate-700">{op.nombre}</p>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Agrupación</label>
+                      <select
+                        value={c.agrupacion || "presupuesto"}
+                        onChange={e => update({ agrupacion: e.target.value })}
+                        className="h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 min-w-[140px]">
+                        <option value="presupuesto">Por presupuesto</option>
+                        <option value="referencia">Por referencia</option>
+                        <option value="individual">Individual</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Orden</label>
+                      <select
+                        value={c.orden || "fecha"}
+                        onChange={e => update({ orden: e.target.value })}
+                        className="h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 min-w-[130px]">
+                        <option value="fecha">Fecha</option>
+                        <option value="unidades_desc">Mayor cantidad</option>
+                        <option value="nombre">Nombre</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
       {/* Modal ver remisión */}
       {viewingLote && (
