@@ -1052,12 +1052,16 @@ export default function AccountsPayablePage() {
 
         {/* Formulario CxP manual */}
         {showForm && (
-          <PayableForm
-            payable={editingPayable} suppliers={suppliers} locations={locations}
-            userLocation={userLocation} isAdmin={isAdmin}
-            onSave={handleSave}
-            onCancel={() => { setShowForm(false); setEditingPayable(null); }}
-          />
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
+            <div className="w-full max-w-2xl">
+              <PayableForm
+                payable={editingPayable} suppliers={suppliers} locations={locations}
+                userLocation={userLocation} isAdmin={isAdmin}
+                onSave={handleSave}
+                onCancel={() => { setShowForm(false); setEditingPayable(null); }}
+              />
+            </div>
+          </div>
         )}
 
         {/* Tabs */}
