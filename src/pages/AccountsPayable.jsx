@@ -14,7 +14,7 @@ import {
   Plus, DollarSign, AlertCircle, TrendingUp, Loader2, Package, ShoppingCart,
   ChevronDown, ChevronUp, CheckCircle2, Users, Wrench, BarChart3, Building2,
   Calendar, Clock, CreditCard, Edit2, Trash2, Repeat, CircleDollarSign,
-  PackageOpen, ArrowUpRight,
+  PackageOpen, ArrowUpRight, Pencil,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import PayableForm from "../components/payables/PayableForm";
@@ -419,7 +419,7 @@ function MaterialPendienteRow({ item, onComprar }) {
 }
 
 // ─── Tarjeta de item en vista unificada (con historial de abonos) ────────────
-function PendienteCard({ item, onPayment, onDelete, abonos = [], onEditAbono, onDeleteAbono }) {
+function PendienteCard({ item, onPayment, onDelete, onEdit, abonos = [], onEditAbono, onDeleteAbono }) {
   const [expanded, setExpanded] = useState(false);
   const urgency = URGENCY(item.due_date);
   const uStyle = URGENCY_STYLES[urgency];
@@ -482,6 +482,12 @@ function PendienteCard({ item, onPayment, onDelete, abonos = [], onEditAbono, on
             className="bg-emerald-600 hover:bg-emerald-700 text-xs h-8 px-2">
             Pagar
           </Button>
+          {onEdit && (
+            <button onClick={() => onEdit(item)}
+              className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600">
+              <Pencil size={14} />
+            </button>
+          )}
           {item._isOperario && onDelete && (
             <button onClick={() => onDelete(item)}
               className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500">
@@ -1240,6 +1246,7 @@ export default function AccountsPayablePage() {
                               <PendienteCard
                                 key={item.id} item={item} onPayment={setPaymentModalData}
                                 onDelete={handleDeleteOperarioPayment}
+                                onEdit={p => { setEditingPayable(p); setShowForm(true); }}
                                 abonos={allAbonos.filter(a => a.payable_id === item.id)}
                                 onEditAbono={handleEditAbono} onDeleteAbono={handleDeleteAbono}
                               />
@@ -1368,6 +1375,7 @@ export default function AccountsPayablePage() {
                     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
                     .map(p => (
                       <PendienteCard key={p.id} item={p} onPayment={setPaymentModalData}
+                        onEdit={p => { setEditingPayable(p); setShowForm(true); }}
                         abonos={allAbonos.filter(a => a.payable_id === p.id)}
                         onEditAbono={handleEditAbono} onDeleteAbono={handleDeleteAbono} />
                     ))}
