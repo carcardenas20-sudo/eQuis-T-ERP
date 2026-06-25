@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion, Muestra, TareaPlanta } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
   Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2,
-  Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2, MessageCircle, Users, FlaskConical } from "lucide-react";
+  Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2, MessageCircle, Users, FlaskConical, Settings } from "lucide-react";
 import TransferReceive from "@/components/transfers/TransferReceive";
 import RouteOperario from "@/components/route/RouteOperario";
 import RouteDevoluciones from "@/components/route/RouteDevoluciones";
@@ -367,6 +367,102 @@ function TendidoCard({ tendido, onUpdate }) {
   );
 }
 
+// ─── Helpers de agrupación ───────────────────────────────────────────────────
+function mergeTallas(tareasArr) {
+  const map = {};
+  tareasArr.forEach(t =>
+    (t.tallas_cantidades || []).forEach(tc => {
+      map[tc.talla] = (map[tc.talla] || 0) + Number(tc.cantidad);
+    })
+  );
+  return Object.entries(map).map(([talla, cantidad]) => ({ talla, cantidad }));
+}
+
+function grupoEstado(tareasArr) {
+  if (tareasArr.every(t => t.estado === "listo")) return "listo";
+  if (tareasArr.some(t => t.estado === "en_proceso" || t.estado === "listo")) return "en_proceso";
+  return "pendiente";
+}
+
+function sortTareas(arr, orden) {
+  if (orden === "unidades_desc") return [...arr].sort((a, b) => b.total_unidades - a.total_unidades);
+  if (orden === "nombre") return [...arr].sort((a, b) => (a.producto_nombre || "").localeCompare(b.producto_nombre || ""));
+  return arr;
+}
+
+// ─── Tarjeta agrupada por referencia (varias TareaPlanta → una card) ─────────
+function TareaGrupoCard({ tareas, onUpdate }) {
+  const [loading, setLoading] = useState(false);
+  const estado = grupoEstado(tareas);
+  const isListo = estado === "listo";
+  const isEnProceso = estado === "en_proceso";
+  const totalUds = tareas.reduce((s, t) => s + (t.total_unidades || 0), 0);
+  const tallasM = mergeTallas(tareas);
+  const ref = tareas[0];
+
+  const cambiarEstado = async (nuevoEstado) => {
+    setLoading(true);
+    try {
+      await Promise.all(tareas.map(t => TareaPlanta.update(t.id, { estado: nuevoEstado })));
+      onUpdate();
+    } catch (e) { alert("Error: " + e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className={`bg-white rounded-xl border shadow-sm ${isListo ? "border-green-200" : "border-slate-200"}`}>
+      <div className="px-3 py-2.5">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div className="flex items-start gap-2 min-w-0">
+            {isListo
+              ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+              : <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0 mt-0.5" />}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate">{ref.producto_nombre}</p>
+              {ref.combinacion_nombre && (
+                <p className="text-xs text-slate-500 truncate">{ref.combinacion_nombre}</p>
+              )}
+              <p className="text-[10px] text-slate-400">{tareas.length} presupuesto{tareas.length !== 1 ? "s" : ""}</p>
+            </div>
+          </div>
+          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 shrink-0">
+            {totalUds} uds
+          </span>
+        </div>
+
+        {tallasM.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {tallasM.map((tc, k) => (
+              <div key={k} className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-center min-w-[32px]">
+                <p className="text-[10px] text-slate-400 leading-none">{tc.talla}</p>
+                <p className="text-xs font-bold text-slate-800 leading-none mt-0.5">{tc.cantidad}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <EstadoBadge estado={estado} />
+          {!isListo && (
+            <>
+              {!isEnProceso && (
+                <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 active:bg-blue-100 disabled:opacity-50">
+                  <Play className="w-3 h-3" /> Iniciar
+                </button>
+              )}
+              <button onClick={() => cambiarEstado("listo")} disabled={loading}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 active:bg-green-100 disabled:opacity-50">
+                <Check className="w-3 h-3" /> Listo
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Portal principal ─────────────────────────────────────────────────────────
 export default function PlantPortal() {
   const [operaciones, setOperaciones] = useState([]);
@@ -389,6 +485,9 @@ export default function PlantPortal() {
   const [tabId, setTabId] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState("activos");
   const [tareas, setTareas] = useState(/** @type {any[]} */ ([]));
+  const [opConfig, setOpConfig] = useState(/** @type {Record<string,{agrupacion:string,orden:string}>} */ ({}));
+  const [opConfigId, setOpConfigId] = useState(/** @type {string|null} */ (null));
+  const [showConfig, setShowConfig] = useState(false);
 
   // ── Planillador ───────────────────────────────────────────────────────────────
   const [planilladorAuth, setPlanilladorAuth] = useState(/** @type {any|null} */ (null));
@@ -474,13 +573,14 @@ export default function PlantPortal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [opsData, presData, prodData, tendData, cfgData, tareasData] = await Promise.all([
+      const [opsData, presData, prodData, tendData, cfgData, tareasData, opCfgData] = await Promise.all([
         Operacion.list("orden_procesamiento"),
         Presupuesto.filter({ estado: "aprobado" }),
         Producto.list(),
         Remision.filter({ tipo_remision: "tendido" }),
         AppConfig.filter({ key: "proceso_planta_estados" }),
         TareaPlanta.list(),
+        AppConfig.filter({ key: "portal_planta_op_config" }),
       ]);
       const activas = (opsData || []).filter(o => o.activa !== false);
       setOperaciones(activas);
@@ -493,6 +593,10 @@ export default function PlantPortal() {
       const cfg = (cfgData || [])[0] || null;
       setEstadoConfigId(cfg?.id || null);
       try { setEstadosMap(cfg ? JSON.parse(cfg.value) : {}); } catch { setEstadosMap({}); }
+
+      const opCfg = (opCfgData || [])[0] || null;
+      setOpConfigId(opCfg?.id || null);
+      try { setOpConfig(opCfg ? JSON.parse(opCfg.value) : {}); } catch { setOpConfig({}); }
     } catch (e) {
       console.error("Error cargando datos principales:", e);
     }
@@ -593,6 +697,22 @@ export default function PlantPortal() {
     }
   };
 
+  const getOpCfg = (opId) => opConfig[opId] || { agrupacion: "presupuesto", orden: "fecha" };
+
+  const saveOpConfig = async (newConfig) => {
+    try {
+      if (opConfigId) {
+        await AppConfig.update(opConfigId, { value: JSON.stringify(newConfig) });
+      } else {
+        const created = await AppConfig.create({ key: "portal_planta_op_config", value: JSON.stringify(newConfig) });
+        setOpConfigId(created.id);
+      }
+      setOpConfig(newConfig);
+    } catch (e) {
+      alert("Error guardando configuración: " + e.message);
+    }
+  };
+
   const filtrar = (estado) => {
     if (filtroEstado === "activos") return estado !== "listo";
     if (filtroEstado === "listos") return estado === "listo";
@@ -674,17 +794,34 @@ export default function PlantPortal() {
 
   const esTabOperacion = tabId && tabId !== "tendidos" && tabId !== "traslados" && tabId !== "planillador";
 
-  // TareaPlanta-based rendering (presupuestos con tareas generadas)
+  // TareaPlanta filtradas para la pestaña actual
   const tareasFiltradas = esTabOperacion
     ? tareas.filter(t => t.operacion_id === tabId && filtrar(t.estado || "pendiente"))
     : [];
 
-  const tareasPorPres = tareasFiltradas.reduce((map, t) => {
-    const key = t.presupuesto_numero || t.presupuesto_id || "—";
-    if (!map[key]) map[key] = [];
-    map[key].push(t);
-    return map;
-  }, {});
+  // Aplicar orden y agrupación según config
+  const cfg = esTabOperacion ? getOpCfg(tabId) : { agrupacion: "presupuesto", orden: "fecha" };
+  const tareasSorted = sortTareas(tareasFiltradas, cfg.orden);
+
+  // Agrupación "referencia": producto + combinación fusionados
+  const tareasPorRef = cfg.agrupacion === "referencia"
+    ? tareasSorted.reduce((map, t) => {
+        const key = `${t.producto_nombre}||${t.combinacion_nombre || ""}`;
+        if (!map[key]) map[key] = [];
+        map[key].push(t);
+        return map;
+      }, {})
+    : {};
+
+  // Agrupación "presupuesto": por número de presupuesto
+  const tareasPorPres = cfg.agrupacion === "presupuesto"
+    ? tareasSorted.reduce((map, t) => {
+        const key = t.presupuesto_numero || t.presupuesto_id || "—";
+        if (!map[key]) map[key] = [];
+        map[key].push(t);
+        return map;
+      }, {})
+    : {};
 
   // Fallback: presupuestos without TareaPlanta (legacy or newly approved without combis)
   const presFiltrados = (tabId && esTabOperacion)
@@ -707,9 +844,14 @@ export default function PlantPortal() {
             </div>
             <span className="font-bold text-slate-900 text-sm">Portal de Planta</span>
           </div>
-          <button onClick={loadData} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowConfig(true)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
+              <Settings className="w-4 h-4" />
+            </button>
+            <button onClick={loadData} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         </div>
 
         {/* Tabs en grid 2 columnas */}
@@ -1070,16 +1212,22 @@ export default function PlantPortal() {
           </div>
         ) : (
           <>
-            {/* TareaPlanta-based cards (per-combination state tracking) */}
+            {/* TareaPlanta-based cards */}
             {tareasFiltradas.length > 0 && (
               <div className="space-y-4">
-                {Object.entries(tareasPorPres).map(([presNumero, tareaGrupo]) => (
+                {cfg.agrupacion === "referencia" && Object.entries(tareasPorRef).map(([key, grupo]) => (
+                  <TareaGrupoCard key={key} tareas={grupo} onUpdate={loadData} />
+                ))}
+                {cfg.agrupacion === "presupuesto" && Object.entries(tareasPorPres).map(([presNumero, grupo]) => (
                   <div key={presNumero} className="space-y-2">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">{presNumero}</p>
-                    {tareaGrupo.map(t => (
+                    {grupo.map(t => (
                       <TareaCard key={t.id} tarea={t} onUpdate={loadData} />
                     ))}
                   </div>
+                ))}
+                {cfg.agrupacion === "individual" && tareasSorted.map(t => (
+                  <TareaCard key={t.id} tarea={t} onUpdate={loadData} />
                 ))}
               </div>
             )}
@@ -1112,6 +1260,62 @@ export default function PlantPortal() {
           </>
         )}
       </div>
+
+      {/* ── Modal configuración de operaciones ─────────────────────────── */}
+      {showConfig && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={() => setShowConfig(false)}>
+          <div className="bg-white rounded-t-2xl w-full p-5 space-y-4 max-h-[80vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <Settings className="w-4 h-4 text-slate-500" /> Configurar operaciones
+              </h3>
+              <button onClick={() => setShowConfig(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {operaciones.length === 0 && (
+              <p className="text-sm text-slate-400 text-center py-4">No hay operaciones configuradas</p>
+            )}
+
+            {operaciones.map(op => {
+              const c = getOpCfg(op.id);
+              const update = (patch) => saveOpConfig({ ...opConfig, [op.id]: { ...c, ...patch } });
+              return (
+                <div key={op.id} className="pb-4 border-b border-slate-100 last:border-0">
+                  <p className="font-semibold text-sm text-slate-700 mb-2">{op.nombre}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-medium text-slate-500 block mb-1">Agrupación</label>
+                      <select value={c.agrupacion || "presupuesto"} onChange={e => update({ agrupacion: e.target.value })}
+                        className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white">
+                        <option value="presupuesto">Por presupuesto</option>
+                        <option value="referencia">Por referencia</option>
+                        <option value="individual">Individual</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-medium text-slate-500 block mb-1">Orden</label>
+                      <select value={c.orden || "fecha"} onChange={e => update({ orden: e.target.value })}
+                        className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white">
+                        <option value="fecha">Fecha</option>
+                        <option value="unidades_desc">Mayor cantidad</option>
+                        <option value="nombre">Nombre</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            <button onClick={() => setShowConfig(false)}
+              className="w-full py-2.5 rounded-xl bg-slate-800 text-white text-sm font-semibold">
+              Listo
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
