@@ -739,7 +739,8 @@ export default function PlantPortal() {
     const map = {};
     for (const lote of lotesAsig) {
       for (const mat of (lote.materiales_calculados || [])) {
-        const opId = matOpConfig[mat.materia_prima_id];
+        const cfgKey = `${lote.producto_id}_${mat.materia_prima_id}`;
+        const opId = matOpConfig[cfgKey];
         if (opId) {
           if (!map[opId]) map[opId] = new Set();
           map[opId].add(lote.presupuesto_id);
@@ -798,7 +799,8 @@ export default function PlantPortal() {
     let matCount = 0;
     for (const lote of lotesAsig) {
       for (const mat of (lote.materiales_calculados || [])) {
-        if (matOpConfig[mat.materia_prima_id] === opId && (mat.estado || "pendiente") !== "listo") matCount++;
+        const cfgKey = `${lote.producto_id}_${mat.materia_prima_id}`;
+        if (matOpConfig[cfgKey] === opId && (mat.estado || "pendiente") !== "listo") matCount++;
       }
     }
     // TareaPlanta para presupuestos no cubiertos por materiales de lote
@@ -883,7 +885,7 @@ export default function PlantPortal() {
         const presNum = presupuestos.find(p => p.id === lote.presupuesto_id)?.numero_presupuesto || "—";
         return (lote.materiales_calculados || [])
           .map((mat, i) => ({ ...mat, _loteId: lote.id, _matIdx: i, _presNum: presNum, _loteMats: lote.materiales_calculados }))
-          .filter(mat => matOpConfig[mat.materia_prima_id] === tabId && filtrar(mat.estado || "pendiente"));
+          .filter(mat => matOpConfig[`${lote.producto_id}_${mat.materia_prima_id}`] === tabId && filtrar(mat.estado || "pendiente"));
       })
     : [];
   const matsPorPres = materialesDeOp.reduce((map, m) => {

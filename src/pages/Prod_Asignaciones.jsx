@@ -843,17 +843,23 @@ export default function Asignaciones() {
 
         {/* ── Módulos de planta por materia prima ──────────────────────────── */}
         {(() => {
-          const seen = new Set();
-          const matsEnLotes = [];
+          // Agrupar por producto: { producto_id: { nombre, mats: [{mat, key}] } }
+          const porProducto = {};
           for (const lote of lotes) {
+            const prodId = lote.producto_id;
+            const prodNombre = lote.producto_nombre || prodId;
+            if (!porProducto[prodId]) porProducto[prodId] = { nombre: prodNombre, mats: [], seen: new Set() };
             for (const mat of (lote.materiales_calculados || [])) {
-              if (mat.materia_prima_id && !seen.has(mat.materia_prima_id)) {
-                seen.add(mat.materia_prima_id);
-                matsEnLotes.push(mat);
+              if (!mat.materia_prima_id) continue;
+              const cfgKey = `${prodId}_${mat.materia_prima_id}`;
+              if (!porProducto[prodId].seen.has(cfgKey)) {
+                porProducto[prodId].seen.add(cfgKey);
+                porProducto[prodId].mats.push({ ...mat, _cfgKey: cfgKey });
               }
             }
           }
-          if (matsEnLotes.length === 0 || operaciones.length === 0) return null;
+          const grupos = Object.values(porProducto).filter(g => g.mats.length > 0);
+          if (grupos.length === 0 || operaciones.length === 0) return null;
           return (
             <Card className="border-slate-200">
               <CardHeader className="pb-3">
@@ -861,24 +867,29 @@ export default function Asignaciones() {
                   <Settings className="w-4 h-4 text-slate-500" />
                   Módulos de planta por materia prima
                 </CardTitle>
-                <p className="text-xs text-slate-400 mt-0.5">A qué módulo del portal va cada material. Aplica a todos los presupuestos.</p>
+                <p className="text-xs text-slate-400 mt-0.5">A qué módulo del portal va cada material, por producto. Aplica a todos los presupuestos.</p>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {matsEnLotes.map(mat => (
-                  <div key={mat.materia_prima_id} className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{mat.nombre}</p>
-                    </div>
-                    <select
-                      value={matOpConfig[mat.materia_prima_id] || ""}
-                      onChange={e => saveMatOpConfig({ ...matOpConfig, [mat.materia_prima_id]: e.target.value || null })}
-                      className="h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 min-w-[150px] shrink-0"
-                    >
-                      <option value="">— Sin módulo —</option>
-                      {operaciones.map(op => (
-                        <option key={op.id} value={op.id}>{op.nombre}</option>
+              <CardContent className="space-y-4">
+                {grupos.map(grupo => (
+                  <div key={grupo.nombre}>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{grupo.nombre}</p>
+                    <div className="space-y-1">
+                      {grupo.mats.map(mat => (
+                        <div key={mat._cfgKey} className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
+                          <p className="text-sm text-slate-700 min-w-0 truncate">{mat.nombre}</p>
+                          <select
+                            value={matOpConfig[mat._cfgKey] || ""}
+                            onChange={e => saveMatOpConfig({ ...matOpConfig, [mat._cfgKey]: e.target.value || null })}
+                            className="h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 min-w-[150px] shrink-0"
+                          >
+                            <option value="">— Sin módulo —</option>
+                            {operaciones.map(op => (
+                              <option key={op.id} value={op.id}>{op.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
                       ))}
-                    </select>
+                    </div>
                   </div>
                 ))}
               </CardContent>
