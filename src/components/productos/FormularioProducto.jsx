@@ -78,18 +78,6 @@ const MaterialRow = memo(function MaterialRow({ material, index, total, materias
         </button>
         <span className="text-xs text-slate-600">Incluir en remisión</span>
       </div>
-      {operaciones.length > 0 && (
-        <div className="flex items-center gap-2 pt-1 border-t border-slate-200">
-          <Label className="text-xs text-slate-500 shrink-0">Módulo portal planta</Label>
-          <Select value={material.operacion_portal_id || ""} onValueChange={v => onActualizar(index, 'operacion_portal_id', v || null)}>
-            <SelectTrigger className="h-7 text-xs flex-1"><SelectValue placeholder="— Sin módulo —" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">— Sin módulo —</SelectItem>
-              {operaciones.map(op => <SelectItem key={op.id} value={op.id}>{op.nombre}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
       {material.en_remision !== false && (<>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-1">
           <div>
@@ -687,6 +675,31 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                     )}
                   </div>
                   <p className="text-xs text-slate-400">💡 La sección/anclaje define qué color toma este material en cada combinación.</p>
+
+                  {/* Módulo portal planta por material */}
+                  {operaciones.length > 0 && formData.materiales_requeridos.some(m => m.materia_prima_id) && (
+                    <div className="space-y-2 pt-2 border-t border-slate-200">
+                      <Label className="text-sm font-semibold text-slate-700">Módulo portal planta por material</Label>
+                      <div className="space-y-1">
+                        {formData.materiales_requeridos.filter(m => m.materia_prima_id).map((mat, i) => {
+                          const mp = materiasPrimas.find(m => m.id === mat.materia_prima_id);
+                          const realIdx = formData.materiales_requeridos.indexOf(mat);
+                          return (
+                            <div key={mat.row_id || i} className="flex items-center gap-3">
+                              <span className="text-xs text-slate-600 flex-1 truncate">{mp?.nombre || mat.materia_prima_id}</span>
+                              <Select value={mat.operacion_portal_id || ""} onValueChange={v => actualizarMaterial(realIdx, 'operacion_portal_id', v || null)}>
+                                <SelectTrigger className="h-7 text-xs w-44 shrink-0"><SelectValue placeholder="— Sin módulo —" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">— Sin módulo —</SelectItem>
+                                  {operaciones.map(op => <SelectItem key={op.id} value={op.id}>{op.nombre}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* TAB: COMBINACIONES */}
