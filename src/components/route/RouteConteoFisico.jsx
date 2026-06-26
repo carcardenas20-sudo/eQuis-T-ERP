@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { CheckCircle2, AlertTriangle, Plus, X, ClipboardCheck, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -22,11 +22,19 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
       .filter(Boolean),
   ])].sort((a, b) => b.localeCompare(a));
 
-  const [selectedDate, setSelectedDate] = useState(availableDates[0] || today);
-  const [conteo, setConteo] = useState({});
-  const [conteoDev, setConteoDev] = useState({});
+  const lsKey     = (d) => `conteo_fisico_${d}`;
+  const lsKeyDev  = (d) => `conteo_fisico_dev_${d}`;
+  const lsLoad    = (key) => { try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch { return {}; } };
+
+  const initDate = availableDates[0] || today;
+  const [selectedDate, setSelectedDate] = useState(initDate);
+  const [conteo, setConteo] = useState(() => lsLoad(lsKey(initDate)));
+  const [conteoDev, setConteoDev] = useState(() => lsLoad(lsKeyDev(initDate)));
   const [confirmado, setConfirmado] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => { localStorage.setItem(lsKey(selectedDate), JSON.stringify(conteo)); }, [conteo, selectedDate]);
+  useEffect(() => { localStorage.setItem(lsKeyDev(selectedDate), JSON.stringify(conteoDev)); }, [conteoDev, selectedDate]);
 
   // Entregas del día seleccionado (excluye movimientos internos de muestras y traslados)
   const EXCLUDED_STATUSES = new Set(["borrador", "muestra_guia", "traslado_muestra"]);
@@ -247,7 +255,13 @@ export default function RouteConteoFisico({ employees, products, deliveries, dis
         <span className="text-xs font-semibold text-slate-600 shrink-0">Fecha a contar:</span>
         <select
           value={selectedDate}
-          onChange={e => { setSelectedDate(e.target.value); setConteo({}); setConteoDev({}); setConfirmado(false); }}
+          onChange={e => {
+            const d = e.target.value;
+            setSelectedDate(d);
+            setConteo(lsLoad(lsKey(d)));
+            setConteoDev(lsLoad(lsKeyDev(d)));
+            setConfirmado(false);
+          }}
           className="flex-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
           {availableDates.map(d => (
