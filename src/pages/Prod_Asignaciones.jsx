@@ -104,8 +104,6 @@ export default function Asignaciones() {
   const [operaciones, setOperaciones] = useState([]);
   const [opConfig, setOpConfig] = useState({});
   const [opConfigId, setOpConfigId] = useState(null);
-  const [matOpConfig, setMatOpConfig] = useState({}); // materia_prima_id → operacion_id
-  const [matOpConfigId, setMatOpConfigId] = useState(null);
 
   // Form
   const [showForm, setShowForm] = useState(false);
@@ -120,14 +118,13 @@ export default function Asignaciones() {
   const loadBase = async () => {
     setLoading(true);
     try {
-      const [presData, prodData, mpData, colData, opsData, opCfgData, matOpCfgData] = await Promise.all([
+      const [presData, prodData, mpData, colData, opsData, opCfgData] = await Promise.all([
         Presupuesto.list("-created_date"),
         Producto.list(),
         MateriaPrima.list(),
         Color.list(),
         Operacion.list("orden_procesamiento"),
         AppConfig.filter({ key: "portal_planta_op_config" }),
-        AppConfig.filter({ key: "portal_material_op_config" }),
       ]);
       const aprobados = (presData || []).filter(p => p.estado === "aprobado");
       setPresupuestos(aprobados);
@@ -139,9 +136,6 @@ export default function Asignaciones() {
       const opCfg = (opCfgData || [])[0] || null;
       setOpConfigId(opCfg?.id || null);
       try { setOpConfig(opCfg ? JSON.parse(opCfg.value) : {}); } catch { setOpConfig({}); }
-      const matOpCfg = (matOpCfgData || [])[0] || null;
-      setMatOpConfigId(matOpCfg?.id || null);
-      try { setMatOpConfig(matOpCfg ? JSON.parse(matOpCfg.value) : {}); } catch { setMatOpConfig({}); }
     } catch (err) {
       console.error(err);
     }
@@ -448,20 +442,6 @@ export default function Asignaciones() {
   };
 
   const getOpCfg = (opId) => opConfig[opId] || { agrupacion: "presupuesto", orden: "fecha" };
-
-  const saveMatOpConfig = async (newConfig) => {
-    try {
-      if (matOpConfigId) {
-        await AppConfig.update(matOpConfigId, { value: JSON.stringify(newConfig) });
-      } else {
-        const created = await AppConfig.create({ key: "portal_material_op_config", value: JSON.stringify(newConfig) });
-        setMatOpConfigId(created.id);
-      }
-      setMatOpConfig(newConfig);
-    } catch (e) {
-      alert("Error guardando configuración: " + e.message);
-    }
-  };
 
   if (loading) return (
     <div className="p-8 flex justify-center">
@@ -841,61 +821,6 @@ export default function Asignaciones() {
           </Card>
         )}
 
-        {/* ── Módulos de planta por materia prima ──────────────────────────── */}
-        {(() => {
-          // Agrupar por producto: { producto_id: { nombre, mats: [{mat, key}] } }
-          const porProducto = {};
-          for (const lote of lotes) {
-            const prodId = lote.producto_id;
-            const prodNombre = lote.producto_nombre || prodId;
-            if (!porProducto[prodId]) porProducto[prodId] = { nombre: prodNombre, mats: [], seen: new Set() };
-            for (const mat of (lote.materiales_calculados || [])) {
-              if (!mat.materia_prima_id) continue;
-              const cfgKey = `${prodId}_${mat.materia_prima_id}`;
-              if (!porProducto[prodId].seen.has(cfgKey)) {
-                porProducto[prodId].seen.add(cfgKey);
-                porProducto[prodId].mats.push({ ...mat, _cfgKey: cfgKey });
-              }
-            }
-          }
-          const grupos = Object.values(porProducto).filter(g => g.mats.length > 0);
-          if (grupos.length === 0 || operaciones.length === 0) return null;
-          return (
-            <Card className="border-slate-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2 text-slate-700">
-                  <Settings className="w-4 h-4 text-slate-500" />
-                  Módulos de planta por materia prima
-                </CardTitle>
-                <p className="text-xs text-slate-400 mt-0.5">A qué módulo del portal va cada material, por producto. Aplica a todos los presupuestos.</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {grupos.map(grupo => (
-                  <div key={grupo.nombre}>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{grupo.nombre}</p>
-                    <div className="space-y-1">
-                      {grupo.mats.map(mat => (
-                        <div key={mat._cfgKey} className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
-                          <p className="text-sm text-slate-700 min-w-0 truncate">{mat.nombre}</p>
-                          <select
-                            value={matOpConfig[mat._cfgKey] || ""}
-                            onChange={e => saveMatOpConfig({ ...matOpConfig, [mat._cfgKey]: e.target.value || null })}
-                            className="h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 min-w-[150px] shrink-0"
-                          >
-                            <option value="">— Sin módulo —</option>
-                            {operaciones.map(op => (
-                              <option key={op.id} value={op.id}>{op.nombre}</option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          );
-        })()}
 
       {/* Modal ver remisión */}
       {viewingLote && (

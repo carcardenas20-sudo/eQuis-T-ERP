@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import GestorCombinacionesPredefinidas from './GestorCombinacionesPredefinidas';
 
-const MaterialRow = memo(function MaterialRow({ material, index, total, materiasPrimas, secciones, onActualizar, onRemover, onMover }) {
+const MaterialRow = memo(function MaterialRow({ material, index, total, materiasPrimas, secciones, operaciones, onActualizar, onRemover, onMover }) {
   const mp = materiasPrimas.find(m => m.id === material.materia_prima_id);
   const costo = (mp?.precio_por_unidad || 0) * (material.cantidad_por_unidad || 0);
   return (
@@ -78,6 +78,18 @@ const MaterialRow = memo(function MaterialRow({ material, index, total, materias
         </button>
         <span className="text-xs text-slate-600">Incluir en remisión</span>
       </div>
+      {operaciones.length > 0 && (
+        <div className="flex items-center gap-2 pt-1 border-t border-slate-200">
+          <Label className="text-xs text-slate-500 shrink-0">Módulo portal planta</Label>
+          <Select value={material.operacion_portal_id || ""} onValueChange={v => onActualizar(index, 'operacion_portal_id', v || null)}>
+            <SelectTrigger className="h-7 text-xs flex-1"><SelectValue placeholder="— Sin módulo —" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">— Sin módulo —</SelectItem>
+              {operaciones.map(op => <SelectItem key={op.id} value={op.id}>{op.nombre}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       {material.en_remision !== false && (<>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-1">
           <div>
@@ -268,7 +280,8 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
       piezas_por_unidad: 1,
       etiqueta_cantidad: "",
       nombre_seccion_display: "",
-      es_opcional: false
+      es_opcional: false,
+      operacion_portal_id: "",
     };
     setFormData(prev => ({ ...prev, materiales_requeridos: [...prev.materiales_requeridos, nuevoMaterial] }));
   }, []);
@@ -665,6 +678,7 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                           total={formData.materiales_requeridos.length}
                           materiasPrimas={materiasPrimas}
                           secciones={SECCIONES}
+                          operaciones={operaciones}
                           onActualizar={actualizarMaterial}
                           onRemover={removerMaterial}
                           onMover={moverMaterial}
