@@ -463,6 +463,68 @@ function TareaGrupoCard({ tareas, onUpdate }) {
   );
 }
 
+// ─── Tarjeta de material de lote (una materia prima → una operación) ──────────
+function MaterialLoteCard({ mat, loteId, matIdx, loteMats, setLotesAsig }) {
+  const [loading, setLoading] = useState(false);
+  const isListo = mat.estado === "listo";
+  const isEnProceso = mat.estado === "en_proceso";
+
+  const cambiarEstado = async (nuevoEstado) => {
+    setLoading(true);
+    try {
+      const nuevosMats = loteMats.map((m, i) =>
+        i === matIdx ? { ...m, estado: nuevoEstado } : m
+      );
+      await Remision.update(loteId, { materiales_calculados: nuevosMats });
+      setLotesAsig(prev => prev.map(l =>
+        l.id === loteId ? { ...l, materiales_calculados: nuevosMats } : l
+      ));
+    } catch (e) { alert("Error: " + e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className={`bg-white rounded-xl border shadow-sm ${isListo ? "border-green-200" : "border-slate-200"}`}>
+      <div className="px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {isListo
+              ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+              : <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0" />}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate">{mat.nombre}</p>
+              {mat.color && mat.color !== "Sin definir" && (
+                <p className="text-xs text-slate-500 truncate">{mat.color}</p>
+              )}
+            </div>
+          </div>
+          <span className="text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 shrink-0 whitespace-nowrap">
+            {mat.cantidad == null ? '—' : Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, '')}
+            <span className="text-xs font-normal text-slate-500 ml-1">{mat.etiqueta}</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <EstadoBadge estado={mat.estado || "pendiente"} />
+          {!isListo && (
+            <>
+              {!isEnProceso && (
+                <button onClick={() => cambiarEstado("en_proceso")} disabled={loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 active:bg-blue-100 disabled:opacity-50">
+                  <Play className="w-3 h-3" /> Iniciar
+                </button>
+              )}
+              <button onClick={() => cambiarEstado("listo")} disabled={loading}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 active:bg-green-100 disabled:opacity-50">
+                <Check className="w-3 h-3" /> Listo
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Portal principal ─────────────────────────────────────────────────────────
 export default function PlantPortal() {
   const [operaciones, setOperaciones] = useState([]);
@@ -485,6 +547,7 @@ export default function PlantPortal() {
   const [tabId, setTabId] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState("activos");
   const [tareas, setTareas] = useState(/** @type {any[]} */ ([]));
+  const [lotesAsig, setLotesAsig] = useState(/** @type {any[]} */ ([]));
   const [opConfig, setOpConfig] = useState(/** @type {Record<string,{agrupacion:string,orden:string}>} */ ({}));
   const [opConfigId, setOpConfigId] = useState(/** @type {string|null} */ (null));
 
@@ -572,7 +635,7 @@ export default function PlantPortal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [opsData, presData, prodData, tendData, cfgData, tareasData, opCfgData] = await Promise.all([
+      const [opsData, presData, prodData, tendData, cfgData, tareasData, opCfgData, lotesAsigData] = await Promise.all([
         Operacion.list("orden_procesamiento"),
         Presupuesto.filter({ estado: "aprobado" }),
         Producto.list(),
@@ -580,6 +643,7 @@ export default function PlantPortal() {
         AppConfig.filter({ key: "proceso_planta_estados" }),
         TareaPlanta.list(),
         AppConfig.filter({ key: "portal_planta_op_config" }),
+        Remision.filter({ tipo_remision: "asignacion_despacho" }),
       ]);
       const activas = (opsData || []).filter(o => o.activa !== false);
       setOperaciones(activas);
@@ -587,6 +651,7 @@ export default function PlantPortal() {
       setProductos(prodData || []);
       setTendidos(tendData || []);
       setTareas((tareasData || []).filter(t => t.estado !== "cancelado"));
+      setLotesAsig(lotesAsigData || []);
       setTabId(prev => prev ?? (activas[0]?.id || "tendidos"));
 
       const cfg = (cfgData || [])[0] || null;
@@ -664,15 +729,32 @@ export default function PlantPortal() {
     new Set(tareas.map(t => t.presupuesto_id).filter(Boolean)),
   [tareas]);
 
+  // Para cada operación: Set de presupuesto_ids con materiales asignados en lotes
+  const presIdsConMateriales = useMemo(() => {
+    const map = {};
+    for (const lote of lotesAsig) {
+      for (const mat of (lote.materiales_calculados || [])) {
+        if (mat.operacion_id) {
+          if (!map[mat.operacion_id]) map[mat.operacion_id] = new Set();
+          map[mat.operacion_id].add(lote.presupuesto_id);
+        }
+      }
+    }
+    return map;
+  }, [lotesAsig]);
+
   // Presupuestos que tienen al menos un producto con esta operación requerida
-  // (solo usados como fallback para presupuestos sin TareaPlanta)
-  const presupuestosDeOp = (opId) =>
-    presupuestos.filter(pres =>
+  // (solo usados como fallback para presupuestos sin lote-materiales ni TareaPlanta)
+  const presupuestosDeOp = (opId) => {
+    const conMat = presIdsConMateriales[opId] || new Set();
+    return presupuestos.filter(pres =>
+      !conMat.has(pres.id) &&
       !presIdsConTareas.has(pres.id) &&
       (pres.productos || []).some(item =>
         (productoMap[item.producto_id]?.operaciones_requeridas || []).includes(opId)
       )
     );
+  };
 
   const ordenesDeOp = (opId) =>
     ordenes.filter(ord =>
@@ -705,12 +787,21 @@ export default function PlantPortal() {
   };
 
   const countPendOp = (opId) => {
-    const tareasOp = tareas.filter(t => t.operacion_id === opId);
+    // Materiales de lotes asignados a esta operación
+    const conMat = presIdsConMateriales[opId] || new Set();
+    let matCount = 0;
+    for (const lote of lotesAsig) {
+      for (const mat of (lote.materiales_calculados || [])) {
+        if (mat.operacion_id === opId && (mat.estado || "pendiente") !== "listo") matCount++;
+      }
+    }
+    // TareaPlanta para presupuestos no cubiertos por materiales de lote
+    const tareasOp = tareas.filter(t => t.operacion_id === opId && !conMat.has(t.presupuesto_id));
     const pendTareas = tareasOp.length > 0
       ? tareasOp.filter(t => (t.estado || "pendiente") !== "listo").length
       : presupuestosDeOp(opId).filter(p => getEstadoPres(p, opId) !== "listo").length;
     const o = ordenesDeOp(opId).filter(o => o.estado !== "listo" && o.estado !== "lista").length;
-    return pendTareas + o;
+    return matCount + pendTareas + o;
   };
 
   const pendTendidos = tendidos.filter(t => t.estado !== "listo").length;
@@ -779,9 +870,25 @@ export default function PlantPortal() {
 
   const esTabOperacion = tabId && tabId !== "tendidos" && tabId !== "traslados" && tabId !== "planillador";
 
-  // TareaPlanta filtradas para la pestaña actual
+  // Materiales de lotes asignados a esta operación
+  const presConMatTab = esTabOperacion ? (presIdsConMateriales[tabId] || new Set()) : new Set();
+  const materialesDeOp = esTabOperacion
+    ? lotesAsig.flatMap(lote => {
+        const presNum = presupuestos.find(p => p.id === lote.presupuesto_id)?.numero_presupuesto || "—";
+        return (lote.materiales_calculados || [])
+          .map((mat, i) => ({ ...mat, _loteId: lote.id, _matIdx: i, _presNum: presNum, _loteMats: lote.materiales_calculados }))
+          .filter(mat => mat.operacion_id === tabId && filtrar(mat.estado || "pendiente"));
+      })
+    : [];
+  const matsPorPres = materialesDeOp.reduce((map, m) => {
+    if (!map[m._presNum]) map[m._presNum] = [];
+    map[m._presNum].push(m);
+    return map;
+  }, {});
+
+  // TareaPlanta filtradas para la pestaña actual (solo para presupuestos sin materiales de lote)
   const tareasFiltradas = esTabOperacion
-    ? tareas.filter(t => t.operacion_id === tabId && filtrar(t.estado || "pendiente"))
+    ? tareas.filter(t => t.operacion_id === tabId && !presConMatTab.has(t.presupuesto_id) && filtrar(t.estado || "pendiente"))
     : [];
 
   // Aplicar orden y agrupación según config
@@ -808,7 +915,7 @@ export default function PlantPortal() {
       }, {})
     : {};
 
-  // Fallback: presupuestos without TareaPlanta (legacy or newly approved without combis)
+  // Fallback: presupuestos sin lote-materiales ni TareaPlanta
   const presFiltrados = (tabId && esTabOperacion)
     ? presupuestosDeOp(tabId).filter(p => filtrar(getEstadoPres(p, tabId)))
     : [];
@@ -816,7 +923,7 @@ export default function PlantPortal() {
   const ordFiltradas = tabId && tabId !== "tendidos"
     ? ordenesDeOp(tabId).filter(o => filtrar(o.estado === "lista" ? "listo" : (o.estado || "pendiente"))) : [];
 
-  const hayContenido = tareasFiltradas.length > 0 || presFiltrados.length > 0 || ordFiltradas.length > 0;
+  const hayContenido = materialesDeOp.length > 0 || tareasFiltradas.length > 0 || presFiltrados.length > 0 || ordFiltradas.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-safe w-full overflow-x-hidden">
@@ -1192,9 +1299,32 @@ export default function PlantPortal() {
           </div>
         ) : (
           <>
-            {/* TareaPlanta-based cards */}
+            {/* Materiales de lotes (sistema nuevo) */}
+            {materialesDeOp.length > 0 && (
+              <div className="space-y-4">
+                {Object.entries(matsPorPres).map(([presNum, mats]) => (
+                  <div key={presNum} className="space-y-2">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">{presNum}</p>
+                    {mats.map(mat => (
+                      <MaterialLoteCard
+                        key={`${mat._loteId}_${mat._matIdx}`}
+                        mat={mat}
+                        loteId={mat._loteId}
+                        matIdx={mat._matIdx}
+                        loteMats={mat._loteMats}
+                        setLotesAsig={setLotesAsig}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* TareaPlanta cards (para presupuestos sin materiales de lote asignados) */}
             {tareasFiltradas.length > 0 && (
               <div className="space-y-4">
+                {materialesDeOp.length > 0 && (
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">Otros presupuestos</p>
+                )}
                 {cfg.agrupacion === "referencia" && Object.entries(tareasPorRef).map(([key, grupo]) => (
                   <TareaGrupoCard key={key} tareas={grupo} onUpdate={loadData} />
                 ))}
@@ -1211,12 +1341,9 @@ export default function PlantPortal() {
                 ))}
               </div>
             )}
-            {/* Legacy: presupuestos sin TareaPlanta */}
+            {/* Legacy: presupuestos sin lote-materiales ni TareaPlanta */}
             {presFiltrados.length > 0 && (
               <div className="space-y-2">
-                {tareasFiltradas.length > 0 && (
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">Sin tareas asignadas</p>
-                )}
                 {presFiltrados.map(pres => (
                   <PresupuestoOpCard
                     key={pres.id}

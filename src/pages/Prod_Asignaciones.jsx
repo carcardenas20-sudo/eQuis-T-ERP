@@ -902,17 +902,42 @@ export default function Asignaciones() {
                 ) : (
                   <div className="space-y-2">
                     {(viewingLote.materiales_calculados || []).map((mat, i) => (
-                      <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-100">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">{mat.nombre}</p>
-                          {mat.color && mat.color !== "Sin definir" && (
-                            <p className="text-xs font-bold text-slate-700">{mat.color}</p>
-                          )}
+                      <div key={i} className="bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-100 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-800">{mat.nombre}</p>
+                            {mat.color && mat.color !== "Sin definir" && (
+                              <p className="text-xs font-bold text-slate-700">{mat.color}</p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-lg font-bold text-slate-900">{mat.cantidad == null ? '—' : Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, '')}</span>
+                            <span className="text-xs text-slate-400 ml-1">{mat.etiqueta}</span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-lg font-bold text-slate-900">{mat.cantidad == null ? '—' : Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, '')}</span>
-                          <span className="text-xs text-slate-400 ml-1">{mat.etiqueta}</span>
-                        </div>
+                        {operaciones.length > 0 && (
+                          <select
+                            value={mat.operacion_id || ""}
+                            onChange={async (e) => {
+                              const opId = e.target.value || null;
+                              const nuevosMats = (viewingLote.materiales_calculados || []).map((m, j) =>
+                                j === i ? { ...m, operacion_id: opId } : m
+                              );
+                              try {
+                                await Remision.update(viewingLote.id, { materiales_calculados: nuevosMats });
+                                const updated = { ...viewingLote, materiales_calculados: nuevosMats };
+                                setViewingLote(updated);
+                                setLotes(prev => prev.map(l => l.id === viewingLote.id ? { ...l, materiales_calculados: nuevosMats } : l));
+                              } catch (err) { alert("Error: " + err.message); }
+                            }}
+                            className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-700"
+                          >
+                            <option value="">— Sin módulo de planta —</option>
+                            {operaciones.map(op => (
+                              <option key={op.id} value={op.id}>{op.nombre}</option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                     ))}
                   </div>
