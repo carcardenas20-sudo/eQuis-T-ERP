@@ -548,6 +548,7 @@ export default function PlantPortal() {
   const [filtroEstado, setFiltroEstado] = useState("activos");
   const [tareas, setTareas] = useState(/** @type {any[]} */ ([]));
   const [lotesAsig, setLotesAsig] = useState(/** @type {any[]} */ ([]));
+  const [matOpConfig, setMatOpConfig] = useState(/** @type {Record<string,string>} */ ({}));
   const [opConfig, setOpConfig] = useState(/** @type {Record<string,{agrupacion:string,orden:string}>} */ ({}));
   const [opConfigId, setOpConfigId] = useState(/** @type {string|null} */ (null));
 
@@ -635,7 +636,7 @@ export default function PlantPortal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [opsData, presData, prodData, tendData, cfgData, tareasData, opCfgData, lotesAsigData] = await Promise.all([
+      const [opsData, presData, prodData, tendData, cfgData, tareasData, opCfgData, lotesAsigData, matOpCfgData] = await Promise.all([
         Operacion.list("orden_procesamiento"),
         Presupuesto.filter({ estado: "aprobado" }),
         Producto.list(),
@@ -644,6 +645,7 @@ export default function PlantPortal() {
         TareaPlanta.list(),
         AppConfig.filter({ key: "portal_planta_op_config" }),
         Remision.filter({ tipo_remision: "asignacion_despacho" }),
+        AppConfig.filter({ key: "portal_material_op_config" }),
       ]);
       const activas = (opsData || []).filter(o => o.activa !== false);
       setOperaciones(activas);
@@ -661,6 +663,9 @@ export default function PlantPortal() {
       const opCfg = (opCfgData || [])[0] || null;
       setOpConfigId(opCfg?.id || null);
       try { setOpConfig(opCfg ? JSON.parse(opCfg.value) : {}); } catch { setOpConfig({}); }
+
+      const matOpCfg = (matOpCfgData || [])[0] || null;
+      try { setMatOpConfig(matOpCfg ? JSON.parse(matOpCfg.value) : {}); } catch { setMatOpConfig({}); }
     } catch (e) {
       console.error("Error cargando datos principales:", e);
     }
@@ -729,19 +734,20 @@ export default function PlantPortal() {
     new Set(tareas.map(t => t.presupuesto_id).filter(Boolean)),
   [tareas]);
 
-  // Para cada operación: Set de presupuesto_ids con materiales asignados en lotes
+  // Para cada operación: Set de presupuesto_ids con materiales asignados via config global
   const presIdsConMateriales = useMemo(() => {
     const map = {};
     for (const lote of lotesAsig) {
       for (const mat of (lote.materiales_calculados || [])) {
-        if (mat.operacion_id) {
-          if (!map[mat.operacion_id]) map[mat.operacion_id] = new Set();
-          map[mat.operacion_id].add(lote.presupuesto_id);
+        const opId = matOpConfig[mat.materia_prima_id];
+        if (opId) {
+          if (!map[opId]) map[opId] = new Set();
+          map[opId].add(lote.presupuesto_id);
         }
       }
     }
     return map;
-  }, [lotesAsig]);
+  }, [lotesAsig, matOpConfig]);
 
   // Presupuestos que tienen al menos un producto con esta operación requerida
   // (solo usados como fallback para presupuestos sin lote-materiales ni TareaPlanta)
@@ -787,12 +793,12 @@ export default function PlantPortal() {
   };
 
   const countPendOp = (opId) => {
-    // Materiales de lotes asignados a esta operación
+    // Materiales de lotes asignados a esta operación via config global
     const conMat = presIdsConMateriales[opId] || new Set();
     let matCount = 0;
     for (const lote of lotesAsig) {
       for (const mat of (lote.materiales_calculados || [])) {
-        if (mat.operacion_id === opId && (mat.estado || "pendiente") !== "listo") matCount++;
+        if (matOpConfig[mat.materia_prima_id] === opId && (mat.estado || "pendiente") !== "listo") matCount++;
       }
     }
     // TareaPlanta para presupuestos no cubiertos por materiales de lote
@@ -877,7 +883,7 @@ export default function PlantPortal() {
         const presNum = presupuestos.find(p => p.id === lote.presupuesto_id)?.numero_presupuesto || "—";
         return (lote.materiales_calculados || [])
           .map((mat, i) => ({ ...mat, _loteId: lote.id, _matIdx: i, _presNum: presNum, _loteMats: lote.materiales_calculados }))
-          .filter(mat => mat.operacion_id === tabId && filtrar(mat.estado || "pendiente"));
+          .filter(mat => matOpConfig[mat.materia_prima_id] === tabId && filtrar(mat.estado || "pendiente"));
       })
     : [];
   const matsPorPres = materialesDeOp.reduce((map, m) => {

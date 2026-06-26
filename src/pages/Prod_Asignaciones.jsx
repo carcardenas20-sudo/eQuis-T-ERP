@@ -104,6 +104,8 @@ export default function Asignaciones() {
   const [operaciones, setOperaciones] = useState([]);
   const [opConfig, setOpConfig] = useState({});
   const [opConfigId, setOpConfigId] = useState(null);
+  const [matOpConfig, setMatOpConfig] = useState({}); // materia_prima_id → operacion_id
+  const [matOpConfigId, setMatOpConfigId] = useState(null);
 
   // Form
   const [showForm, setShowForm] = useState(false);
@@ -118,13 +120,14 @@ export default function Asignaciones() {
   const loadBase = async () => {
     setLoading(true);
     try {
-      const [presData, prodData, mpData, colData, opsData, opCfgData] = await Promise.all([
+      const [presData, prodData, mpData, colData, opsData, opCfgData, matOpCfgData] = await Promise.all([
         Presupuesto.list("-created_date"),
         Producto.list(),
         MateriaPrima.list(),
         Color.list(),
         Operacion.list("orden_procesamiento"),
         AppConfig.filter({ key: "portal_planta_op_config" }),
+        AppConfig.filter({ key: "portal_material_op_config" }),
       ]);
       const aprobados = (presData || []).filter(p => p.estado === "aprobado");
       setPresupuestos(aprobados);
@@ -136,6 +139,9 @@ export default function Asignaciones() {
       const opCfg = (opCfgData || [])[0] || null;
       setOpConfigId(opCfg?.id || null);
       try { setOpConfig(opCfg ? JSON.parse(opCfg.value) : {}); } catch { setOpConfig({}); }
+      const matOpCfg = (matOpCfgData || [])[0] || null;
+      setMatOpConfigId(matOpCfg?.id || null);
+      try { setMatOpConfig(matOpCfg ? JSON.parse(matOpCfg.value) : {}); } catch { setMatOpConfig({}); }
     } catch (err) {
       console.error(err);
     }
@@ -442,6 +448,20 @@ export default function Asignaciones() {
   };
 
   const getOpCfg = (opId) => opConfig[opId] || { agrupacion: "presupuesto", orden: "fecha" };
+
+  const saveMatOpConfig = async (newConfig) => {
+    try {
+      if (matOpConfigId) {
+        await AppConfig.update(matOpConfigId, { value: JSON.stringify(newConfig) });
+      } else {
+        const created = await AppConfig.create({ key: "portal_material_op_config", value: JSON.stringify(newConfig) });
+        setMatOpConfigId(created.id);
+      }
+      setMatOpConfig(newConfig);
+    } catch (e) {
+      alert("Error guardando configuración: " + e.message);
+    }
+  };
 
   if (loading) return (
     <div className="p-8 flex justify-center">
@@ -821,6 +841,51 @@ export default function Asignaciones() {
           </Card>
         )}
 
+        {/* ── Módulos de planta por materia prima ──────────────────────────── */}
+        {(() => {
+          const seen = new Set();
+          const matsEnLotes = [];
+          for (const lote of lotes) {
+            for (const mat of (lote.materiales_calculados || [])) {
+              if (mat.materia_prima_id && !seen.has(mat.materia_prima_id)) {
+                seen.add(mat.materia_prima_id);
+                matsEnLotes.push(mat);
+              }
+            }
+          }
+          if (matsEnLotes.length === 0 || operaciones.length === 0) return null;
+          return (
+            <Card className="border-slate-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2 text-slate-700">
+                  <Settings className="w-4 h-4 text-slate-500" />
+                  Módulos de planta por materia prima
+                </CardTitle>
+                <p className="text-xs text-slate-400 mt-0.5">A qué módulo del portal va cada material. Aplica a todos los presupuestos.</p>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {matsEnLotes.map(mat => (
+                  <div key={mat.materia_prima_id} className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{mat.nombre}</p>
+                    </div>
+                    <select
+                      value={matOpConfig[mat.materia_prima_id] || ""}
+                      onChange={e => saveMatOpConfig({ ...matOpConfig, [mat.materia_prima_id]: e.target.value || null })}
+                      className="h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 min-w-[150px] shrink-0"
+                    >
+                      <option value="">— Sin módulo —</option>
+                      {operaciones.map(op => (
+                        <option key={op.id} value={op.id}>{op.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          );
+        })()}
+
       {/* Modal ver remisión */}
       {viewingLote && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -902,42 +967,17 @@ export default function Asignaciones() {
                 ) : (
                   <div className="space-y-2">
                     {(viewingLote.materiales_calculados || []).map((mat, i) => (
-                      <div key={i} className="bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-100 space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-slate-800">{mat.nombre}</p>
-                            {mat.color && mat.color !== "Sin definir" && (
-                              <p className="text-xs font-bold text-slate-700">{mat.color}</p>
-                            )}
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className="text-lg font-bold text-slate-900">{mat.cantidad == null ? '—' : Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, '')}</span>
-                            <span className="text-xs text-slate-400 ml-1">{mat.etiqueta}</span>
-                          </div>
+                      <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-100">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{mat.nombre}</p>
+                          {mat.color && mat.color !== "Sin definir" && (
+                            <p className="text-xs font-bold text-slate-700">{mat.color}</p>
+                          )}
                         </div>
-                        {operaciones.length > 0 && (
-                          <select
-                            value={mat.operacion_id || ""}
-                            onChange={async (e) => {
-                              const opId = e.target.value || null;
-                              const nuevosMats = (viewingLote.materiales_calculados || []).map((m, j) =>
-                                j === i ? { ...m, operacion_id: opId } : m
-                              );
-                              try {
-                                await Remision.update(viewingLote.id, { materiales_calculados: nuevosMats });
-                                const updated = { ...viewingLote, materiales_calculados: nuevosMats };
-                                setViewingLote(updated);
-                                setLotes(prev => prev.map(l => l.id === viewingLote.id ? { ...l, materiales_calculados: nuevosMats } : l));
-                              } catch (err) { alert("Error: " + err.message); }
-                            }}
-                            className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-700"
-                          >
-                            <option value="">— Sin módulo de planta —</option>
-                            {operaciones.map(op => (
-                              <option key={op.id} value={op.id}>{op.nombre}</option>
-                            ))}
-                          </select>
-                        )}
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-slate-900">{mat.cantidad == null ? '—' : Number(mat.cantidad).toFixed(2).replace(/\.?0+$/, '')}</span>
+                          <span className="text-xs text-slate-400 ml-1">{mat.etiqueta}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
