@@ -537,6 +537,25 @@ app.post('/api/confirmaciones/:id/descartar', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/confirmaciones/:id/desvincular', requireAuth, async (req, res) => {
+  try {
+    const { rowCount } = await query(
+      `UPDATE entity_confirmacion_bancaria
+       SET estado = 'pendiente',
+           venta_vinculada_id = NULL,
+           credito_vinculado_id = NULL,
+           vinculado_por_user_id = NULL,
+           updated_date = NOW()
+       WHERE id = $1 AND estado = 'vinculada'`,
+      [req.params.id]
+    );
+    if (rowCount === 0) return res.status(400).json({ error: 'Confirmación no encontrada o no vinculada' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Limpieza: borrar Dispatch huérfanos de lotes auto-creados ────────────────
 app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) => {
   try {
