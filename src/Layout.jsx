@@ -378,7 +378,7 @@ function LayoutContent({ children }) {
       {/* Main */}
       <main className="lg:ml-64 min-h-[100dvh] pb-24 lg:pb-0 overflow-x-hidden overflow-y-auto touch-pan-y">
         <AnimatePresence mode="wait">
-          <motion.div key={location.pathname} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.18, ease: "easeOut" }}>
+          <motion.div key={location.pathname} initial={{ opacity: 0, y: 12, scale: 0.995 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.995 }} transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}>
             {(() => {
               if (isAdmin || isLoading) return children;
               const pageName = location.pathname.replace(/^\//, '');

@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { Stagger, StaggerItem, AnimatedNumber } from "@/components/motion";
 import DeliveredUnits from "../components/dashboard/DeliveredUnits";
 import PaymentRequestsWidget from "../components/dashboard/PaymentRequests";
 import PendingDeliveriesByEmployee from "../components/dashboard/PendingDeliveriesByEmployee";
@@ -30,13 +31,16 @@ function fmtCOP(n) {
   return "$" + (Number(n) || 0).toLocaleString("es-CO");
 }
 
-function StatCard({ label, value, icon: Icon, bg, iconCls, sub }) {
+function StatCard({ label, value, icon: Icon, bg, iconCls, sub, format }) {
+  const isNum = typeof value === "number";
   return (
-    <div className="bg-white p-3 sm:p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-200">
+    <div className="bg-white p-3 sm:p-5 rounded-xl card-shadow hover-lift border border-slate-200 h-full">
       <div className="flex justify-between items-start gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs sm:text-sm text-slate-600 mb-1 leading-tight">{label}</p>
-          <p className="text-lg sm:text-2xl font-bold text-slate-900 tabular-nums break-all">{value}</p>
+          <p className="text-lg sm:text-2xl font-bold text-slate-900 tabular-nums break-all">
+            {isNum ? <AnimatedNumber value={value} format={format} /> : value}
+          </p>
           {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
         </div>
         <div className={`${bg} p-2 sm:p-3 rounded-xl shrink-0`}>
@@ -399,18 +403,18 @@ export default function Dashboard() {
 
             {loadingComercial ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {[...Array(6)].map((_, i) => <div key={i} className="h-24 bg-slate-100 rounded-xl animate-pulse" />)}
+                {[...Array(6)].map((_, i) => <div key={i} className="h-24 shimmer rounded-xl" />)}
               </div>
             ) : comercialStats ? (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <StatCard label="Efectivo en Caja" value={fmtCOP(comercialStats.netCashInDrawer)} icon={Wallet} bg="bg-emerald-100" iconCls="text-emerald-600" />
-                  <StatCard label="Ingresos Hoy" value={fmtCOP(comercialStats.totalIncome)} icon={DollarSign} bg="bg-blue-100" iconCls="text-blue-600" />
-                  <StatCard label="Gastos Hoy" value={fmtCOP(comercialStats.totalExpenses)} icon={Package} bg="bg-purple-100" iconCls="text-purple-600" />
-                  <StatCard label="Balance" value={fmtCOP(comercialStats.totalIncome - comercialStats.totalExpenses)} icon={TrendingUp} bg="bg-amber-100" iconCls="text-amber-600" />
-                  <StatCard label="Por Cobrar" value={fmtCOP(comercialStats.pendingCredits)} icon={CreditCard} bg="bg-orange-100" iconCls="text-orange-600" />
-                  <StatCard label="Créditos Vencidos" value={comercialStats.overdueCredits} icon={AlertTriangle} bg="bg-red-100" iconCls="text-red-600" sub="créditos" />
-                </div>
+                <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <StaggerItem><StatCard label="Efectivo en Caja" value={comercialStats.netCashInDrawer} format={fmtCOP} icon={Wallet} bg="bg-emerald-100" iconCls="text-emerald-600" /></StaggerItem>
+                  <StaggerItem><StatCard label="Ingresos Hoy" value={comercialStats.totalIncome} format={fmtCOP} icon={DollarSign} bg="bg-blue-100" iconCls="text-blue-600" /></StaggerItem>
+                  <StaggerItem><StatCard label="Gastos Hoy" value={comercialStats.totalExpenses} format={fmtCOP} icon={Package} bg="bg-purple-100" iconCls="text-purple-600" /></StaggerItem>
+                  <StaggerItem><StatCard label="Balance" value={comercialStats.totalIncome - comercialStats.totalExpenses} format={fmtCOP} icon={TrendingUp} bg="bg-amber-100" iconCls="text-amber-600" /></StaggerItem>
+                  <StaggerItem><StatCard label="Por Cobrar" value={comercialStats.pendingCredits} format={fmtCOP} icon={CreditCard} bg="bg-orange-100" iconCls="text-orange-600" /></StaggerItem>
+                  <StaggerItem><StatCard label="Créditos Vencidos" value={comercialStats.overdueCredits} icon={AlertTriangle} bg="bg-red-100" iconCls="text-red-600" sub="créditos" /></StaggerItem>
+                </Stagger>
 
                 <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200">
                   <h3 className="text-sm font-semibold text-slate-700 mb-3">Cierre de Caja del Día</h3>
@@ -445,37 +449,38 @@ export default function Dashboard() {
 
             {loadingPipeline ? (
               <div className="space-y-2">
-                {[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />)}
+                {[...Array(5)].map((_, i) => <div key={i} className="h-10 shimmer rounded-lg" />)}
               </div>
             ) : pipelineStats ? (
               <>
                 {/* Summary cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <StatCard
+                <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <StaggerItem><StatCard
                     label="Ítems por comprar"
                     value={pipelineStats.totalItems}
                     icon={ShoppingCart}
                     bg="bg-emerald-100"
                     iconCls="text-emerald-600"
                     sub="materiales distintos"
-                  />
-                  <StatCard
+                  /></StaggerItem>
+                  <StaggerItem><StatCard
                     label="Costo total estimado"
-                    value={fmtCOP(pipelineStats.totalCostoPendiente)}
+                    value={pipelineStats.totalCostoPendiente}
+                    format={fmtCOP}
                     icon={DollarSign}
                     bg="bg-amber-100"
                     iconCls="text-amber-600"
                     sub="suma de pendientes"
-                  />
-                  <StatCard
+                  /></StaggerItem>
+                  <StaggerItem><StatCard
                     label="Presupuestos aprobados"
                     value={pipelineStats.totalPresupuestosAprobados}
                     icon={BarChart3}
                     bg="bg-blue-100"
                     iconCls="text-blue-600"
                     sub="con materiales sin comprar"
-                  />
-                </div>
+                  /></StaggerItem>
+                </Stagger>
 
                 {/* Materials table — agrupada por tipo */}
                 <ListaComprasPorTipo
@@ -497,7 +502,7 @@ export default function Dashboard() {
 
             {loadingOperarios ? (
               <div className="space-y-3">
-                {[...Array(4)].map((_, i) => <div key={i} className="h-32 bg-slate-100 rounded-xl animate-pulse" />)}
+                {[...Array(4)].map((_, i) => <div key={i} className="h-32 shimmer rounded-xl" />)}
               </div>
             ) : operariosStats ? (
               <div className="space-y-4">

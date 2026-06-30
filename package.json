@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "concurrently -n API,Vite -c blue,green \"node server/index.js\" \"vite\"",
+    "dev": "concurrently -n API,Vite -c blue,green \"node --env-file-if-exists=.env server/index.js\" \"vite\"",
     "server": "node server/index.js",
     "import-data": "node scripts/import-to-postgres.js",
     "verify-migration": "node scripts/verify-migration.js",
