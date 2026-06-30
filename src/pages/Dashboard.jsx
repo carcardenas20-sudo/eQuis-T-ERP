@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Stagger, StaggerItem, AnimatedNumber } from "@/components/motion";
+import { Stagger, StaggerItem, AnimatedNumber, FadeIn, scaleIn } from "@/components/motion";
 import DeliveredUnits from "../components/dashboard/DeliveredUnits";
 import PaymentRequestsWidget from "../components/dashboard/PaymentRequests";
 import PendingDeliveriesByEmployee from "../components/dashboard/PendingDeliveriesByEmployee";
@@ -31,20 +31,33 @@ function fmtCOP(n) {
   return "$" + (Number(n) || 0).toLocaleString("es-CO");
 }
 
-function StatCard({ label, value, icon: Icon, bg, iconCls, sub, format }) {
+const TONES = {
+  emerald: "from-emerald-500 to-teal-600",
+  blue: "from-blue-500 to-indigo-600",
+  purple: "from-purple-500 to-fuchsia-600",
+  amber: "from-amber-500 to-orange-600",
+  orange: "from-orange-500 to-rose-600",
+  red: "from-rose-500 to-red-600",
+};
+
+function StatCard({ label, value, icon: Icon, tone = "blue", sub, format }) {
   const isNum = typeof value === "number";
+  const grad = TONES[tone] || TONES.blue;
   return (
-    <div className="bg-white p-3 sm:p-5 rounded-xl card-shadow hover-lift border border-slate-200 h-full">
-      <div className="flex justify-between items-start gap-2">
+    <div className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white bg-gradient-to-br ${grad} shadow-lg hover-lift h-full`}>
+      {/* Brillo decorativo */}
+      <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-white/15 blur-sm" />
+      <div className="absolute -bottom-10 -left-6 w-24 h-24 rounded-full bg-black/10" />
+      <div className="relative flex justify-between items-start gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs sm:text-sm text-slate-600 mb-1 leading-tight">{label}</p>
-          <p className="text-lg sm:text-2xl font-bold text-slate-900 tabular-nums break-all">
-            {isNum ? <AnimatedNumber value={value} format={format} /> : value}
+          <p className="text-xs sm:text-sm font-medium text-white/85 mb-1.5 leading-tight">{label}</p>
+          <p className="text-2xl sm:text-4xl font-extrabold tracking-tight tabular-nums break-all drop-shadow">
+            {isNum ? <AnimatedNumber value={value} format={format} duration={1.4} /> : value}
           </p>
-          {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
+          {sub && <p className="text-[11px] sm:text-xs text-white/75 mt-1">{sub}</p>}
         </div>
-        <div className={`${bg} p-2 sm:p-3 rounded-xl shrink-0`}>
-          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${iconCls}`} />
+        <div className="bg-white/25 backdrop-blur-sm p-2.5 sm:p-3 rounded-xl shrink-0 shadow-inner ring-1 ring-white/30">
+          <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
         </div>
       </div>
     </div>
@@ -365,10 +378,10 @@ export default function Dashboard() {
     <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen pb-24 sm:pb-8 overflow-y-auto">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        <div className="mb-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
+        <FadeIn className="mb-2">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Dashboard</h1>
           <p className="text-slate-500 text-sm mt-1">{currentUser?.full_name || currentUser?.email} · {userRole?.name}</p>
-        </div>
+        </FadeIn>
 
         {/* ── SECCIÓN COMERCIAL ──────────────────────────────── */}
         {hasComercial && (
@@ -407,13 +420,13 @@ export default function Dashboard() {
               </div>
             ) : comercialStats ? (
               <>
-                <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <StaggerItem><StatCard label="Efectivo en Caja" value={comercialStats.netCashInDrawer} format={fmtCOP} icon={Wallet} bg="bg-emerald-100" iconCls="text-emerald-600" /></StaggerItem>
-                  <StaggerItem><StatCard label="Ingresos Hoy" value={comercialStats.totalIncome} format={fmtCOP} icon={DollarSign} bg="bg-blue-100" iconCls="text-blue-600" /></StaggerItem>
-                  <StaggerItem><StatCard label="Gastos Hoy" value={comercialStats.totalExpenses} format={fmtCOP} icon={Package} bg="bg-purple-100" iconCls="text-purple-600" /></StaggerItem>
-                  <StaggerItem><StatCard label="Balance" value={comercialStats.totalIncome - comercialStats.totalExpenses} format={fmtCOP} icon={TrendingUp} bg="bg-amber-100" iconCls="text-amber-600" /></StaggerItem>
-                  <StaggerItem><StatCard label="Por Cobrar" value={comercialStats.pendingCredits} format={fmtCOP} icon={CreditCard} bg="bg-orange-100" iconCls="text-orange-600" /></StaggerItem>
-                  <StaggerItem><StatCard label="Créditos Vencidos" value={comercialStats.overdueCredits} icon={AlertTriangle} bg="bg-red-100" iconCls="text-red-600" sub="créditos" /></StaggerItem>
+                <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-3" stagger={0.08}>
+                  <StaggerItem variant={scaleIn}><StatCard label="Efectivo en Caja" value={comercialStats.netCashInDrawer} format={fmtCOP} icon={Wallet} tone="emerald" /></StaggerItem>
+                  <StaggerItem variant={scaleIn}><StatCard label="Ingresos Hoy" value={comercialStats.totalIncome} format={fmtCOP} icon={DollarSign} tone="blue" /></StaggerItem>
+                  <StaggerItem variant={scaleIn}><StatCard label="Gastos Hoy" value={comercialStats.totalExpenses} format={fmtCOP} icon={Package} tone="purple" /></StaggerItem>
+                  <StaggerItem variant={scaleIn}><StatCard label="Balance" value={comercialStats.totalIncome - comercialStats.totalExpenses} format={fmtCOP} icon={TrendingUp} tone="amber" /></StaggerItem>
+                  <StaggerItem variant={scaleIn}><StatCard label="Por Cobrar" value={comercialStats.pendingCredits} format={fmtCOP} icon={CreditCard} tone="orange" /></StaggerItem>
+                  <StaggerItem variant={scaleIn}><StatCard label="Créditos Vencidos" value={comercialStats.overdueCredits} icon={AlertTriangle} tone="red" sub="créditos" /></StaggerItem>
                 </Stagger>
 
                 <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200">
@@ -454,30 +467,27 @@ export default function Dashboard() {
             ) : pipelineStats ? (
               <>
                 {/* Summary cards */}
-                <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <StaggerItem><StatCard
+                <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-3" stagger={0.08}>
+                  <StaggerItem variant={scaleIn}><StatCard
                     label="Ítems por comprar"
                     value={pipelineStats.totalItems}
                     icon={ShoppingCart}
-                    bg="bg-emerald-100"
-                    iconCls="text-emerald-600"
+                    tone="emerald"
                     sub="materiales distintos"
                   /></StaggerItem>
-                  <StaggerItem><StatCard
+                  <StaggerItem variant={scaleIn}><StatCard
                     label="Costo total estimado"
                     value={pipelineStats.totalCostoPendiente}
                     format={fmtCOP}
                     icon={DollarSign}
-                    bg="bg-amber-100"
-                    iconCls="text-amber-600"
+                    tone="amber"
                     sub="suma de pendientes"
                   /></StaggerItem>
-                  <StaggerItem><StatCard
+                  <StaggerItem variant={scaleIn}><StatCard
                     label="Presupuestos aprobados"
                     value={pipelineStats.totalPresupuestosAprobados}
                     icon={BarChart3}
-                    bg="bg-blue-100"
-                    iconCls="text-blue-600"
+                    tone="blue"
                     sub="con materiales sin comprar"
                   /></StaggerItem>
                 </Stagger>
