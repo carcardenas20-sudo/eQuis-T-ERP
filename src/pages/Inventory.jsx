@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { Alert, AlertDescription } from "@/components/ui/alert"; // Added Alert components
 
+import { Stagger, StaggerItem, FadeIn, scaleIn } from "@/components/motion";
+import KpiCard from "@/components/ui/KpiCard";
 import InventoryTable from "../components/inventory/InventoryTable";
 import InventoryMobileList from "../components/inventory/InventoryMobileList";
 import StockAdjustmentModal from "../components/inventory/StockAdjustmentModal";
@@ -200,10 +202,10 @@ export default function InventoryPage() {
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Control de Inventario</h1> {/* Title changed */}
+          <FadeIn>
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Control de Inventario</h1>
             <p className="text-slate-600 mt-1">
-              Monitorea y ajusta el stock de productos en tus sucursales. {/* Description changed */}
+              Monitorea y ajusta el stock de productos en tus sucursales.
             </p>
             {/* ✅ NUEVO: Mostrar sucursal si es usuario no-admin */}
             {!isAdmin && userLocation && (
@@ -212,7 +214,7 @@ export default function InventoryPage() {
                 <span>Viendo inventario de: <strong>{userLocation.name}</strong></span>
               </div>
             )}
-          </div>
+          </FadeIn>
           <div className="flex gap-2">
             {duplicadosGrupos.length > 0 && (
               <Button
@@ -279,57 +281,21 @@ export default function InventoryPage() {
         {activeTab === "inventory" && (
           <>
             {/* Stats Cards - these use 'inventory' state directly now */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-              <Card className="shadow-lg border-0">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-medium text-slate-600">Total Productos</CardTitle>
-                    <Package className="w-4 h-4 text-blue-500" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-slate-900">{totalProducts}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-medium text-slate-600">Stock Bajo</CardTitle>
-                    <TrendingDown className="w-4 h-4 text-orange-500" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">{lowStockItems}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-medium text-slate-600">Sin Stock</CardTitle>
-                    <TrendingDown className="w-4 h-4 text-red-500" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">{outOfStockItems}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-medium text-slate-600">Valor Total</CardTitle>
-                    <TrendingUp className="w-4 h-4 text-green-500" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
-                    ${totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Stagger className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6" stagger={0.08}>
+              <StaggerItem variant={scaleIn}>
+                <KpiCard label="Total Productos" value={totalProducts} icon={Package} tone="blue" />
+              </StaggerItem>
+              <StaggerItem variant={scaleIn}>
+                <KpiCard label="Stock Bajo" value={lowStockItems} icon={TrendingDown} tone="amber" />
+              </StaggerItem>
+              <StaggerItem variant={scaleIn}>
+                <KpiCard label="Sin Stock" value={outOfStockItems} icon={TrendingDown} tone="red" />
+              </StaggerItem>
+              <StaggerItem variant={scaleIn}>
+                <KpiCard label="Valor Total" value={totalStockValue} icon={TrendingUp} tone="emerald"
+                  format={(n) => `$${(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+              </StaggerItem>
+            </Stagger>
 
             {/* Filters */}
             <Card className="shadow-lg border-0">

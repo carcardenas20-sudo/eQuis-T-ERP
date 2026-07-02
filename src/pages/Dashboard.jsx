@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Stagger, StaggerItem, AnimatedNumber, FadeIn, scaleIn } from "@/components/motion";
+import KpiCard from "@/components/ui/KpiCard";
 import DeliveredUnits from "../components/dashboard/DeliveredUnits";
 import PaymentRequestsWidget from "../components/dashboard/PaymentRequests";
 import PendingDeliveriesByEmployee from "../components/dashboard/PendingDeliveriesByEmployee";
@@ -31,50 +32,23 @@ function fmtCOP(n) {
   return "$" + (Number(n) || 0).toLocaleString("es-CO");
 }
 
-const TONES = {
-  emerald: "from-emerald-500 to-teal-600",
-  blue: "from-blue-500 to-indigo-600",
-  purple: "from-purple-500 to-fuchsia-600",
-  amber: "from-amber-500 to-orange-600",
-  orange: "from-orange-500 to-rose-600",
-  red: "from-rose-500 to-red-600",
-};
-
-function StatCard({ label, value, icon: Icon, tone = "blue", sub, format }) {
-  const isNum = typeof value === "number";
-  const grad = TONES[tone] || TONES.blue;
-  return (
-    <div className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white bg-gradient-to-br ${grad} shadow-lg hover-lift h-full`}>
-      {/* Brillo decorativo */}
-      <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-white/15 blur-sm" />
-      <div className="absolute -bottom-10 -left-6 w-24 h-24 rounded-full bg-black/10" />
-      <div className="relative flex justify-between items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium text-white/85 mb-1.5 leading-tight">{label}</p>
-          <p className="text-2xl sm:text-4xl font-extrabold tracking-tight tabular-nums break-all drop-shadow">
-            {isNum ? <AnimatedNumber value={value} format={format} duration={1.4} /> : value}
-          </p>
-          {sub && <p className="text-[11px] sm:text-xs text-white/75 mt-1">{sub}</p>}
-        </div>
-        <div className="bg-white/25 backdrop-blur-sm p-2.5 sm:p-3 rounded-xl shrink-0 shadow-inner ring-1 ring-white/30">
-          <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
-        </div>
-      </div>
-    </div>
-  );
-}
+// KPI con gradiente: ahora vive en @/components/ui/KpiCard (compartido).
+const StatCard = KpiCard;
 
 function SectionHeader({ title, subtitle, color }) {
-  const cls = {
-    blue: "border-blue-500 text-blue-900",
-    violet: "border-violet-500 text-violet-900",
-    emerald: "border-emerald-500 text-emerald-900",
-  }[color] || "border-slate-400 text-slate-900";
+  const grad = {
+    blue: "from-blue-500 to-indigo-600",
+    violet: "from-violet-500 to-purple-600",
+    emerald: "from-emerald-500 to-teal-600",
+  }[color] || "from-slate-400 to-slate-600";
   return (
-    <div className={`border-l-4 pl-3 mb-4 ${cls}`}>
-      <h2 className="text-lg font-bold">{title}</h2>
-      {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
-    </div>
+    <FadeIn className="flex items-center gap-3 mb-4">
+      <div className={`w-1.5 self-stretch rounded-full bg-gradient-to-b ${grad}`} />
+      <div>
+        <h2 className={`text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r ${grad} bg-clip-text text-transparent`}>{title}</h2>
+        {subtitle && <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>}
+      </div>
+    </FadeIn>
   );
 }
 
@@ -223,7 +197,10 @@ export default function Dashboard() {
         : (isAdmin && selectedLocation !== 'all' ? { location_id: selectedLocation } : {});
 
       const [allSales, todayExpenses, allCredits, creditPaymentsToday] = await Promise.all([
-        Sale.filter({ status: 'completed', ...locationFilter }),
+        // ✅ Incluir ventas a crédito: en una venta mixta (efectivo/transferencia
+        // + crédito) el estado queda 'credit', pero la porción pagada SÍ ingresó
+        // a caja. Abajo se suma solo por método real e ignora el método 'credit'.
+        Sale.filter({ status: { $in: ['completed', 'credit'] }, ...locationFilter }),
         Expense.filter(locationFilter),
         Credit.filter(locationFilter),
         Payment.filter({ type: 'credit_payment', ...locationFilter }),
@@ -240,9 +217,11 @@ export default function Dashboard() {
         if (methods.length > 0) {
           methods.forEach(pm => {
             const amt = Number(pm.amount) || 0;
+            // Solo dinero realmente recibido. 'credit' (parte no pagada),
+            // 'courtesy' u otros NO cuentan como ingreso.
             if (pm.method === 'cash') cashIncome += amt;
             else if (pm.method === 'card') cardIncome += amt;
-            else transferIncome += amt;
+            else if (pm.method === 'transfer' || pm.method === 'qr') transferIncome += amt;
           });
         } else {
           cashIncome += Number(sale.total_amount) || 0;
@@ -515,16 +494,16 @@ export default function Dashboard() {
                 {[...Array(4)].map((_, i) => <div key={i} className="h-32 shimmer rounded-xl" />)}
               </div>
             ) : operariosStats ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <Stagger className="space-y-4" stagger={0.08}>
+                <StaggerItem className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <DeliveredUnits deliveries={operariosStats.deliveries} />
                   <PaymentRequestsWidget
                     paymentRequests={operariosStats.paymentRequests}
                     onRefresh={loadOperarios}
                   />
-                </div>
+                </StaggerItem>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <StaggerItem className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <PendingDeliveriesByEmployee
                     employees={operariosStats.employees}
                     products={operariosStats.products}
@@ -535,9 +514,9 @@ export default function Dashboard() {
                     inventory={operariosStats.inventory}
                     products={operariosStats.products}
                   />
-                </div>
+                </StaggerItem>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <StaggerItem className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <PendingPayments
                     employees={operariosStats.employees}
                     deliveries={operariosStats.deliveries}
@@ -552,24 +531,24 @@ export default function Dashboard() {
                     products={operariosStats.products}
                     purchases={operariosStats.purchases}
                   />
-                </div>
+                </StaggerItem>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <StaggerItem className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <OverdueDeliveries
                     employees={operariosStats.employees}
                     dispatches={operariosStats.dispatches}
                     deliveries={operariosStats.deliveries}
                   />
-                </div>
+                </StaggerItem>
 
-                <div className="grid grid-cols-1 gap-4">
+                <StaggerItem className="grid grid-cols-1 gap-4">
                   <ProductionStats
                     employees={operariosStats.employees}
                     deliveries={operariosStats.deliveries}
                     dispatches={operariosStats.dispatches}
                   />
-                </div>
-              </div>
+                </StaggerItem>
+              </Stagger>
             ) : null}
           </section>
         )}

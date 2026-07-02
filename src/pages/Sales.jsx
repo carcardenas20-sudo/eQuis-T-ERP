@@ -14,10 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { Stagger, StaggerItem, FadeIn, scaleIn } from "@/components/motion";
+import KpiCard from "@/components/ui/KpiCard";
 import SalesTable from "../components/sales/SalesTable";
 import SalesMobileList from "../components/sales/SalesMobileList";
 import SaleDetailModal from "../components/sales/SaleDetailModal";
 import EditSaleModal from "../components/sales/EditSaleModal";
+
+const fmtMoney = (n) => `$${Math.round(Number(n) || 0).toLocaleString()}`;
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
@@ -328,8 +332,8 @@ export default function SalesPage() {
       <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Historial de Ventas</h1>
+          <FadeIn>
+            <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Historial de Ventas</h1>
             <p className="text-slate-600 mt-1">
               Consulta y analiza todas las transacciones (Hora local).
             </p>
@@ -340,7 +344,7 @@ export default function SalesPage() {
                 <span>Viendo ventas de: <strong>{sessionLocation.name}</strong></span>
               </div>
             )}
-          </div>
+          </FadeIn>
           <Button
             variant="outline"
             onClick={loadSales}
@@ -353,31 +357,22 @@ export default function SalesPage() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+        <Stagger className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6" stagger={0.08}>
           {[
-            { label: "Total Ventas", value: totalSales, sub: `${completedSales} completadas`, Icon: FileText, cls: "text-slate-900", iconCls: "text-blue-500" },
-            { label: "Ingresos Totales", value: `$${totalRevenue.toLocaleString()}`, Icon: DollarSign, cls: "text-green-600", iconCls: "text-green-500" },
-            { label: "Ticket Promedio", value: `$${averageTicket.toLocaleString()}`, Icon: Calendar, cls: "text-purple-600", iconCls: "text-purple-500" },
+            { label: "Total Ventas", value: totalSales, sub: `${completedSales} completadas`, Icon: FileText, tone: "blue" },
+            { label: "Ingresos Totales", value: totalRevenue, format: fmtMoney, Icon: DollarSign, tone: "emerald" },
+            { label: "Ticket Promedio", value: averageTicket, format: fmtMoney, Icon: Calendar, tone: "purple" },
             {
               label: "Ventas Hoy",
               value: sales.filter(s => s.sale_date === new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })).length,
-              Icon: Package, cls: "text-orange-600", iconCls: "text-orange-500"
+              Icon: Package, tone: "amber"
             },
-          ].map(({ label, value, sub, Icon, cls, iconCls }) => (
-            <Card key={label} className="shadow-sm border-0">
-              <CardHeader className="pb-2 pt-3 px-3 sm:px-6 sm:pb-3 sm:pt-6">
-                <div className="flex items-center justify-between gap-1">
-                  <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 leading-tight">{label}</CardTitle>
-                  <Icon className={`w-4 h-4 shrink-0 ${iconCls}`} />
-                </div>
-              </CardHeader>
-              <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
-                <div className={`text-xl sm:text-2xl font-bold tabular-nums break-all ${cls}`}>{value}</div>
-                {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
-              </CardContent>
-            </Card>
+          ].map(({ label, value, sub, format, Icon, tone }) => (
+            <StaggerItem key={label} variant={scaleIn}>
+              <KpiCard label={label} value={value} sub={sub} format={format} icon={Icon} tone={tone} />
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
 
         {/* Filters */}
         <Card className="shadow-lg border-0">

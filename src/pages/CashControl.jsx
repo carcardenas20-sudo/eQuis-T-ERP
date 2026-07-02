@@ -73,7 +73,11 @@ export default function CashControlPage() {
       windowStartDate.setDate(windowStartDate.getDate() - 60);
       const windowStartStr = windowStartDate.toISOString().slice(0, 10);
 
-      let salesFilter = { status: 'completed' };
+      // ✅ Incluir ventas a crédito: una venta mixta (efectivo/transferencia + crédito)
+      // queda en estado 'credit', pero su porción pagada SÍ es dinero recibido.
+      // El bucle de abajo suma solo por método (cash/transfer/card) e ignora el
+      // método 'credit', así que la parte no pagada nunca entra a caja.
+      let salesFilter = { status: { $in: ['completed', 'credit'] } };
       let expensesFilter = {};
       if (filters.location !== "all") {
         salesFilter.location_id = filters.location;

@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, ShoppingCart, Package, AlertTriangle, AlertCircle } from "lucide-react";
+import { Pressable } from "@/components/motion";
 
 export default function ProductSearch({
   products,
@@ -136,7 +137,9 @@ export default function ProductSearch({
             const isOutOfStock = stockInfo.level === 'empty';
 
             return (
-              <div
+              <Pressable
+                as="div"
+                lift
                 key={product.id}
                 className={`bg-white border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-200 hover:border-blue-300 cursor-pointer relative overflow-hidden ${isOutOfStock ? 'opacity-75' : ''} ${isMobile ? 'p-2' : 'p-4'}` }
                 onClick={() => !isOutOfStock && handleAddToCart(product)}
@@ -241,7 +244,7 @@ export default function ProductSearch({
                     </Badge>
                   </div>
                 )}
-              </div>
+              </Pressable>
             );
           })
         )}
