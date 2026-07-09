@@ -85,6 +85,7 @@ const ALL_PERMISSIONS = [
   { id: "accounting_view_transactions",    label: "Ver Transacciones",     category: "Contabilidad", level: "Intermedio", description: "Ver movimientos bancarios y cuentas" },
   { id: "accounting_manage_bank_accounts", label: "Gestionar Cuentas",     category: "Contabilidad", level: "Gerencial",  description: "Crear y modificar cuentas bancarias" },
   { id: "accounting_reconcile",            label: "Conciliar Cuentas",     category: "Contabilidad", level: "Gerencial",  description: "Realizar conciliación bancaria" },
+  { id: "cash_control_view",               label: "Ver Control de Efectivo (su sucursal)", category: "Contabilidad", level: "Básico", description: "Ver los cierres de caja de SU sucursal en modo lectura (sin poder marcar recogido ni verificado). Ideal para vendedores que necesitan ver su caja del día." },
 
   // ── OPERARIOS ──────────────────────────────────────────────
   { id: "operarios_view",  label: "Ver Módulo Operarios",       category: "Operarios", level: "Básico",     description: "Accede a: Dashboard, Operaciones Diarias, Entregas, Despachos, Pendientes, Cotizador, Compras y Solicitudes de Pago" },
@@ -166,7 +167,7 @@ const PREDEFINED_ROLES = [
   {
     name: "Vendedor",
     description: "Ventas básicas sin descuentos ni devoluciones",
-    permissions: ["dashboard_view", "dashboard_comercial", "pos_sales", "customers_view", "customers_create", "customers_edit", "sales_view", "sales_print", "credits_view", "credits_collect", "products_view", "inventory_view", "reports_basic"]
+    permissions: ["dashboard_view", "dashboard_comercial", "pos_sales", "customers_view", "customers_create", "customers_edit", "sales_view", "sales_print", "credits_view", "credits_collect", "products_view", "inventory_view", "reports_basic", "cash_control_view"]
   },
   {
     name: "Cajero",

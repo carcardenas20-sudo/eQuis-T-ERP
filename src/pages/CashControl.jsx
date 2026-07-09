@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { CashControl, Expense, Location, Sale, Payment } from "@/entities/all";
-import { User } from "@/entities/User";
+import { useSession } from "@/components/providers/SessionProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,9 +35,15 @@ function toDateOnly(val) {
 }
 
 export default function CashControlPage() {
+  const { currentUser, userLocation, permissions, isRealAdmin, previewRoleId } = useSession();
+  const effectiveAdmin = isRealAdmin && !previewRoleId;
+  // Puede marcar recogido/verificado y ver TODAS las sedes (admin o gerencia contable).
+  // Un vendedor con solo 'cash_control_view' NO puede: ve su sucursal en modo lectura.
+  const canManage = effectiveAdmin || (permissions || []).includes('accounting_view_transactions');
+  const canViewAll = canManage;
+
   const [controls, setControls] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBulkLoading, setIsBulkLoading] = useState(false);
   const [filters, setFilters] = useState({ location: "all", dateRange: "week" });
@@ -48,13 +54,13 @@ export default function CashControlPage() {
   const firstLoadRef = useRef(true);
 
   const loadData = useCallback(async () => {
+    if (!currentUser) return;
+    // Vendedores (sin permiso de todas las sedes) solo ven SU sucursal.
+    if (!canViewAll && !userLocation?.id) { setControls([]); setIsLoading(false); return; }
+    const effectiveLocation = canViewAll ? filters.location : userLocation.id;
     setIsLoading(true);
     try {
-      const [user, locs] = await Promise.all([
-        User.me(),
-        Location.filter({ is_active: true })
-      ]);
-      setCurrentUser(user);
+      const locs = await Location.filter({ is_active: true });
       setLocations(locs);
 
       const today = new Date();
@@ -79,15 +85,15 @@ export default function CashControlPage() {
       // método 'credit', así que la parte no pagada nunca entra a caja.
       let salesFilter = { status: { $in: ['completed', 'credit'] } };
       let expensesFilter = {};
-      if (filters.location !== "all") {
-        salesFilter.location_id = filters.location;
-        expensesFilter.location_id = filters.location;
+      if (effectiveLocation !== "all") {
+        salesFilter.location_id = effectiveLocation;
+        expensesFilter.location_id = effectiveLocation;
       }
       salesFilter.sale_date = { $gte: windowStartStr };
       expensesFilter.expense_date = { $gte: windowStartStr };
 
       let paymentsFilter = { type: 'credit_payment' };
-      if (filters.location !== "all") paymentsFilter.location_id = filters.location;
+      if (effectiveLocation !== "all") paymentsFilter.location_id = effectiveLocation;
       paymentsFilter.payment_date = { $gte: windowStartStr };
 
       const [sales, expenses, creditPayments] = await Promise.all([
@@ -194,7 +200,7 @@ export default function CashControlPage() {
       for (const control of existingControls) {
         if (controlsInArray.has(control.id)) continue;
         if (control.cash_collected && control.transfers_verified) continue;
-        if (filters.location !== "all" && control.location_id !== filters.location) continue;
+        if (effectiveLocation !== "all" && control.location_id !== effectiveLocation) continue;
         const controlDate = toDateOnly(control.control_date);
         const controlExpenses = expenses.filter(e =>
           toDateOnly(e.expense_date) === controlDate &&
@@ -229,11 +235,18 @@ export default function CashControlPage() {
       console.error("Error:", error);
     }
     setIsLoading(false);
-  }, [filters]);
+  }, [filters, currentUser, canViewAll, userLocation]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Vendedores: fijar el filtro a su sucursal (no pueden cambiarlo).
+  useEffect(() => {
+    if (!canViewAll && userLocation?.id) {
+      setFilters(p => p.location === userLocation.id ? p : { ...p, location: userLocation.id });
+    }
+  }, [canViewAll, userLocation]);
 
   const handleMarkCashCollected = async (control) => {
     await CashControl.update(control.id, {
@@ -423,7 +436,7 @@ export default function CashControlPage() {
                 <CheckCircle2 className="w-4 h-4" /> Recogido
                 {c.cash_collected_by && <span className="text-green-600 ml-1">· {c.cash_collected_by.split('@')[0]}</span>}
               </div>
-            ) : (
+            ) : canManage ? (
               <Button
                 size="sm"
                 className="w-full bg-green-600 hover:bg-green-700 text-white text-xs"
@@ -431,6 +444,10 @@ export default function CashControlPage() {
               >
                 ✓ Marcar Recogido
               </Button>
+            ) : (
+              <div className="flex items-center gap-1 text-amber-600 text-xs font-semibold">
+                <Clock className="w-4 h-4" /> Pendiente de recoger
+              </div>
             )}
           </div>
 
@@ -445,7 +462,7 @@ export default function CashControlPage() {
                 <CheckCircle2 className="w-4 h-4" /> Verificado
                 {c.transfers_verified_by && <span className="text-blue-600 ml-1">· {c.transfers_verified_by.split('@')[0]}</span>}
               </div>
-            ) : (
+            ) : canManage ? (
               <Button
                 size="sm"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs"
@@ -453,6 +470,10 @@ export default function CashControlPage() {
               >
                 ✓ Marcar Verificado
               </Button>
+            ) : (
+              <div className="flex items-center gap-1 text-amber-600 text-xs font-semibold">
+                <Clock className="w-4 h-4" /> Pendiente de verificar
+              </div>
             )}
           </div>
 
@@ -483,17 +504,34 @@ export default function CashControlPage() {
       <div className="max-w-7xl mx-auto space-y-4">
         <h1 className="text-2xl sm:text-3xl font-bold">Control de Efectivo</h1>
 
+        {!canManage && (
+          <div className="text-xs sm:text-sm bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-3 py-2">
+            👁️ Modo lectura: ves los cierres de caja de tu sucursal. El administrador marca el efectivo como recogido/verificado.
+          </div>
+        )}
+        {!canViewAll && !userLocation?.id && (
+          <div className="text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
+            No tienes una sucursal asignada. Pídele al administrador que te asigne una para ver tu control de efectivo.
+          </div>
+        )}
+
         {/* Filters */}
         <Card>
           <CardContent className="p-4">
             <div className="grid grid-cols-2 gap-4">
-              <Select value={filters.location} onValueChange={(v) => setFilters(p => ({ ...p, location: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las sucursales</SelectItem>
-                  {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {canViewAll ? (
+                <Select value={filters.location} onValueChange={(v) => setFilters(p => ({ ...p, location: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las sucursales</SelectItem>
+                    {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center px-3 h-10 rounded-md border border-slate-200 bg-slate-100 text-sm font-medium text-slate-700">
+                  📍 {userLocation?.name || 'Tu sucursal'}
+                </div>
+              )}
               <Select value={filters.dateRange} onValueChange={(v) => setFilters(p => ({ ...p, dateRange: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -517,7 +555,7 @@ export default function CashControlPage() {
                 </div>
                 <div className="text-xs text-emerald-600 mt-1">Sucursal: {selectedLocationName}</div>
               </div>
-              {historicalPendingCount > 0 && (
+              {canManage && historicalPendingCount > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -553,7 +591,7 @@ export default function CashControlPage() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 justify-between sm:justify-end">
-                        {isExpanded && dayPending.length > 0 && (
+                        {canManage && isExpanded && dayPending.length > 0 && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -578,8 +616,9 @@ export default function CashControlPage() {
           </div>
         )}
 
-        {/* Completed */}
-        {completed.length > 0 && (
+        {/* Completed — solo visible para quien administra (admin/gerencia).
+            El vendedor ve únicamente los cierres pendientes (vigentes). */}
+        {canManage && completed.length > 0 && (
           <div className="space-y-3">
             <h2 className="text-xl font-bold flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -603,10 +642,12 @@ export default function CashControlPage() {
           </div>
         )}
 
-        {pending.length === 0 && completed.length === 0 && (
+        {pending.length === 0 && (canManage ? completed.length === 0 : true) && (
           <Card>
             <CardContent className="p-8 text-center text-slate-500">
-              No hay registros para el período seleccionado.
+              {canManage
+                ? 'No hay registros para el período seleccionado.'
+                : '✅ No tienes cierres pendientes por recoger o verificar.'}
             </CardContent>
           </Card>
         )}

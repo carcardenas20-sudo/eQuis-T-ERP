@@ -44,7 +44,7 @@ const comercialGroups = [
     title: "Finanzas", items: [
       { title: "Gastos", url: createPageUrl("Expenses"), icon: Receipt, permissions: ["expenses_view"] },
       { title: "Cuentas por Pagar", url: createPageUrl("AccountsPayable"), icon: CreditCard, permissions: ["accounts_payable_view"] },
-      { title: "Control de Efectivo", url: createPageUrl("CashControl"), icon: Wallet, permissions: ["accounting_view_transactions"] },
+      { title: "Control de Efectivo", url: createPageUrl("CashControl"), icon: Wallet, permissions: ["accounting_view_transactions", "cash_control_view"] },
       { title: "Cuentas Bancarias", url: createPageUrl("BankAccounts"), icon: Building2, permissions: ["accounting_view_transactions"] },
       { title: "Confirmaciones Bancarias", url: createPageUrl("ConfirmacionesBancarias"), icon: Banknote, permissions: ["accounting_view_transactions"] },
       { title: "Reportes", url: createPageUrl("Reports"), icon: BarChart3, permissions: ["reports_basic"] },
