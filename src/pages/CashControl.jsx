@@ -34,6 +34,11 @@ function toDateOnly(val) {
   return String(val).slice(0, 10);
 }
 
+// Redondeo a centavos para comparar/almacenar montos sin ruido de punto flotante.
+function round2(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
 export default function CashControlPage() {
   const { currentUser, userLocation, permissions, isRealAdmin, previewRoleId } = useSession();
   const effectiveAdmin = isRealAdmin && !previewRoleId;
@@ -167,17 +172,27 @@ export default function CashControlPage() {
         // Si no hay actividad y no existe un control previo, saltar
         if (!hasActivity && !control) continue;
 
-        const newCash = data.cash;
-        const newTransfer = data.transfers;
-        const newCard = data.card;
+        const newCash = round2(data.cash);
+        const newTransfer = round2(data.transfers);
+        const newCard = round2(data.card);
 
         if (control) {
-          if (control.cash_amount !== newCash || control.transfer_amount !== newTransfer || control.card_amount !== newCard) {
-            updatePromises.push(
-              CashControl.update(control.id, { cash_amount: newCash, transfer_amount: newTransfer, card_amount: newCard })
-            );
+          const cashChanged = round2(control.cash_amount) !== newCash;
+          const transferChanged = round2(control.transfer_amount) !== newTransfer;
+          const cardChanged = round2(control.card_amount) !== newCard;
+
+          if (cashChanged || transferChanged || cardChanged) {
+            const updates = { cash_amount: newCash, transfer_amount: newTransfer, card_amount: newCard };
+            // 🔒 Integridad de caja: si el monto de un día YA cerrado cambia
+            // (p. ej. una venta se re-fecha a ese día ya recogido/verificado),
+            // reabrir su revisión para que el admin lo vuelva a cuadrar.
+            if (cashChanged && control.cash_collected) updates.cash_collected = false;
+            if (transferChanged && control.transfers_verified) updates.transfers_verified = false;
+            updatePromises.push(CashControl.update(control.id, updates));
+            control = { ...control, ...updates };
+          } else {
+            control = { ...control, cash_amount: newCash, transfer_amount: newTransfer, card_amount: newCard };
           }
-          control = { ...control, cash_amount: newCash, transfer_amount: newTransfer, card_amount: newCard };
         } else {
           control = await CashControl.create({
             location_id: data.location_id,
@@ -381,6 +396,13 @@ export default function CashControlPage() {
           <h3 className="font-bold text-lg">{loc?.name || '(sin sucursal)'}</h3>
           {allDone && <Badge className="bg-green-500 text-white">✓ Completado</Badge>}
         </div>
+
+        {((!c.cash_collected && c.cash_collected_date) || (!c.transfers_verified && c.transfers_verified_date)) && (
+          <div className="mb-3 text-xs sm:text-sm bg-amber-50 border border-amber-300 text-amber-800 rounded-lg px-3 py-2 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span><b>Reabierto:</b> este día se había cerrado, pero su monto cambió después (p. ej. una venta re-fechada). Revísalo y márcalo de nuevo.</span>
+          </div>
+        )}
 
         {/* Summary */}
         <div className="mb-4 p-4 bg-white rounded-lg border border-slate-200">
