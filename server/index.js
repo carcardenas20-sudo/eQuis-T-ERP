@@ -173,7 +173,7 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
     // Buscar primero en la tabla propia, luego en app_entities (compatibilidad con traslados viejos)
     let trasRow = null, useAppEntities = false;
     try {
-      const { rows } = await query(`SELECT id, estado, origen_location_id, destino_location_id, data FROM entity_traslado WHERE id = $1`, [traslado_id]);
+      const { rows } = await query(`SELECT id, numero_traslado, estado, origen_location_id, destino_location_id, data FROM entity_traslado WHERE id = $1`, [traslado_id]);
       if (rows.length) trasRow = rows[0];
     } catch (_) {}
     if (!trasRow) {
@@ -185,6 +185,7 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
     // Combinar columnas tipadas + JSONB (las tipadas tienen precedencia)
     const traslado = {
       ...trasRow.data,
+      ...(trasRow.numero_traslado != null && { numero_traslado: trasRow.numero_traslado }),
       ...(trasRow.estado !== undefined && { estado: trasRow.estado }),
       ...(trasRow.origen_location_id !== undefined && { origen_location_id: trasRow.origen_location_id }),
       ...(trasRow.destino_location_id !== undefined && { destino_location_id: trasRow.destino_location_id }),
@@ -223,6 +224,12 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
           (Number(origInv.current_stock) || 0) - totalRecibido,
           Math.max(0, (Number(origInv.available_stock) || 0) - totalRecibido),
           origInv.id,
+        ]);
+      } else {
+        // No existía fila de inventario en el origen: crearla (en negativo) para NO
+        // perder la salida. Antes se saltaba en silencio → el inventario global se inflaba.
+        await query(`INSERT INTO entity_inventory (id, product_id, location_id, current_stock, available_stock, data) VALUES ($1,$2,$3,$4,$5,$6)`, [
+          crypto.randomUUID(), pId, traslado.origen_location_id, -totalRecibido, 0, JSON.stringify({}),
         ]);
       }
 
