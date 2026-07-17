@@ -511,7 +511,7 @@ app.post('/api/confirmaciones/mock', requireAuth, async (req, res) => {
 app.post('/api/confirmaciones/:id/vincular', requireAuth, async (req, res) => {
   try {
     const { venta_id, credito_id } = req.body;
-    const userId = req.user?.id || req.user?.email || 'system';
+    const userId = req.userId || req.userEmail || 'system';
     const { rowCount } = await query(
       `UPDATE entity_confirmacion_bancaria
        SET estado = 'vinculada',
@@ -700,7 +700,7 @@ app.post('/api/functions/enviarRecomendacionCalidad', requireAuth, async (req, r
   try {
     const { employee_id, texto, categoria, header, footer } = req.body;
     if (!employee_id || !texto) return res.status(400).json({ error: 'employee_id y texto son requeridos' });
-    const nombre = await enviarYRegistrar({ employee_id, texto, categoria, enviado_por: req.user?.email || '', header, footer });
+    const nombre = await enviarYRegistrar({ employee_id, texto, categoria, enviado_por: req.userEmail || '', header, footer });
     res.json({ ok: true, nombre });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -720,7 +720,7 @@ app.post('/api/functions/enviarRecomendacionTodos', requireAuth, async (req, res
     const results = { ok: [], errors: [] };
     for (const emp of empleados) {
       try {
-        const nombre = await enviarYRegistrar({ employee_id: emp.employee_id, texto, categoria, enviado_por: req.user?.email || '', header, footer });
+        const nombre = await enviarYRegistrar({ employee_id: emp.employee_id, texto, categoria, enviado_por: req.userEmail || '', header, footer });
         results.ok.push(nombre);
       } catch (e) {
         results.errors.push(e.message);

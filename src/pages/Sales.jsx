@@ -291,18 +291,26 @@ export default function SalesPage() {
             await Inventory.update(currentInventory.id, {
               current_stock: currentInventory.current_stock + item.quantity
             });
-
-            // Create a reversal inventory movement
-            await InventoryMovement.create({
+          } else {
+            // No existía fila de inventario: crearla para devolver el stock.
+            // Antes se saltaba en silencio → el inventario quedaba descuadrado hacia abajo.
+            await Inventory.create({
               product_id: item.product_id,
               location_id: saleToDelete.location_id,
-              movement_type: "return", // Using 'return' to signify stock coming back in
-              quantity: item.quantity, // Positive quantity
-              reference_id: saleToDelete.id,
-              reason: `Anulación de factura #${saleToDelete.invoice_number || saleToDelete.id}`,
-              movement_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+              current_stock: item.quantity
             });
           }
+
+          // Movimiento de reversión — SIEMPRE se registra (exista o no la fila).
+          await InventoryMovement.create({
+            product_id: item.product_id,
+            location_id: saleToDelete.location_id,
+            movement_type: "return", // stock que regresa
+            quantity: item.quantity,
+            reference_id: saleToDelete.id,
+            reason: `Anulación de factura #${saleToDelete.invoice_number || saleToDelete.id}`,
+            movement_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+          });
           // Delete the sale item record
           await SaleItem.delete(item.id);
         }
