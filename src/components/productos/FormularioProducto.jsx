@@ -687,10 +687,12 @@ export default function FormularioProducto({ producto, materiasPrimas, colores =
                           return (
                             <div key={mat.row_id || i} className="flex items-center gap-3">
                               <span className="text-xs text-slate-600 flex-1 truncate">{mp?.nombre || mat.materia_prima_id}</span>
-                              <Select value={mat.operacion_portal_id || ""} onValueChange={v => actualizarMaterial(realIdx, 'operacion_portal_id', v || null)}>
+                              {/* OJO: el sentinela debe ser "_none", NO cadena vacía.
+                                  Radix lanza error si un SelectItem tiene value="" → tumba el render (pantalla en blanco). */}
+                              <Select value={mat.operacion_portal_id || "_none"} onValueChange={v => actualizarMaterial(realIdx, 'operacion_portal_id', v === "_none" ? null : v)}>
                                 <SelectTrigger className="h-7 text-xs w-44 shrink-0"><SelectValue placeholder="— Sin módulo —" /></SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="">— Sin módulo —</SelectItem>
+                                  <SelectItem value="_none">— Sin módulo —</SelectItem>
                                   {operaciones.map(op => <SelectItem key={op.id} value={op.id}>{op.nombre}</SelectItem>)}
                                 </SelectContent>
                               </Select>
