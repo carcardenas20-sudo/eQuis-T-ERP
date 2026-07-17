@@ -184,7 +184,7 @@ export default function CreditDetailModal({ credit, onClose, onRefresh }) {
                 <span className="text-sm font-medium text-blue-800">Total Crédito</span>
               </div>
               <p className="text-2xl font-bold text-blue-900">
-                ${(credit.total_amount || 0).toLocaleString()}
+                ${(creditData.total_amount || 0).toLocaleString()}
               </p>
             </div>
 
@@ -194,7 +194,7 @@ export default function CreditDetailModal({ credit, onClose, onRefresh }) {
                 <span className="text-sm font-medium text-green-800">Pagado</span>
               </div>
               <p className="text-2xl font-bold text-green-900">
-                ${((credit.total_amount || 0) - (credit.pending_amount || 0)).toLocaleString()}
+                ${((creditData.total_amount || 0) - (creditData.pending_amount || 0)).toLocaleString()}
               </p>
             </div>
 
@@ -204,7 +204,7 @@ export default function CreditDetailModal({ credit, onClose, onRefresh }) {
                 <span className="text-sm font-medium text-orange-800">Pendiente</span>
               </div>
               <p className="text-2xl font-bold text-orange-900">
-                ${(credit.pending_amount || 0).toLocaleString()}
+                ${(creditData.pending_amount || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -327,13 +327,13 @@ export default function CreditDetailModal({ credit, onClose, onRefresh }) {
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-slate-700">Total Pagado:</span>
                     <span className="text-2xl font-bold text-green-600">
-                      ${(credit.paid_amount || 0).toLocaleString()}
+                      ${(creditData.paid_amount || 0).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-slate-600">Pendiente:</span>
                     <span className="text-lg font-semibold text-orange-600">
-                      ${(credit.pending_amount || 0).toLocaleString()}
+                      ${(creditData.pending_amount || 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
