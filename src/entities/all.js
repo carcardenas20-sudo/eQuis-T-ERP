@@ -19,6 +19,7 @@ export const Customer = makeEntity('Customer');
 export const Expense = makeEntity('Expense');
 export const ExpenseTask = makeEntity('ExpenseTask');
 export const ExpenseTemplate = makeEntity('ExpenseTemplate');
+export const Hoja = makeEntity('Hoja');
 export const Inventory = makeEntity('Inventory');
 export const InventoryMovement = makeEntity('InventoryMovement');
 export const Inventario = makeEntity('Inventario');

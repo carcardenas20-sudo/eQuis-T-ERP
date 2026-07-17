@@ -666,6 +666,21 @@ export const ENTITY_SCHEMAS = {
     indexes: ['banco', 'estado', 'fecha_pago'],
   },
 
+  // ============================================================
+  // HERRAMIENTAS
+  // ============================================================
+
+  // Hoja de cálculo simple (apuntes / cuentas sueltas antes de presupuestar).
+  // La cuadrícula y las fórmulas viven en data.celdas (JSONB).
+  Hoja: {
+    table: 'entity_hoja',
+    typed: {
+      nombre: 'TEXT',
+      creado_por: 'TEXT',
+    },
+    indexes: ['creado_por'],
+  },
+
   ConfirmacionBancaria: {
     table: 'entity_confirmacion_bancaria',
     typed: {

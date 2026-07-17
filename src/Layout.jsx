@@ -81,6 +81,9 @@ const produccionGroups = [
       { title: "Proveedores", url: createPageUrl("Prod_Proveedores"), icon: Building2, permissions: ["produccion_view"] },
       { title: "Compras Prod.", url: createPageUrl("Prod_Compras"), icon: ShoppingBag, permissions: ["produccion_view"] },
       { title: "Presupuestos", url: createPageUrl("Prod_Presupuestos"), icon: Calculator, permissions: ["produccion_view", "produccion_pipeline_view"] },
+      // Permiso "sheets_admin": ningún rol lo trae por defecto, así que SOLO los admin
+      // lo ven (el Layout deja pasar a los admin). Para dárselo a alguien, se asigna en Roles.
+      { title: "Apuntes y Cuentas", url: createPageUrl("Hojas"), icon: BookOpen, permissions: ["sheets_admin"] },
     ]
   },
 ];

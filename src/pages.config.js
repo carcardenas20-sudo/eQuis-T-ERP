@@ -42,6 +42,9 @@ import Prod_Presupuestos from './pages/Prod_Presupuestos';
 import Prod_Asignaciones from './pages/Prod_Asignaciones';
 import Prod_EstadoCuentaPublico from './pages/Prod_EstadoCuentaPublico';
 
+// ── HERRAMIENTAS ──────────────────────────────────────────────
+import Hojas from './pages/Hojas';
+
 // ── MÓDULO SERVICIOS A TERCEROS ───────────────────────────────
 import Serv_Catalogo from './pages/Serv_Catalogo';
 import Serv_Ordenes from './pages/Serv_Ordenes';
@@ -104,6 +107,9 @@ export const PAGES = {
   "Prod_Presupuestos": Prod_Presupuestos,
   "Prod_Asignaciones": Prod_Asignaciones,
   "Prod_EstadoCuentaPublico": Prod_EstadoCuentaPublico,
+
+  // Herramientas
+  "Hojas": Hojas,
 
   // Servicios a terceros
   "Serv_Catalogo": Serv_Catalogo,

@@ -107,6 +107,7 @@ const ALL_PERMISSIONS = [
   { id: "locations_edit",        label: "Editar Sucursales",         category: "Sistema", level: "Administrador",description: "Modificar datos de sucursales" },
   { id: "settings_system",       label: "Configuración General",     category: "Sistema", level: "Administrador",description: "Modificar configuraciones generales del sistema" },
   { id: "settings_price_lists",  label: "Listas de Precios",         category: "Sistema", level: "Gerencial",    description: "Gestionar listas de precios" },
+  { id: "sheets_admin",          label: "Apuntes y Cuentas",         category: "Sistema", level: "Gerencial",    description: "Acceder a las hojas de cálculo de apuntes/cuentas sueltas. Por defecto NINGÚN rol lo trae: solo los administradores la ven. Asígnalo aquí si quieres dárselo a alguien más." },
   { id: "data_export",           label: "Exportar Datos",            category: "Sistema", level: "Gerencial",    description: "Exportar registros del sistema" },
   { id: "system_logs",           label: "Ver Logs del Sistema",      category: "Sistema", level: "Administrador",description: "Consultar registros de actividad del sistema" },
 ];
