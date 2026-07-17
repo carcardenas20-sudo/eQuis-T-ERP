@@ -40,7 +40,6 @@ import CustomerForm from "../components/pos/CustomerForm";
 import ExchangeModal from "../components/pos/ExchangeModal";
 import QuoteModal from "../components/pos/QuoteModal";
 import HoldCartManager from "../components/pos/HoldCartManager";
-import DiscountPinModal from "../components/pos/DiscountPinModal";
 
 
 
@@ -87,7 +86,6 @@ export default function POS() {
   const [showExchange, setShowExchange] = useState(false);
   const [showQuote, setShowQuote] = useState(false);
   const [showHoldCart, setShowHoldCart] = useState(false);
-  const [showDiscountPin, setShowDiscountPin] = useState(false);
   const [postSaleInfo, setPostSaleInfo] = useState(null);
   const [pendingTransferencia, setPendingTransferencia] = useState(null);
 
@@ -311,12 +309,6 @@ export default function POS() {
     alert(`Cambio registrado exitosamente. Ref: ${exchangeRef}`);
   }, [selectedLocationId]);
 
-  const handleDiscountAuthorized = useCallback(() => {
-    setShowDiscountPin(false);
-    // After authorization, admin has shared PIN. Now allow global discount for 5 min (use permission already in cart)
-    alert("Descuento autorizado. Ahora puedes aplicar el descuento en el carrito.");
-  }, []);
-
   const loadIngresos = async () => {
     if (ingresosLoaded) return;
     setIngresosLoading(true);
@@ -406,7 +398,7 @@ export default function POS() {
         customer_email: customer?.email || "",
         customer_id: customer?.id || null,
         sale_date: saleDateTime, // ✅ ISO timestamp completo
-        subtotal: totals.subtotalAfterDiscount,
+        subtotal: totals.subtotal, // BRUTO: la factura resta el descuento aparte (Subtotal − Descuento = neto)
         tax_amount: totals.taxAmount,
         discount_amount: totals.globalDiscountAmount,
         total_amount: totals.total,
@@ -806,9 +798,6 @@ export default function POS() {
               <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowHoldCart(true)} disabled={!selectedLocationId}>
                 <Clock className="w-4 h-4 text-amber-600" /> En Espera
               </Button>
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowDiscountPin(true)}>
-                <Shield className="w-4 h-4 text-purple-600" /> Pin Descuento
-              </Button>
               <Button variant="outline" size="sm" className="gap-2 ml-auto" onClick={() => { setShowIngresos(true); loadIngresos(); }}>
                 <CalendarClock className="w-4 h-4 text-indigo-600" /> Próximos ingresos
               </Button>
@@ -958,13 +947,6 @@ export default function POS() {
           currentCustomer={customer}
           onRestoreCart={handleRestoreCart}
           onClose={() => setShowHoldCart(false)}
-        />
-      )}
-
-      {showDiscountPin && (
-        <DiscountPinModal
-          onAuthorized={handleDiscountAuthorized}
-          onClose={() => setShowDiscountPin(false)}
         />
       )}
 
