@@ -18,8 +18,51 @@ function requireAdminForPrivileged(req, res, next) {
   next();
 }
 
+// RBAC granular (etapa 1): exige el permiso correspondiente para ELIMINAR ciertas
+// entidades directamente vía API. Solo cubre borrados DIRECTOS de estas entidades
+// (acciones que el frontend ya restringe por permiso). NO gatea escrituras que son
+// efecto secundario de flujos (ventas, anulaciones, abonos), para no bloquear a
+// usuarios legítimos. Los admin pasan siempre. Ante cualquier fallo, se permite (fail-open).
+const DELETE_PERMISSION = {
+  Product: 'products_delete',
+  Customer: 'customers_delete',
+  Expense: 'expenses_delete',
+  BankAccount: 'accounting_manage_bank_accounts',
+};
+
+async function loadUserPermissions(userId) {
+  if (!userId) return [];
+  const { rows } = await query('SELECT role, role_id FROM app_users WHERE id = $1', [userId]);
+  const u = rows[0];
+  if (!u) return [];
+  if (u.role === 'admin') return null; // null = admin (todos los permisos)
+  if (!u.role_id) return [];
+  const r = await query('SELECT data FROM entity_role WHERE id = $1', [u.role_id]);
+  const perms = r.rows[0]?.data?.permissions;
+  return Array.isArray(perms) ? perms : [];
+}
+
+async function requirePermissionForSensitiveDelete(req, res, next) {
+  try {
+    if (req.method !== 'DELETE') return next();
+    const needed = DELETE_PERMISSION[req.params.type];
+    if (!needed) return next();
+    if (req.userRole === 'admin') return next();
+    const perms = await loadUserPermissions(req.userId);
+    if (perms === null) return next(); // admin
+    if (!perms.includes(needed)) {
+      return res.status(403).json({ error: `No tienes permiso para eliminar "${req.params.type}"` });
+    }
+    next();
+  } catch (e) {
+    console.warn('RBAC (delete) omitido por error:', e.message);
+    next(); // fail-open: no bloquear por un fallo técnico
+  }
+}
+
 router.use('/:type', requireAdminForPrivileged);
 router.use('/:type/:id', requireAdminForPrivileged);
+router.use('/:type/:id', requirePermissionForSensitiveDelete);
 
 function buildOrderBy(orderByParam, schema) {
   if (!orderByParam) return 'ORDER BY created_date DESC';
