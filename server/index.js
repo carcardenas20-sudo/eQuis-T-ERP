@@ -203,6 +203,16 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
       return res.json({ ok: true, estado: 'rechazado' });
     }
 
+    // Reclamo atómico: pasar de 'pendiente' a 'aceptado' en UNA sola operación.
+    // Si dos peticiones llegan a la vez, solo una "gana" (rowCount 1); la otra aborta
+    // ANTES de tocar el inventario, evitando doble entrada/salida (condición de carrera).
+    const claim = useAppEntities
+      ? await query(`UPDATE app_entities SET data = data || '{"estado":"aceptado"}'::jsonb, updated_date = NOW() WHERE entity_type='Traslado' AND id=$1 AND data->>'estado'='pendiente'`, [traslado_id])
+      : await query(`UPDATE entity_traslado SET estado='aceptado' WHERE id=$1 AND estado='pendiente'`, [traslado_id]);
+    if (claim.rowCount === 0) {
+      return res.status(409).json({ error: 'El traslado ya fue procesado por otra persona.' });
+    }
+
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
     const { rows: allInv } = await query(`SELECT id, product_id, location_id, current_stock, available_stock FROM entity_inventory`);
 
