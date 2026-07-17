@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PayableInstallment } from "@/entities/PayableInstallment";
-import { PayablePayment, Expense, BankAccount } from "@/entities/all";
+import { PayablePayment, Expense, BankAccount, AccountPayable } from "@/entities/all";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ export default function InstallmentPaymentModal({ payable, onClose, onSaved }) {
   const [paymentDate, setPaymentDate] = useState(
     new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
   );
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     load();
@@ -50,6 +51,7 @@ export default function InstallmentPaymentModal({ payable, onClose, onSaved }) {
   ];
 
   const handleSubmit = async () => {
+    if (saving) return;
     if (totalEntered <= 0) { alert("Ingresa al menos un monto"); return; }
     if (!locationId) { alert("Selecciona una sucursal"); return; }
     if (method === 'transfer' && !bankAccountId) { alert("Selecciona una cuenta bancaria"); return; }
@@ -61,49 +63,57 @@ export default function InstallmentPaymentModal({ payable, onClose, onSaved }) {
       if (v > (pendingById[id]||0)) { alert("Un monto excede el saldo de su cuota"); return; }
     }
 
-    // Crear pagos por cuota y actualizar cuotas; además actualizar totales del payable
-    let totalPaidNow = 0;
-    for (const inst of installments) {
-      const v = Number(amounts[inst.id]||0);
-      if (!v) continue;
-      totalPaidNow += v;
+    setSaving(true);
+    try {
+      // Crear pagos por cuota y actualizar cuotas; además actualizar totales del payable
+      let totalPaidNow = 0;
+      for (const inst of installments) {
+        const v = Number(amounts[inst.id]||0);
+        if (!v) continue;
+        totalPaidNow += v;
 
-      const payment = await PayablePayment.create({
-        payable_id: payable.id,
-        payment_date: new Date().toISOString(),
-        amount: v,
-        method,
-        reference: reference || "",
-        bank_account_id: bankAccountId || null,
-        location_id: locationId,
-        notes: notes ? `${notes} | Cuota #${inst.sequence_number}` : `Pago cuota #${inst.sequence_number}`
-      });
-
-      if (method === 'cash') {
-        const expense = await Expense.create({
-          description: `Pago cuota #${inst.sequence_number} a ${payable.supplier_name} - ${payable.description}`,
+        const payment = await PayablePayment.create({
+          payable_id: payable.id,
+          payment_date: new Date().toISOString(),
           amount: v,
-          category: payable.category || "otros",
-          expense_date: paymentDate,
+          method,
+          reference: reference || "",
+          bank_account_id: bankAccountId || null,
           location_id: locationId,
-          payment_method: 'cash',
-          receipt_number: reference || "",
-          supplier: payable.supplier_name,
-          notes: `Abono a CxP #${payable.id} cuota #${inst.sequence_number}`
+          notes: notes ? `${notes} | Cuota #${inst.sequence_number}` : `Pago cuota #${inst.sequence_number}`
         });
-        await PayablePayment.update(payment.id, { expense_id: expense.id });
+
+        if (method === 'cash') {
+          const expense = await Expense.create({
+            description: `Pago cuota #${inst.sequence_number} a ${payable.supplier_name} - ${payable.description}`,
+            amount: v,
+            category: payable.category || "otros",
+            expense_date: paymentDate,
+            location_id: locationId,
+            payment_method: 'cash',
+            receipt_number: reference || "",
+            supplier: payable.supplier_name,
+            notes: `Abono a CxP #${payable.id} cuota #${inst.sequence_number}`
+          });
+          await PayablePayment.update(payment.id, { expense_id: expense.id });
+        }
+
+        const newPaid = Number((inst.paid_amount||0) + v);
+        const pending = Math.max(0, (inst.amount||0) - newPaid);
+        await PayableInstallment.update(inst.id, { paid_amount: newPaid, status: pending <= 0 ? 'paid' : 'partial' });
       }
 
-      const newPaid = Number((inst.paid_amount||0) + v);
-      const pending = Math.max(0, (inst.amount||0) - newPaid);
-      await PayableInstallment.update(inst.id, { paid_amount: newPaid, status: pending <= 0 ? 'paid' : 'partial' });
+      const newPaidAmount = Number((payable.paid_amount||0) + totalPaidNow);
+      const newPendingAmount = Math.max(0, Number((payable.total_amount||0) - newPaidAmount));
+      await AccountPayable.update(payable.id, { paid_amount: newPaidAmount, pending_amount: newPendingAmount, status: newPendingAmount <= 0 ? 'paid' : 'partial' });
+
+      onSaved && onSaved();
+    } catch (e) {
+      console.error("Error registrando pago por cuotas:", e);
+      alert("Error al registrar los pagos: " + (e?.message || e) + "\n\nRevisa el saldo de la cuenta por pagar; algunos registros pudieron quedar a medias.");
+    } finally {
+      setSaving(false);
     }
-
-    const newPaidAmount = Number((payable.paid_amount||0) + totalPaidNow);
-    const newPendingAmount = Math.max(0, Number((payable.total_amount||0) - newPaidAmount));
-    await AccountPayable.update(payable.id, { paid_amount: newPaidAmount, pending_amount: newPendingAmount, status: newPendingAmount <= 0 ? 'paid' : 'partial' });
-
-    onSaved && onSaved();
   };
 
   return (
@@ -206,8 +216,8 @@ export default function InstallmentPaymentModal({ payable, onClose, onSaved }) {
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t">
-            <Button variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSubmit}>Registrar Pagos</Button>
+            <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={saving}>{saving ? "Registrando..." : "Registrar Pagos"}</Button>
           </div>
         </CardContent>
       </Card>

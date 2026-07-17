@@ -177,9 +177,12 @@ export default function SalesPage() {
         status: newStatus
       });
 
-      // Delete existing payments for this sale
+      // Borrar SOLO los pagos propios de la venta. Los abonos al crédito
+      // (type 'credit_payment') son pagos aparte del cliente y NO se deben borrar:
+      // hacerlo perdía el efectivo abonado y descuadraba la caja.
       const existingPayments = await Payment.filter({ sale_id: editingSale.id });
       for (const payment of existingPayments) {
+        if (payment.type === 'credit_payment') continue; // conservar abonos
         await Payment.delete(payment.id);
       }
 
@@ -199,34 +202,46 @@ export default function SalesPage() {
         }
       }
 
-      // Handle credit changes
+      // Manejo del crédito — CONSERVANDO lo ya abonado.
+      // Antes se borraba el crédito y se creaba uno nuevo con el saldo COMPLETO,
+      // ignorando los abonos → la deuda del cliente se inflaba. Ahora se actualiza
+      // el crédito existente (conserva su id y sus abonos vinculados) preservando paid_amount.
       const existingCredits = await Credit.filter({ sale_id: editingSale.id });
       const hasNewCredit = editedData.payment_methods.some(p => p.method === 'credit');
+      const creditPaymentMethod = editedData.payment_methods.find(p => p.method === 'credit');
+      const creditAmount = creditPaymentMethod ? creditPaymentMethod.amount : 0;
 
-      // Delete existing credits
-      for (const credit of existingCredits) {
-        await Credit.delete(credit.id);
-      }
-
-      // Create new credit if needed
       if (hasNewCredit) {
-        const creditPaymentMethod = editedData.payment_methods.find(p => p.method === 'credit');
-        const creditAmount = creditPaymentMethod ? creditPaymentMethod.amount : 0;
         const dueDate = new Date(editedData.sale_date);
-        dueDate.setDate(dueDate.getDate() + 30); // 30 days from the edited sale date
-
-        await Credit.create({
-          sale_id: editingSale.id,
-          customer_id: editedData.customer_id || editingSale.customer_id || null, // Prioritize edited customer ID, then original, then null
-          customer_name: editedData.customer_name, // Use edited customer name
-          customer_phone: editedData.customer_phone, // Use edited customer phone
+        dueDate.setDate(dueDate.getDate() + 30); // 30 días desde la fecha editada
+        const existing = existingCredits[0];
+        const alreadyPaid = existing ? (Number(existing.paid_amount) || 0) : 0;
+        const paid = Math.min(alreadyPaid, creditAmount);
+        const pending = Math.max(0, creditAmount - paid);
+        const creditFields = {
+          customer_id: editedData.customer_id || editingSale.customer_id || null,
+          customer_name: editedData.customer_name,
+          customer_phone: editedData.customer_phone,
           total_amount: creditAmount,
-          pending_amount: creditAmount,
+          paid_amount: paid,
+          pending_amount: pending,
           due_date: dueDate.toISOString().split('T')[0],
-          status: "pending",
-          location_id: editingSale.location_id, // Use original sale's location
+          status: pending <= 0 ? 'paid' : (paid > 0 ? 'partial' : 'pending'),
+          location_id: editingSale.location_id,
           notes: `Crédito editado - Factura #${editingSale.invoice_number || editingSale.id}`
-        });
+        };
+        if (existing) {
+          // Actualizar el crédito existente (mantiene su id → los abonos siguen vinculados)
+          await Credit.update(existing.id, creditFields);
+          for (const c of existingCredits.slice(1)) await Credit.delete(c.id); // limpiar duplicados si los hubiera
+        } else {
+          await Credit.create({ sale_id: editingSale.id, ...creditFields });
+        }
+      } else {
+        // La venta ya no es a crédito: eliminar los créditos previos
+        for (const credit of existingCredits) {
+          await Credit.delete(credit.id);
+        }
       }
 
       // Reload sales data
