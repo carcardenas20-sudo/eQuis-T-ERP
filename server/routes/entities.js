@@ -34,6 +34,13 @@ const DELETE_PERMISSION = {
   Sale: ['pos_delete_sales', 'sales_cancel'],
 };
 
+// Igual que arriba pero para EDITAR (PUT/PATCH). Solo Sale por ahora: es el único PUT que el
+// frontend dispara directamente sobre una venta (Sales.jsx handleSaveEditedSale); ningún otro
+// flujo actualiza la venta como efecto secundario → gatear aquí no rompe nada.
+const EDIT_PERMISSION = {
+  Sale: ['pos_edit_sales', 'sales_edit'],
+};
+
 async function loadUserPermissions(userId) {
   if (!userId) return [];
   const { rows } = await query('SELECT role, role_id FROM app_users WHERE id = $1', [userId]);
@@ -66,9 +73,29 @@ async function requirePermissionForSensitiveDelete(req, res, next) {
   }
 }
 
+async function requirePermissionForSensitiveEdit(req, res, next) {
+  try {
+    if (req.method !== 'PUT' && req.method !== 'PATCH') return next();
+    const needed = EDIT_PERMISSION[req.params.type];
+    if (!needed) return next();
+    if (req.userRole === 'admin') return next();
+    const perms = await loadUserPermissions(req.userId);
+    if (perms === null) return next(); // admin
+    const neededList = Array.isArray(needed) ? needed : [needed];
+    if (!neededList.some(p => perms.includes(p))) {
+      return res.status(403).json({ error: `No tienes permiso para modificar "${req.params.type}"` });
+    }
+    next();
+  } catch (e) {
+    console.warn('RBAC (edit) omitido por error:', e.message);
+    next(); // fail-open: no bloquear por un fallo técnico
+  }
+}
+
 router.use('/:type', requireAdminForPrivileged);
 router.use('/:type/:id', requireAdminForPrivileged);
 router.use('/:type/:id', requirePermissionForSensitiveDelete);
+router.use('/:type/:id', requirePermissionForSensitiveEdit);
 
 function buildOrderBy(orderByParam, schema) {
   if (!orderByParam) return 'ORDER BY created_date DESC';

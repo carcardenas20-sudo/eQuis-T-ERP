@@ -370,6 +370,13 @@ export default function SalesPage() {
     permissions?.includes("pos_delete_sales")
   );
 
+  // ¿Puede EDITAR ventas? Igual, alineado con el gate del servidor.
+  const canEditSales = Boolean(
+    (currentUser?.role === "admin") ||
+    permissions?.includes("sales_edit") ||
+    permissions?.includes("pos_edit_sales")
+  );
+
   return (
     <div className="p-4 lg:p-6 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-slate-900 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
@@ -561,6 +568,7 @@ export default function SalesPage() {
               onEditSale={handleEditSale}
               onDeleteSale={handleDeleteSale}
               canDelete={canDeleteSales}
+              canEdit={canEditSales}
               isLoading={isLoading}
               isProcessing={isProcessing}
             />
@@ -575,6 +583,7 @@ export default function SalesPage() {
             onEditSale={handleEditSale}
             onDeleteSale={handleDeleteSale}
             canDelete={canDeleteSales}
+            canEdit={canEditSales}
             isLoading={isLoading}
             onRefresh={loadSales}
           />

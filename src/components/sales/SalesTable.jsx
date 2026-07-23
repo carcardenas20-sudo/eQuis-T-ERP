@@ -69,7 +69,7 @@ const formatDate = (dateString) => {
   return { date: `${day}/${month}/${year}`, time: `${hours}:${minutes}` };
 };
 
-export default function SalesTable({ sales, onViewDetail, onEditSale, onDeleteSale, canDelete = true, isLoading, isProcessing }) {
+export default function SalesTable({ sales, onViewDetail, onEditSale, onDeleteSale, canDelete = true, canEdit = true, isLoading, isProcessing }) {
   const [expandedId, setExpandedId] = useState(null);
   const [itemsCache, setItemsCache] = useState({});
   const [loadingId, setLoadingId] = useState(null);
@@ -154,10 +154,12 @@ export default function SalesTable({ sales, onViewDetail, onEditSale, onDeleteSa
                           onClick={() => onViewDetail(sale)} disabled={isProcessing} className="h-8 w-8">
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="outline" size="icon" title="Editar"
-                          onClick={() => onEditSale(sale)} disabled={isProcessing} className="h-8 w-8 text-blue-600">
-                          <Edit className="w-4 h-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="outline" size="icon" title="Editar"
+                            onClick={() => onEditSale(sale)} disabled={isProcessing} className="h-8 w-8 text-blue-600">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        )}
                         {canDelete && (
                           <Button variant="outline" size="icon" title="Anular"
                             onClick={() => onDeleteSale(sale)} disabled={isProcessing} className="h-8 w-8 text-red-600">
