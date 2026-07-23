@@ -107,6 +107,9 @@ const auth = {
     body: JSON.stringify({ email, password }),
   }),
   logout: () => {
+    // Limpiar también la cookie de sesión del servidor (la que autoriza /uploads).
+    // Fire-and-forget: no bloquear el logout si la red falla.
+    apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
     setToken(null);
   },
   redirectToLogin: () => {

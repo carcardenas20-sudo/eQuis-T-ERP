@@ -22,7 +22,32 @@ const PORT = process.env.API_PORT || 3001;
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
+// /uploads YA NO es público. Antes cualquiera con la URL veía la imagen sin login.
+// Ahora exige sesión: cookie httpOnly (puesta en login/me — la mandan los <img> del mismo
+// origen), o header Bearer, o ?token=. Las páginas públicas no muestran imágenes subidas,
+// así que gatear aquí no rompe nada público.
+function tokenFromReq(req) {
+  const auth = req.headers.authorization;
+  if (auth && auth.startsWith('Bearer ')) return auth.slice(7);
+  if (req.query && req.query.token) return String(req.query.token);
+  const raw = req.headers.cookie || '';
+  const m = raw.match(/(?:^|;\s*)equist_session=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    const token = tokenFromReq(req);
+    if (!token) return res.status(401).json({ error: 'No autenticado' });
+    try {
+      jwt.verify(token, JWT_SECRET);
+      return next();
+    } catch {
+      return res.status(401).json({ error: 'Sesión inválida o expirada' });
+    }
+  },
+  express.static(join(__dirname, '..', 'uploads'))
+);
 
 // Permissive middleware: parses token if present, doesn't block
 const authMiddleware = (req, res, next) => {

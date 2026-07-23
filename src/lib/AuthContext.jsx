@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    setToken(null);
+    localClient.auth.logout(); // limpia token local + cookie de sesión del servidor
     setUser(null);
     setIsAuthenticated(false);
   };
