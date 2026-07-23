@@ -279,16 +279,24 @@ export default function ExchangeModal({ locationId, inventory, priceLists = [], 
       // Inventario: devoluciones
       for (const item of returnItems) {
         const inv = inventory.find(i => i.product_id === item.product.sku && i.location_id === locationId);
-        if (inv) await Inventory.update(inv.id, { current_stock: inv.current_stock + item.quantity, last_movement_date: today });
-        else await Inventory.create({ product_id: item.product.sku, location_id: locationId, current_stock: item.quantity, last_movement_date: today });
+        if (inv) {
+          await Inventory.update(inv.id, { current_stock: inv.current_stock + item.quantity, last_movement_date: today });
+          inv.current_stock += item.quantity; // reflejar el cambio localmente por si el MISMO SKU también se lleva
+        } else {
+          await Inventory.create({ product_id: item.product.sku, location_id: locationId, current_stock: item.quantity, last_movement_date: today });
+        }
         await InventoryMovement.create({ product_id: item.product.sku, location_id: locationId, movement_type: "return", quantity: item.quantity, reference_id: exchangeRef, reason: `Cambio - Devolución${notes ? ` - ${notes}` : ''}`, cost_per_unit: item.product.base_cost || 0, movement_date: today });
       }
 
       // Inventario: salidas
       for (const item of takeItems) {
         const inv = inventory.find(i => i.product_id === item.product.sku && i.location_id === locationId);
-        if (inv) await Inventory.update(inv.id, { current_stock: inv.current_stock - item.quantity, last_movement_date: today });
-        else await Inventory.create({ product_id: item.product.sku, location_id: locationId, current_stock: -item.quantity, last_movement_date: today }); // no perder la salida si no hay fila
+        if (inv) {
+          await Inventory.update(inv.id, { current_stock: inv.current_stock - item.quantity, last_movement_date: today });
+          inv.current_stock -= item.quantity; // mantener coherente el valor local
+        } else {
+          await Inventory.create({ product_id: item.product.sku, location_id: locationId, current_stock: -item.quantity, last_movement_date: today }); // no perder la salida si no hay fila
+        }
         await InventoryMovement.create({ product_id: item.product.sku, location_id: locationId, movement_type: "sale", quantity: -item.quantity, reference_id: exchangeRef, reason: `Cambio - Se lleva${notes ? ` - ${notes}` : ''}`, cost_per_unit: item.product.base_cost || 0, movement_date: today });
       }
 
