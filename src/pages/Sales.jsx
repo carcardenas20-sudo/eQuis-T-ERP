@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Sale } from "@/entities/Sale";
 import { SaleItem } from "@/entities/SaleItem";
 import { Payment } from "@/entities/Payment";
@@ -51,10 +51,11 @@ export default function SalesPage() {
 
   // Cuántas ventas traer. Empieza en 300; "Cargar más" lo sube.
   const [limit, setLimit] = useState(300);
-  // Al cambiar cualquier filtro, volver al límite base.
+  // Volver al límite base SOLO cuando cambia algo que se pide al servidor
+  // (período/estado/sucursal). Búsqueda, medio de pago y orden NO tocan el servidor.
   useEffect(() => {
     setLimit(300);
-  }, [filters.dateRange, filters.status, filters.location, filters.paymentMethod, filters.customStartDate, filters.customEndDate, filters.search]);
+  }, [filters.dateRange, filters.status, filters.location, filters.customStartDate, filters.customEndDate]);
 
   // Aplicar sucursal por defecto para usuarios sin permiso de ver todas
   useEffect(() => {
@@ -99,49 +100,50 @@ export default function SalesPage() {
       }
 
       // Traer SOLO hasta 'limit' registros, ya ordenados por fecha de venta en el servidor.
-      let salesData = await Sale.filter(salesFilter, "-sale_date", limit);
-
-      // Apply search filter (client-side for now)
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        salesData = salesData.filter(sale =>
-          sale.customer_name?.toLowerCase().includes(searchLower) ||
-          sale.invoice_number?.toLowerCase().includes(searchLower) ||
-          sale.customer_phone?.toLowerCase().includes(searchLower)
-        );
-      }
-
-      // Filtro por medio de pago (cliente — payment_methods vive en la venta)
-      if (filters.paymentMethod !== "all") {
-        salesData = salesData.filter(sale =>
-          Array.isArray(sale.payment_methods) &&
-          sale.payment_methods.some(m => m.method === filters.paymentMethod)
-        );
-      }
-
-      // Ordenar. Por defecto por FECHA DE LA VENTA (sale_date) para que, al editar la
-      // fecha, la venta se reubique (antes se ordenaba por created_date y no se movía).
-      salesData.sort((a, b) => {
-        if (filters.sort === 'amount_desc') return (Number(b.total_amount) || 0) - (Number(a.total_amount) || 0);
-        if (filters.sort === 'amount_asc') return (Number(a.total_amount) || 0) - (Number(b.total_amount) || 0);
-        const da = new Date(a.sale_date || a.created_date).getTime() || 0;
-        const db = new Date(b.sale_date || b.created_date).getTime() || 0;
-        if (db !== da) return db - da;
-        return (new Date(b.created_date).getTime() || 0) - (new Date(a.created_date).getTime() || 0);
-      });
+      // La búsqueda, el medio de pago y el orden se aplican DESPUÉS en memoria (ver
+      // visibleSales) para no golpear el servidor en cada tecla/cambio.
+      const salesData = await Sale.filter(salesFilter, "-sale_date", limit);
       setSales(salesData);
     } catch (error) {
       console.error("Error loading sales:", error);
     }
     setIsLoading(false);
-  }, [filters, currentUser, permissions, userRole, sessionLocation, limit]);
+  }, [filters.dateRange, filters.status, filters.location, filters.customStartDate, filters.customEndDate, currentUser, permissions, userRole, sessionLocation, limit]);
 
   useEffect(() => {
-    // ✅ Cargar ventas cuando sesión esté lista
+    // ✅ Cargar ventas cuando sesión esté lista (loadSales ya depende de período/estado/sucursal)
     if (!isSessionLoading) {
       loadSales();
     }
-  }, [loadSales, isSessionLoading, sessionLocation, filters.location]);
+  }, [loadSales, isSessionLoading]);
+
+  // Búsqueda + medio de pago + orden: TODO en memoria sobre lo ya cargado → instantáneo,
+  // cero peticiones de red al filtrar. Aquí estaba la lentitud real (una petición por tecla).
+  const visibleSales = useMemo(() => {
+    let list = sales;
+    if (filters.search) {
+      const s = filters.search.toLowerCase();
+      list = list.filter(v =>
+        v.customer_name?.toLowerCase().includes(s) ||
+        v.invoice_number?.toLowerCase().includes(s) ||
+        v.customer_phone?.toLowerCase().includes(s)
+      );
+    }
+    if (filters.paymentMethod !== "all") {
+      list = list.filter(v =>
+        Array.isArray(v.payment_methods) &&
+        v.payment_methods.some(m => m.method === filters.paymentMethod)
+      );
+    }
+    return [...list].sort((a, b) => {
+      if (filters.sort === 'amount_desc') return (Number(b.total_amount) || 0) - (Number(a.total_amount) || 0);
+      if (filters.sort === 'amount_asc') return (Number(a.total_amount) || 0) - (Number(b.total_amount) || 0);
+      const da = new Date(a.sale_date || a.created_date).getTime() || 0;
+      const db = new Date(b.sale_date || b.created_date).getTime() || 0;
+      if (db !== da) return db - da;
+      return (new Date(b.created_date).getTime() || 0) - (new Date(a.created_date).getTime() || 0);
+    });
+  }, [sales, filters.search, filters.paymentMethod, filters.sort]);
 
   useEffect(() => {
     const loadLocations = async () => {
@@ -352,11 +354,11 @@ export default function SalesPage() {
     }
   };
 
-  // Calculate summary stats
-  const totalSales = sales.length;
-  const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+  // Calculate summary stats (sobre lo que se está viendo)
+  const totalSales = visibleSales.length;
+  const totalRevenue = visibleSales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
   const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
-  const completedSales = sales.filter(sale => sale.status === 'completed').length;
+  const completedSales = visibleSales.filter(sale => sale.status === 'completed').length;
 
   // ✅ Determinar si el usuario puede ver todas las sucursales
   const isAdmin = Boolean(permissions?.includes("sales_view_all_locations") || (currentUser?.role === "admin") || (userRole?.name?.toLowerCase().includes("admin")));
@@ -398,7 +400,7 @@ export default function SalesPage() {
             { label: "Ticket Promedio", value: averageTicket, format: fmtMoney, Icon: Calendar, tone: "purple" },
             {
               label: "Ventas Hoy",
-              value: sales.filter(s => s.sale_date === new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })).length,
+              value: visibleSales.filter(s => s.sale_date === new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })).length,
               Icon: Package, tone: "amber"
             },
           ].map(({ label, value, sub, format, Icon, tone }) => (
@@ -526,6 +528,20 @@ export default function SalesPage() {
                 </div>
               )}
             </div>
+
+            {/* Si busca y no está en "Todas", ofrecer ampliar a todo el historial */}
+            {filters.search && filters.dateRange !== 'all' && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Buscando solo en el período seleccionado.{' '}
+                <button
+                  type="button"
+                  onClick={() => setFilters(prev => ({ ...prev, dateRange: 'all' }))}
+                  className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+                >
+                  Buscar en todo el historial
+                </button>
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -533,7 +549,7 @@ export default function SalesPage() {
         <Card className="hidden lg:block shadow-lg border-0 dark:bg-slate-800 dark:border-slate-700">
           <CardContent className="p-0">
             <SalesTable
-              sales={sales}
+              sales={visibleSales}
               onViewDetail={handleViewDetail}
               onEditSale={handleEditSale}
               onDeleteSale={handleDeleteSale}
@@ -546,7 +562,7 @@ export default function SalesPage() {
         {/* Sales Mobile List */}
         <div className="lg:hidden">
           <SalesMobileList
-            sales={sales}
+            sales={visibleSales}
             onViewDetail={handleViewDetail}
             onEditSale={handleEditSale}
             onDeleteSale={handleDeleteSale}
