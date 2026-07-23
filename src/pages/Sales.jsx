@@ -42,6 +42,8 @@ export default function SalesPage() {
     search: "",
     status: "all",
     location: "all",
+    paymentMethod: "all",
+    sort: "date_desc",
     dateRange: "all",
     customStartDate: today,
     customEndDate: today
@@ -118,6 +120,24 @@ export default function SalesPage() {
         );
       }
 
+      // Filtro por medio de pago (cliente — payment_methods vive en la venta)
+      if (filters.paymentMethod !== "all") {
+        salesData = salesData.filter(sale =>
+          Array.isArray(sale.payment_methods) &&
+          sale.payment_methods.some(m => m.method === filters.paymentMethod)
+        );
+      }
+
+      // Ordenar. Por defecto por FECHA DE LA VENTA (sale_date) para que, al editar la
+      // fecha, la venta se reubique (antes se ordenaba por created_date y no se movía).
+      salesData.sort((a, b) => {
+        if (filters.sort === 'amount_desc') return (Number(b.total_amount) || 0) - (Number(a.total_amount) || 0);
+        if (filters.sort === 'amount_asc') return (Number(a.total_amount) || 0) - (Number(b.total_amount) || 0);
+        const da = new Date(a.sale_date || a.created_date).getTime() || 0;
+        const db = new Date(b.sale_date || b.created_date).getTime() || 0;
+        if (db !== da) return db - da;
+        return (new Date(b.created_date).getTime() || 0) - (new Date(a.created_date).getTime() || 0);
+      });
       setSales(salesData);
     } catch (error) {
       console.error("Error loading sales:", error);
@@ -399,8 +419,31 @@ export default function SalesPage() {
 
         {/* Filters */}
         <Card className="shadow-lg border-0">
-          <CardContent className="p-4 lg:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <CardContent className="p-4 lg:p-6 space-y-4">
+            {/* Filtros rápidos de período (chips) — más práctico que el desplegable */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { v: 'all', label: 'Todas' },
+                { v: 'today', label: 'Hoy' },
+                { v: 'week', label: 'Última semana' },
+                { v: 'month', label: 'Último mes' },
+                { v: 'custom', label: 'Personalizado' },
+              ].map(chip => (
+                <button
+                  key={chip.v}
+                  type="button"
+                  onClick={() => setFilters(prev => ({ ...prev, dateRange: chip.v }))}
+                  className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    filters.dateRange === chip.v
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
@@ -446,16 +489,30 @@ export default function SalesPage() {
                 />
               )}
 
-              <Select value={filters.dateRange} onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value }))}>
+              {/* Medio de pago */}
+              <Select value={filters.paymentMethod} onValueChange={(value) => setFilters(prev => ({ ...prev, paymentMethod: value }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Período" />
+                  <SelectValue placeholder="Medio de pago" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="today">Hoy</SelectItem>
-                  <SelectItem value="week">Última Semana</SelectItem>
-                  <SelectItem value="month">Último Mes</SelectItem>
-                  <SelectItem value="custom">Personalizado</SelectItem>
+                  <SelectItem value="all">Todos los pagos</SelectItem>
+                  <SelectItem value="cash">💵 Efectivo</SelectItem>
+                  <SelectItem value="transfer">🏦 Transferencia</SelectItem>
+                  <SelectItem value="card">💳 Tarjeta</SelectItem>
+                  <SelectItem value="credit">📝 Crédito</SelectItem>
+                  <SelectItem value="courtesy">🎁 Cortesía</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Ordenar */}
+              <Select value={filters.sort} onValueChange={(value) => setFilters(prev => ({ ...prev, sort: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ordenar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date_desc">Más recientes primero</SelectItem>
+                  <SelectItem value="amount_desc">Mayor monto</SelectItem>
+                  <SelectItem value="amount_asc">Menor monto</SelectItem>
                 </SelectContent>
               </Select>
 
