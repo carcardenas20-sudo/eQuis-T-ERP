@@ -166,7 +166,10 @@ export default function PurchasesPage() {
         const oldMap = Object.fromEntries(oldItems.map(i => [i.product_id, i]));
         const newItems = purchaseData.items || [];
         const newMap = Object.fromEntries(newItems.map(i => [i.product_id, i]));
-        const isReceived = (editingPurchase.status === 'received') || (isReceived);
+        // ¿La compra que editamos ya estaba recibida? (si sí, hay que sincronizar inventario)
+        // Antes decía `... || (isReceived)` → auto-referencia a un `const` sin inicializar:
+        // al editar una compra NO recibida lanzaba ReferenceError y se caía la página.
+        const isReceived = editingPurchase.status === 'received';
 
         // 2) Crear/actualizar ítems existentes según el formulario
         for (const newItem of newItems) {

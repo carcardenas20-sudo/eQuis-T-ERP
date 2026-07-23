@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Inventory } from "@/entities/Inventory";
+import { InventoryMovement } from "@/entities/InventoryMovement";
 import { Product } from "@/entities/Product";
 import { Location } from "@/entities/Location";
 import { User } from "@/entities/User"; // Added User entity
@@ -140,10 +141,25 @@ export default function InventoryPage() {
 
   const handleSaveAdjustment = async (adjustmentData) => {
     try {
+      const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+      const delta = adjustmentData.newStock - (adjustmentData.previousStock ?? selectedItem.current_stock ?? 0);
       await Inventory.update(selectedItem.id, {
         current_stock: adjustmentData.newStock,
-        last_movement_date: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+        last_movement_date: hoy
       });
+      // Dejar RASTRO del ajuste manual. Antes no se registraba ningún movimiento → el
+      // inventario se descuadraba sin explicación y el motivo escrito se perdía.
+      if (delta !== 0) {
+        await InventoryMovement.create({
+          product_id: selectedItem.product_id,
+          location_id: selectedItem.location_id,
+          movement_type: 'adjustment',
+          quantity: delta, // con signo: + agrega, − descuenta
+          reference_id: selectedItem.id,
+          reason: `Ajuste manual: ${adjustmentData.reason}`,
+          movement_date: hoy
+        });
+      }
       setShowAdjustmentModal(false);
       setSelectedItem(null);
       loadData();

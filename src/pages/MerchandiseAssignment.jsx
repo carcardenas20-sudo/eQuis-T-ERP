@@ -240,8 +240,12 @@ export default function MerchandiseAssignment() {
   // Descontar del inventario las cantidades de las entregas que se están revirtiendo
   const revertInventoryForDeliveries = async (deliveryIds) => {
     const delivsToRevert = assignedDeliveries.filter(d => deliveryIds.includes(d.id));
-    const [allInv, allProducts, productosData] = await Promise.all([
+    // Cargamos también los movimientos de ASIGNACIÓN para saber a qué sucursal(es)
+    // fue realmente cada referencia (antes se descontaba del registro con más stock →
+    // podía descontar de la sucursal equivocada y descuadrar dos sucursales).
+    const [allInv, allProducts, productosData, assignMovsRaw] = await Promise.all([
       Inventory.list(), Product.list(), Producto.list(),
+      InventoryMovement.filter({ movement_type: 'merchandise_assignment' }),
     ]);
 
     const posMap = new Map((allProducts || []).map(pp => [pp.id, pp]));
@@ -250,7 +254,7 @@ export default function MerchandiseAssignment() {
       return { ...p, _posSku: posProduct?.sku || p.reference };
     });
 
-    // Sumar unidades por referencia
+    // Sumar unidades por referencia (cuánto hay que devolver en total)
     const unitsByRef = {};
     delivsToRevert.forEach(d => {
       (d.items || []).forEach(item => {
@@ -265,6 +269,17 @@ export default function MerchandiseAssignment() {
       return 0;
     }
 
+    // Reconstruir la DISTRIBUCIÓN por sucursal desde los movimientos de asignación de
+    // estas mismas entregas (se identifican por la fecha en el motivo: "entrega <fecha>").
+    const dateKeys = [...new Set(delivsToRevert.map(d => (d.delivery_date || '').slice(0, 10)).filter(Boolean))];
+    const splitByProduct = {}; // productId -> { locationId: unidadesAsignadas }
+    for (const m of (assignMovsRaw || [])) {
+      if (!dateKeys.some(dk => (m.reason || '').includes(`entrega ${dk}`))) continue;
+      const pid = m.product_id;
+      if (!splitByProduct[pid]) splitByProduct[pid] = {};
+      splitByProduct[pid][m.location_id] = (splitByProduct[pid][m.location_id] || 0) + (Number(m.quantity) || 0);
+    }
+
     let reverted = 0;
     const noEncontrados = [];
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
@@ -273,30 +288,42 @@ export default function MerchandiseAssignment() {
       const prod = freshProductos.find(p => p.reference === ref);
       const productId = prod?._posSku || ref;
 
-      // Buscar por productId mapeado; si no hay resultado, intentar por referencia directa
-      let invItems = (allInv || []).filter(inv => inv.product_id === productId);
-      if (invItems.length === 0 && productId !== ref) {
-        invItems = (allInv || []).filter(inv => inv.product_id === ref);
+      // Sucursales objetivo: primero la distribución REAL de la asignación; si no hay
+      // rastro (datos viejos), fallback al registro con más stock.
+      const split = splitByProduct[productId] || splitByProduct[ref];
+      let targets; // [{ location_id, want }]  want = tope por sucursal
+      if (split && Object.keys(split).length > 0) {
+        targets = Object.entries(split)
+          .sort((a, b) => b[1] - a[1])
+          .map(([location_id, want]) => ({ location_id, want }));
+      } else {
+        let invItems = (allInv || []).filter(inv => inv.product_id === productId);
+        if (invItems.length === 0 && productId !== ref) {
+          invItems = (allInv || []).filter(inv => inv.product_id === ref);
+        }
+        if (invItems.length === 0) {
+          noEncontrados.push(`${ref} (${qty} uds) — no encontrado en inventario`);
+          continue;
+        }
+        invItems = invItems.slice().sort((a, b) => (Number(b.current_stock) || 0) - (Number(a.current_stock) || 0));
+        targets = invItems.map(inv => ({ location_id: inv.location_id, want: Infinity }));
       }
-
-      if (invItems.length === 0) {
-        noEncontrados.push(`${ref} (${qty} uds) — no encontrado en inventario`);
-        continue;
-      }
-
-      // Ordenar por mayor stock para descontar del registro real primero
-      invItems = invItems.slice().sort((a, b) => (Number(b.current_stock) || 0) - (Number(a.current_stock) || 0));
 
       let remaining = qty;
-      for (const inv of invItems) {
+      for (const t of targets) {
         if (remaining <= 0) break;
+        const inv = (allInv || []).find(
+          i => (i.product_id === productId || i.product_id === ref) && i.location_id === t.location_id
+        );
+        if (!inv) continue;
         const currentStock = Number(inv.current_stock) || 0;
-        const toDeduct = Math.min(remaining, currentStock);
+        const toDeduct = Math.min(remaining, t.want, currentStock);
         if (toDeduct > 0) {
           await Inventory.update(inv.id, {
             current_stock: currentStock - toDeduct,
             available_stock: Math.max(0, (Number(inv.available_stock) || 0) - toDeduct),
           });
+          inv.current_stock = currentStock - toDeduct; // mantener copia local coherente
           await InventoryMovement.create({
             product_id: inv.product_id,
             location_id: inv.location_id,
@@ -310,7 +337,7 @@ export default function MerchandiseAssignment() {
         }
       }
       if (remaining > 0) {
-        noEncontrados.push(`${ref}: solo se descontaron ${qty - remaining} de ${qty} uds (stock insuficiente)`);
+        noEncontrados.push(`${ref}: solo se descontaron ${qty - remaining} de ${qty} uds (stock insuficiente en la(s) sucursal(es) asignada(s))`);
       }
     }
 
