@@ -28,6 +28,10 @@ const DELETE_PERMISSION = {
   Customer: 'customers_delete',
   Expense: 'expenses_delete',
   BankAccount: 'accounting_manage_bank_accounts',
+  // Anular/eliminar una venta: basta CUALQUIERA de estos permisos (según el rol usa uno u otro).
+  // El frontend oculta el botón "Anular" con el mismo criterio → los usuarios legítimos pasan
+  // y esto solo frena el abuso directo por API.
+  Sale: ['pos_delete_sales', 'sales_cancel'],
 };
 
 async function loadUserPermissions(userId) {
@@ -50,7 +54,9 @@ async function requirePermissionForSensitiveDelete(req, res, next) {
     if (req.userRole === 'admin') return next();
     const perms = await loadUserPermissions(req.userId);
     if (perms === null) return next(); // admin
-    if (!perms.includes(needed)) {
+    // `needed` puede ser un permiso (string) o una lista de permisos aceptables (cualquiera vale)
+    const neededList = Array.isArray(needed) ? needed : [needed];
+    if (!neededList.some(p => perms.includes(p))) {
       return res.status(403).json({ error: `No tienes permiso para eliminar "${req.params.type}"` });
     }
     next();

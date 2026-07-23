@@ -21,7 +21,7 @@ const PAY = {
   courtesy: { label: "Cortesía",      icon: "🎁", cls: "bg-pink-100 text-pink-700" },
 };
 
-export default function SalesMobileList({ sales, onViewDetail, onEditSale, onDeleteSale, isLoading, onRefresh }) {
+export default function SalesMobileList({ sales, onViewDetail, onEditSale, onDeleteSale, canDelete = true, isLoading, onRefresh }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [startY, setStartY] = useState(0);
@@ -168,14 +168,16 @@ export default function SalesMobileList({ sales, onViewDetail, onEditSale, onDel
                   >
                     <Edit className="w-4 h-4 select-none" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onDeleteSale(sale)}
-                    className="h-8 w-8 text-red-600 dark:text-red-400 select-none"
-                  >
-                    <Trash2 className="w-4 h-4 select-none" />
-                  </Button>
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDeleteSale(sale)}
+                      className="h-8 w-8 text-red-600 dark:text-red-400 select-none"
+                    >
+                      <Trash2 className="w-4 h-4 select-none" />
+                    </Button>
+                  )}
                 </div>
               </div>
 

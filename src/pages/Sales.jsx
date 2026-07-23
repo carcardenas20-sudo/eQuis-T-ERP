@@ -363,6 +363,13 @@ export default function SalesPage() {
   // ✅ Determinar si el usuario puede ver todas las sucursales
   const isAdmin = Boolean(permissions?.includes("sales_view_all_locations") || (currentUser?.role === "admin") || (userRole?.name?.toLowerCase().includes("admin")));
 
+  // ¿Puede ANULAR ventas? Mismo criterio que valida el servidor (RBAC). Si no, se oculta el botón.
+  const canDeleteSales = Boolean(
+    (currentUser?.role === "admin") ||
+    permissions?.includes("sales_cancel") ||
+    permissions?.includes("pos_delete_sales")
+  );
+
   return (
     <div className="p-4 lg:p-6 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-slate-900 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
@@ -553,6 +560,7 @@ export default function SalesPage() {
               onViewDetail={handleViewDetail}
               onEditSale={handleEditSale}
               onDeleteSale={handleDeleteSale}
+              canDelete={canDeleteSales}
               isLoading={isLoading}
               isProcessing={isProcessing}
             />
@@ -566,6 +574,7 @@ export default function SalesPage() {
             onViewDetail={handleViewDetail}
             onEditSale={handleEditSale}
             onDeleteSale={handleDeleteSale}
+            canDelete={canDeleteSales}
             isLoading={isLoading}
             onRefresh={loadSales}
           />
