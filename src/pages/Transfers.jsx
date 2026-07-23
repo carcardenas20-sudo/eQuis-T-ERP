@@ -33,6 +33,7 @@ export default function TransfersPage() {
   const [products, setProducts] = useState([]);
   const [traslados, setTraslados] = useState([]);
   const [receivingId, setReceivingId] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
 
   const [form, setForm] = useState(({ origen: sessionUser?.location_id || "", destino: "", notas: "", lonas: [] }));
   const [saving, setSaving] = useState(false);
@@ -67,8 +68,10 @@ export default function TransfersPage() {
   const pendientesRecibir = traslados.filter(t =>
     t.estado === "pendiente" && myLocationIds.includes(t.destino_location_id)
   );
+  // El admin ve TODOS los pendientes (para poder corregir cualquiera, ej. los de Taller);
+  // los demás solo los de su(s) sucursal(es) de origen.
   const pendientesEnviar = traslados.filter(t =>
-    t.estado === "pendiente" && myLocationIds.includes(t.origen_location_id)
+    t.estado === "pendiente" && (isRealAdmin || myLocationIds.includes(t.origen_location_id))
   );
   const historialTraslados = traslados.filter(t => t.estado === "aceptado" || t.estado === "rechazado");
 
@@ -115,6 +118,28 @@ export default function TransfersPage() {
     }
   };
 
+  const iniciarEdicion = (t) => {
+    let lonas = (t.lonas || []).map((l, i) => ({
+      id: Date.now() + i,
+      items: (l.items || []).map(it => ({ product_id: it.product_id, nombre: it.nombre, cantidad: it.cantidad })),
+    }));
+    // Fallback: si no hay lonas guardadas pero sí items, armar una lona con ellos.
+    if (lonas.length === 0 && (t.items || []).length > 0) {
+      lonas = [{ id: Date.now(), items: t.items.map(it => ({ product_id: it.product_id, nombre: it.nombre, cantidad: it.cantidad_enviada })) }];
+    }
+    setEditandoId(t.id);
+    setForm({ origen: t.origen_location_id || "", destino: t.destino_location_id || "", notas: t.notas || "", lonas });
+    setError("");
+    setActiveTab("enviar");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setForm({ origen: sessionUser?.location_id || "", destino: "", notas: "", lonas: [] });
+    setError("");
+  };
+
   const handleEnviar = async (e) => {
     e.preventDefault();
     setError("");
@@ -139,8 +164,7 @@ export default function TransfersPage() {
     try {
       const origen = locations.find(l => l.id === form.origen);
       const destino = locations.find(l => l.id === form.destino);
-      await Traslado.create({
-        numero_traslado: nextNumero(),
+      const payload = {
         origen_location_id: form.origen,
         origen_nombre: origen?.name || "",
         destino_location_id: form.destino,
@@ -153,15 +177,25 @@ export default function TransfersPage() {
             .map(i => ({ product_id: i.product_id, nombre: i.nombre, cantidad: Number(i.cantidad) })),
           total: l.items.reduce((s, i) => s + (Number(i.cantidad) || 0), 0),
         })),
-        estado: "pendiente",
         notas: form.notas,
-        creado_por: currentUser?.email || "",
-      });
+      };
+      if (editandoId) {
+        // Corregir un traslado pendiente existente (conserva su número y estado).
+        await Traslado.update(editandoId, payload);
+        setEditandoId(null);
+      } else {
+        await Traslado.create({
+          numero_traslado: nextNumero(),
+          ...payload,
+          estado: "pendiente",
+          creado_por: currentUser?.email || "",
+        });
+      }
       setForm({ origen: sessionUser?.location_id || "", destino: "", notas: "", lonas: [] });
       await loadData();
       setActiveTab("recibir");
     } catch (err) {
-      setError("Error al crear el traslado: " + (err instanceof Error ? err.message : String(err)));
+      setError("Error al guardar el traslado: " + (err instanceof Error ? err.message : String(err)));
     }
     setSaving(false);
   };
@@ -207,6 +241,13 @@ export default function TransfersPage() {
             <CardContent className="p-5">
               <form onSubmit={handleEnviar} className="space-y-5">
                 {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+
+                {editandoId && (
+                  <div className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800">
+                    <span>✏️ Estás <b>corrigiendo</b> un traslado pendiente. Al guardar se actualiza (no crea uno nuevo).</span>
+                    <button type="button" onClick={cancelarEdicion} className="text-amber-700 underline text-xs shrink-0">Cancelar edición</button>
+                  </div>
+                )}
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
@@ -312,7 +353,7 @@ export default function TransfersPage() {
 
                 <Button type="submit" disabled={saving} className="w-full bg-blue-600 hover:bg-blue-700">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                  Crear traslado pendiente
+                  {editandoId ? 'Guardar cambios' : 'Crear traslado pendiente'}
                 </Button>
               </form>
 
@@ -326,6 +367,9 @@ export default function TransfersPage() {
                         <p className="font-semibold text-slate-800 text-sm">{t.numero_traslado}</p>
                         <div className="flex items-center gap-2">
                           <Badge className={ESTADO_CFG.pendiente.color}>{ESTADO_CFG.pendiente.label}</Badge>
+                          <button onClick={() => iniciarEdicion(t)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                            Editar
+                          </button>
                           <button onClick={() => handleCancelar(t)} className="text-xs text-red-500 hover:text-red-700 font-medium">
                             Cancelar
                           </button>
