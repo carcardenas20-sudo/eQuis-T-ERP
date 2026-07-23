@@ -44,10 +44,17 @@ export default function SalesPage() {
     location: "all",
     paymentMethod: "all",
     sort: "date_desc",
-    dateRange: "all",
+    dateRange: "month", // por defecto solo el último mes → carga rápida (antes bajaba TODO)
     customStartDate: today,
     customEndDate: today
   });
+
+  // Cuántas ventas traer. Empieza en 300; "Cargar más" lo sube.
+  const [limit, setLimit] = useState(300);
+  // Al cambiar cualquier filtro, volver al límite base.
+  useEffect(() => {
+    setLimit(300);
+  }, [filters.dateRange, filters.status, filters.location, filters.paymentMethod, filters.customStartDate, filters.customEndDate, filters.search]);
 
   // Aplicar sucursal por defecto para usuarios sin permiso de ver todas
   useEffect(() => {
@@ -73,42 +80,26 @@ export default function SalesPage() {
         salesFilter.location_id = filters.location;
       }
 
-      // ✅ SIMPLIFICADO: Filtro de fecha más directo
-      if (filters.dateRange === 'today') {
-        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
-        salesFilter.sale_date = { $gte: `${todayStr}T00:00:00`, $lte: `${todayStr}T23:59:59` };
+      // Rango de fechas EN EL SERVIDOR (antes se bajaba TODO y se filtraba en el
+      // navegador → lento y gastaba mucho de Neon). Ahora la base manda solo el período.
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+      const diasAtras = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }); };
+      let desde = null, hasta = null;
+      if (filters.dateRange === 'today') { desde = todayStr; hasta = todayStr; }
+      else if (filters.dateRange === 'week') { desde = diasAtras(7); hasta = todayStr; }
+      else if (filters.dateRange === 'month') { desde = diasAtras(30); hasta = todayStr; }
+      else if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) { desde = filters.customStartDate; hasta = filters.customEndDate; }
+      // Al BUSCAR, se ignora el período (para encontrar aunque no sea del último mes).
+      if (desde && hasta && !filters.search) {
+        salesFilter.sale_date = { $gte: `${desde}T00:00:00`, $lte: `${hasta}T23:59:59` };
       }
 
       if (filters.status !== "all") {
         salesFilter.status = filters.status;
       }
 
-      let salesData = await Sale.filter(salesFilter, "-created_date");
-
-      // ✅ Filtrado en cliente para rangos complejos
-      if (filters.dateRange === 'week') {
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        salesData = salesData.filter(sale => {
-          const saleDate = new Date(sale.sale_date || sale.created_date);
-          return saleDate >= weekAgo;
-        });
-      } else if (filters.dateRange === 'month') {
-        const monthAgo = new Date();
-        monthAgo.setDate(monthAgo.getDate() - 30);
-        salesData = salesData.filter(sale => {
-          const saleDate = new Date(sale.sale_date || sale.created_date);
-          return saleDate >= monthAgo;
-        });
-      } else if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
-        const startDate = new Date(filters.customStartDate + 'T00:00:00');
-        const endDate = new Date(filters.customEndDate + 'T23:59:59');
-
-        salesData = salesData.filter(sale => {
-          const saleDate = new Date(sale.sale_date || sale.created_date);
-          return saleDate >= startDate && saleDate <= endDate;
-        });
-      }
+      // Traer SOLO hasta 'limit' registros, ya ordenados por fecha de venta en el servidor.
+      let salesData = await Sale.filter(salesFilter, "-sale_date", limit);
 
       // Apply search filter (client-side for now)
       if (filters.search) {
@@ -143,7 +134,7 @@ export default function SalesPage() {
       console.error("Error loading sales:", error);
     }
     setIsLoading(false);
-  }, [filters, currentUser, permissions, userRole, sessionLocation]);
+  }, [filters, currentUser, permissions, userRole, sessionLocation, limit]);
 
   useEffect(() => {
     // ✅ Cargar ventas cuando sesión esté lista
@@ -563,6 +554,15 @@ export default function SalesPage() {
             onRefresh={loadSales}
           />
         </div>
+
+        {/* Cargar más — solo si llegamos al tope actual (puede haber más) */}
+        {!isLoading && sales.length >= limit && (
+          <div className="flex justify-center pt-2">
+            <Button variant="outline" onClick={() => setLimit(l => l + 300)} disabled={isLoading}>
+              Cargar más ventas
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Sale Detail Modal */}
