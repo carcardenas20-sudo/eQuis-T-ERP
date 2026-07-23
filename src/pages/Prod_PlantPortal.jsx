@@ -542,6 +542,7 @@ export default function PlantPortal() {
   const [plantaLocationId, setPlantaLocationId] = useState(/** @type {string|null} */ (null));
   const [receivingTrasladoId, setReceivingTrasladoId] = useState(/** @type {string|null} */ (null));
   const [trasladoForm, setTrasladoForm] = useState({ destino: "", lonas: /** @type {any[]} */ ([]), notas: "" });
+  const [editandoTrasladoId, setEditandoTrasladoId] = useState(/** @type {string|null} */ (null));
   const [savingTraslado, setSavingTraslado] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tabId, setTabId] = useState(null);
@@ -842,8 +843,7 @@ export default function PlantPortal() {
           itemsMap[i.product_id].cantidad_enviada += Number(i.cantidad);
         }
       }
-      await Traslado.create({
-        numero_traslado: nextNumeroTraslado(),
+      const payload = {
         origen_location_id: plantaLocationId || "taller",
         origen_nombre: origen?.name || "Taller",
         destino_location_id: trasladoForm.destino,
@@ -854,15 +854,40 @@ export default function PlantPortal() {
           items: l.items.filter(i => i.product_id && i.cantidad).map(i => ({ product_id: i.product_id, nombre: i.nombre, cantidad: Number(i.cantidad) })),
           total: l.items.reduce((s, i) => s + (Number(i.cantidad) || 0), 0),
         })),
-        estado: "pendiente",
         notas: trasladoForm.notas,
-      });
+      };
+      if (editandoTrasladoId) {
+        // Corregir un traslado pendiente (conserva número y estado).
+        await Traslado.update(editandoTrasladoId, payload);
+        setEditandoTrasladoId(null);
+      } else {
+        await Traslado.create({ numero_traslado: nextNumeroTraslado(), ...payload, estado: "pendiente" });
+      }
       setTrasladoForm({ destino: "", lonas: [], notas: "" });
       await loadData();
     } catch (err) {
       alert("Error: " + (err instanceof Error ? err.message : String(err)));
     }
     setSavingTraslado(false);
+  };
+
+  const iniciarEdicionTraslado = (t) => {
+    let lonas = (t.lonas || []).map((l, i) => ({
+      id: Date.now() + i,
+      items: (l.items || []).map(it => ({ product_id: it.product_id, nombre: it.nombre, cantidad: it.cantidad })),
+    }));
+    if (lonas.length === 0 && (t.items || []).length > 0) {
+      lonas = [{ id: Date.now(), items: t.items.map(it => ({ product_id: it.product_id, nombre: it.nombre, cantidad: it.cantidad_enviada })) }];
+    }
+    setEditandoTrasladoId(t.id);
+    setTrasladoForm({ destino: t.destino_location_id || "", lonas, notas: t.notas || "" });
+    setReceivingTrasladoId(null);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelarEdicionTraslado = () => {
+    setEditandoTrasladoId(null);
+    setTrasladoForm({ destino: "", lonas: [], notas: "" });
   };
 
   const tabs = [
@@ -1043,11 +1068,43 @@ export default function PlantPortal() {
                 </div>
               )}
 
+              {/* Enviados por la planta, pendientes — se pueden CORREGIR */}
+              {trasladosPendientesEnviar.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">Enviados · pendientes de recepción</p>
+                  {trasladosPendientesEnviar.map(t => (
+                    <div key={t.id} className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-800 text-sm">{t.numero_traslado} <span className="font-normal text-slate-400">→ {t.destino_nombre}</span></p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(t.items||[]).map((i,idx) => (
+                              <span key={idx} className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                                {i.nombre||i.product_id} · {i.cantidad_enviada}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <button onClick={() => iniciarEdicionTraslado(t)}
+                          className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 shrink-0">
+                          Corregir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Crear nuevo traslado */}
               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
-                  <Send className="w-4 h-4 text-blue-500" /> Enviar traslado
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Send className="w-4 h-4 text-blue-500" /> {editandoTrasladoId ? 'Corrigiendo traslado' : 'Enviar traslado'}
+                  </p>
+                  {editandoTrasladoId && (
+                    <button type="button" onClick={cancelarEdicionTraslado} className="text-xs text-amber-700 underline shrink-0">Cancelar edición</button>
+                  )}
+                </div>
                 {!plantaLocationId && (
                   <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
                     Configura el AppConfig "planta_location_id" con el ID de esta sucursal para habilitar envíos.
@@ -1138,7 +1195,7 @@ export default function PlantPortal() {
                   <button type="submit" disabled={savingTraslado || !trasladoForm.destino || trasladoForm.lonas.length === 0}
                     className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                     {savingTraslado ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    Enviar
+                    {editandoTrasladoId ? 'Guardar cambios' : 'Enviar'}
                   </button>
                 </form>
               </div>
