@@ -281,6 +281,28 @@ export default function CashControlPage() {
     loadData();
   };
 
+  // Deshacer: volver un cierre marcado a PENDIENTE (por si se marcó por error).
+  // Se limpian fecha/autor para que quede como pendiente limpio (no como "reabierto").
+  const handleUnmarkCashCollected = async (control) => {
+    if (!window.confirm('¿Volver el efectivo a PENDIENTE de recoger? Se quitará la marca de "recogido".')) return;
+    await CashControl.update(control.id, {
+      cash_collected: false,
+      cash_collected_date: null,
+      cash_collected_by: null
+    });
+    loadData();
+  };
+
+  const handleUnmarkTransfersVerified = async (control) => {
+    if (!window.confirm('¿Volver las transferencias a PENDIENTES de verificar? Se quitará la marca de "verificado".')) return;
+    await CashControl.update(control.id, {
+      transfers_verified: false,
+      transfers_verified_date: null,
+      transfers_verified_by: null
+    });
+    loadData();
+  };
+
   // Mark ALL pending controls for a specific date as collected+verified
   const handleMarkDayComplete = async (date) => {
     const dayControls = (byDate[date] || []).filter(c => !c.cash_collected || !c.transfers_verified);
@@ -454,9 +476,20 @@ export default function CashControlPage() {
               </span>
             </div>
             {c.cash_collected ? (
-              <div className="flex items-center gap-1 text-green-700 text-xs font-semibold">
-                <CheckCircle2 className="w-4 h-4" /> Recogido
-                {c.cash_collected_by && <span className="text-green-600 ml-1">· {c.cash_collected_by.split('@')[0]}</span>}
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1 text-green-700 text-xs font-semibold">
+                  <CheckCircle2 className="w-4 h-4" /> Recogido
+                  {c.cash_collected_by && <span className="text-green-600 ml-1">· {c.cash_collected_by.split('@')[0]}</span>}
+                </span>
+                {canManage && (
+                  <button
+                    onClick={() => handleUnmarkCashCollected(c)}
+                    className="text-[11px] text-slate-400 hover:text-red-600 underline shrink-0"
+                    title="Deshacer: volver a marcar como pendiente"
+                  >
+                    Deshacer
+                  </button>
+                )}
               </div>
             ) : canManage ? (
               <Button
@@ -480,9 +513,20 @@ export default function CashControlPage() {
               <span className="font-bold text-blue-700 text-sm">${transferAmt.toLocaleString()}</span>
             </div>
             {c.transfers_verified ? (
-              <div className="flex items-center gap-1 text-blue-700 text-xs font-semibold">
-                <CheckCircle2 className="w-4 h-4" /> Verificado
-                {c.transfers_verified_by && <span className="text-blue-600 ml-1">· {c.transfers_verified_by.split('@')[0]}</span>}
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1 text-blue-700 text-xs font-semibold">
+                  <CheckCircle2 className="w-4 h-4" /> Verificado
+                  {c.transfers_verified_by && <span className="text-blue-600 ml-1">· {c.transfers_verified_by.split('@')[0]}</span>}
+                </span>
+                {canManage && (
+                  <button
+                    onClick={() => handleUnmarkTransfersVerified(c)}
+                    className="text-[11px] text-slate-400 hover:text-red-600 underline shrink-0"
+                    title="Deshacer: volver a marcar como pendiente"
+                  >
+                    Deshacer
+                  </button>
+                )}
               </div>
             ) : canManage ? (
               <Button
