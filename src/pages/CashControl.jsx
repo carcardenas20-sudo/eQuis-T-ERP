@@ -160,14 +160,30 @@ export default function CashControlPage() {
       const existingControls = await CashControl.list();
       const controlsArray = [];
       const updatePromises = [];
+      const deletedControlIds = new Set(); // duplicados que se eliminan (no re-agregar)
 
       for (const [, data] of Object.entries(dataByKey)) {
         const expensesTotal = data.expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
         const hasActivity = data.cash > 0 || data.transfers > 0 || data.card > 0 || expensesTotal > 0;
 
-        let control = existingControls.find(
+        // Puede haber registros DUPLICADOS del mismo día+sucursal (por una condición de
+        // carrera anterior: dos cargas simultáneas crearon dos). Nos quedamos con UNO
+        // (preferimos el que ya esté marcado recogido/verificado para no perder ese estado)
+        // y BORRAMOS los demás, así dejan de salir como tarjetas repetidas.
+        const matches = existingControls.filter(
           c => toDateOnly(c.control_date) === data.date && c.location_id === data.location_id
         );
+        if (matches.length > 1) {
+          matches.sort((a, b) =>
+            (Number(!!b.cash_collected) + Number(!!b.transfers_verified)) -
+            (Number(!!a.cash_collected) + Number(!!a.transfers_verified))
+          );
+          for (const extra of matches.slice(1)) {
+            deletedControlIds.add(extra.id);
+            updatePromises.push(CashControl.delete(extra.id).catch(() => {}));
+          }
+        }
+        let control = matches[0];
 
         // Si no hay actividad y no existe un control previo, saltar
         if (!hasActivity && !control) continue;
@@ -214,6 +230,7 @@ export default function CashControlPage() {
       const controlsInArray = new Set(controlsArray.map(c => c.id));
       for (const control of existingControls) {
         if (controlsInArray.has(control.id)) continue;
+        if (deletedControlIds.has(control.id)) continue; // no re-agregar los duplicados borrados
         if (control.cash_collected && control.transfers_verified) continue;
         if (effectiveLocation !== "all" && control.location_id !== effectiveLocation) continue;
         const controlDate = toDateOnly(control.control_date);

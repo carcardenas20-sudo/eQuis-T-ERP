@@ -1,0 +1,14 @@
+# No subir al build de Docker: se instala/compila limpio adentro.
+# node_modules local viene dañado por OneDrive (caniuse-lite) → NO copiarlo.
+node_modules
+.git
+.claude
+dist
+.env
+.env.*
+*.log
+npm-debug.log*
+.DS_Store
+.vscode
+scripts/*.mjs
+_diag*.mjs
