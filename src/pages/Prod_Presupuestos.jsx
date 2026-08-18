@@ -97,8 +97,10 @@ const [showSugerencias, setShowSugerencias] = useState(false);
 
             // Idempotencia: no duplicar si ya existe SM para este presupuesto + referencia
             const yaExiste = (allSM || []).some(sm =>
-              sm.product_reference === producto.reference &&
-              sm.reason === `Presupuesto aprobado ${presNum}`
+              sm.product_reference === producto.reference && (
+                (presupuestoActualizado?.id && sm.presupuesto_id === presupuestoActualizado.id) ||
+                sm.reason === `Presupuesto aprobado ${presNum}`
+              )
             );
             if (yaExiste) continue;
 
@@ -112,6 +114,7 @@ const [showSugerencias, setShowSugerencias] = useState(false);
               quantity: totalUnidades,
               movement_date: today,
               reason: `Presupuesto aprobado ${presNum}`,
+              presupuesto_id: presupuestoActualizado?.id, // id FIJO (el número es editable)
               previous_stock: prevStock,
               new_stock: newStock,
             });
@@ -145,10 +148,19 @@ const [showSugerencias, setShowSugerencias] = useState(false);
             const totalNuevo = (productoItem.combinaciones || []).reduce((sum, comb) =>
               sum + (comb.tallas_cantidades || []).reduce((s, tc) => s + (tc.cantidad || 0), 0), 0);
 
-            // Cuánto se registró en SM para este presupuesto + referencia
+            // Cuánto NETO ya se registró para este presupuesto + referencia.
+            // Enganchado al ID FIJO del presupuesto (no al número, que es editable): antes,
+            // si el número cambiaba entre aprobar y editar, no encontraba la entrada original,
+            // creía "0 → total" y volvía a sumar TODO como una entrada duplicada → stock inflado.
+            // Ahora incluye ajustes previos y resta salidas → editar de nuevo NO duplica.
+            const presId = presupuestoActualizado?.id || editingPresupuesto?.id;
             const smExistente = (allSM || [])
-              .filter(sm => sm.product_reference === producto.reference && sm.reason === `Presupuesto aprobado ${presNum}`)
-              .reduce((s, sm) => s + (Number(sm.quantity) || 0), 0);
+              .filter(sm => sm.product_reference === producto.reference && (
+                (presId && sm.presupuesto_id === presId) ||
+                (sm.reason || '').includes(`aprobado ${presNum}`) ||
+                (sm.reason || '').includes(`Ajuste presupuesto ${presNum}`)
+              ))
+              .reduce((s, sm) => s + (sm.movement_type === 'salida' ? -1 : 1) * (Number(sm.quantity) || 0), 0);
 
             const delta = totalNuevo - smExistente;
             if (delta === 0) continue;
@@ -163,6 +175,7 @@ const [showSugerencias, setShowSugerencias] = useState(false);
               quantity: Math.abs(delta),
               movement_date: today,
               reason: `Ajuste presupuesto ${presNum} (edición: ${smExistente} → ${totalNuevo})`,
+              presupuesto_id: presId, // id FIJO para futuras ediciones
               previous_stock: prevStock,
               new_stock: newStock,
             });
