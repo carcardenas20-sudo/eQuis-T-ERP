@@ -11,7 +11,6 @@ import { ENTITY_SCHEMAS, buildCreateTableSQL, buildIndexSQL } from './entitySche
 import authRoutes from './routes/auth.js';
 import entityRoutes from './routes/entities.js';
 import uploadRoutes from './routes/upload.js';
-import { whatsappManager } from './whatsapp.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -427,14 +426,8 @@ app.delete('/api/functions/borrarBacklogTransferencias', requireAuth, async (req
   }
 });
 
-app.post('/api/functions/backfillTransferencias', requireAuth, async (req, res) => {
-  try {
-    const { backfillEmails } = await import('./emailPoller.js');
-    backfillEmails().catch(e => console.error('[backfill]', e.message));
-    res.json({ ok: true, mensaje: 'Backfill iniciado en segundo plano' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+app.post('/api/functions/backfillTransferencias', requireAuth, (_req, res) => {
+  res.json({ ok: false, mensaje: 'Lector de transferencias por correo deshabilitado.' });
 });
 
 // ─── Recalcular stock de producción ──────────────────────────────────────────
@@ -694,41 +687,19 @@ app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res)
 });
 
 // ─── Serve frontend (React build) ────────────────────────────────────────────
-// ─── WhatsApp ─────────────────────────────────────────────────────────────────
+// ─── WhatsApp (DESHABILITADO — se quitó el bot para bajar el costo de Railway/Chromium) ───
 app.get('/api/whatsapp/status', (_req, res) => {
-  res.json(whatsappManager.getStatus());
+  res.json({ status: 'disabled' });
 });
 
-app.post('/api/whatsapp/init', requireAuth, async (_req, res) => {
-  try {
-    whatsappManager.init(); // no await — corre en background
-    res.json({ ok: true, message: 'Iniciando WhatsApp...' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+app.post('/api/whatsapp/init', requireAuth, (_req, res) => {
+  res.json({ ok: false, message: 'WhatsApp deshabilitado en este servidor.' });
 });
 
 // Helper: enviar mensaje y guardar en historial
-async function enviarYRegistrar({ employee_id, texto, categoria, enviado_por, header, footer }) {
-  const { rows } = await query(
-    `SELECT phone, name FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
-    [employee_id]
-  );
-  if (!rows.length || !rows[0].phone) throw new Error(`${employee_id}: sin número de celular`);
-
-  const h = (header ?? '🎯 *Recomendación de calidad — Equis-T*').trim();
-  const f = (footer ?? '_Equipo de producción_').trim();
-  const partes = [h, `Hola ${rows[0].name},`, texto, f].filter(Boolean);
-  const mensaje = partes.join('\n\n');
-  await whatsappManager.sendMessage(rows[0].phone, mensaje);
-
-  // Guardar en historial
-  await query(
-    `INSERT INTO entity_alerta_calidad (id, employee_id, texto, categoria, fecha, enviado_por, data, created_date, updated_date)
-     VALUES ($1,$2,$3,$4,NOW(),$5,'{}'::jsonb,NOW(),NOW())`,
-    [crypto.randomUUID(), employee_id, texto, categoria || '', enviado_por || '']
-  );
-  return rows[0].name;
+async function enviarYRegistrar() {
+  // WhatsApp deshabilitado: se quitó el bot (Chromium 24/7) para bajar el costo de Railway.
+  throw new Error('WhatsApp deshabilitado en este servidor.');
 }
 
 app.post('/api/functions/enviarRecomendacionCalidad', requireAuth, async (req, res) => {
@@ -1211,17 +1182,8 @@ async function startWithRetry(maxAttempts = 10, delayMs = 5000) {
       app.listen(PORT, '0.0.0.0', () => {
         console.log(`✅ API server running on port ${PORT}`);
       });
-      // Iniciar WhatsApp en background después de que el servidor esté listo
-      setTimeout(() => whatsappManager.init(), 3000);
-      // Iniciar poller de emails bancarios — se demora 40 s para no competir con Puppeteer al arrancar
-      setTimeout(async () => {
-        try {
-          const { startEmailPoller } = await import('./emailPoller.js');
-          startEmailPoller();
-        } catch (e) {
-          console.error('[emailPoller] No se pudo cargar:', e.message);
-        }
-      }, 40_000);
+      // WhatsApp (Chromium) y lector de correos (IMAP) DESHABILITADOS: se quitaron para
+      // bajar el costo de Railway (Chromium 24/7 era el que disparaba la RAM/factura).
       return;
     } catch (err) {
       console.error(`❌ DB init failed (attempt ${attempt}/${maxAttempts}): ${err.message}`);

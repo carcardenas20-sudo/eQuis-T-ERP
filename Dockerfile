@@ -1,14 +1,11 @@
 FROM node:22-slim
 
+# Solo ca-certificates (para TLS). Ya NO instalamos Chromium: se quitó el bot de WhatsApp
+# para bajar el costo (Chromium 24/7 era lo que disparaba la RAM/factura de Railway).
 RUN apt-get update && apt-get install -y \
-    chromium \
     ca-certificates \
-    fonts-liberation \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
-
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
