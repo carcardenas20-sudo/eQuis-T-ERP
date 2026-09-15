@@ -228,13 +228,40 @@ export default function CashControlPage() {
       // Siempre incluir controles no verificados aunque estén fuera del rango de fechas.
       // Cruzar con los gastos cargados para que ajustes retroactivos se reflejen.
       const controlsInArray = new Set(controlsArray.map(c => c.id));
-      for (const control of existingControls) {
-        if (controlsInArray.has(control.id)) continue;
-        if (deletedControlIds.has(control.id)) continue; // no re-agregar los duplicados borrados
-        if (control.cash_collected && control.transfers_verified) continue;
-        if (effectiveLocation !== "all" && control.location_id !== effectiveLocation) continue;
+      const leftoverPending = existingControls.filter(control =>
+        !controlsInArray.has(control.id) &&
+        !deletedControlIds.has(control.id) && // no re-agregar los duplicados borrados
+        !(control.cash_collected && control.transfers_verified) &&
+        (effectiveLocation === "all" || control.location_id === effectiveLocation)
+      );
+
+      // 🐛 FIX efectivo inflado: los gastos se cargaron solo con ventana de 60 días,
+      // pero un control PENDIENTE puede ser más viejo. Si sus gastos quedaron fuera
+      // de la ventana, dejaban de restarse y el neto (y el KPI "sin recoger") se
+      // inflaba. Cargamos aquí los gastos en efectivo anteriores a la ventana que
+      // correspondan a esos controles pendientes, para volver a restarlos.
+      let oldCashExpenses = [];
+      const oldestLeftover = leftoverPending
+        .map(c => toDateOnly(c.control_date))
+        .filter(Boolean)
+        .sort()[0];
+      if (oldestLeftover && oldestLeftover < windowStartStr) {
+        const oldExpFilter = {
+          payment_method: 'cash',
+          expense_date: { $gte: oldestLeftover, $lt: windowStartStr },
+        };
+        if (effectiveLocation !== "all") oldExpFilter.location_id = effectiveLocation;
+        try {
+          oldCashExpenses = await Expense.filter(oldExpFilter);
+        } catch (e) {
+          console.error('No se pudieron cargar gastos históricos:', e);
+        }
+      }
+      const expensesForLeftover = expenses.concat(oldCashExpenses);
+
+      for (const control of leftoverPending) {
         const controlDate = toDateOnly(control.control_date);
-        const controlExpenses = expenses.filter(e =>
+        const controlExpenses = expensesForLeftover.filter(e =>
           toDateOnly(e.expense_date) === controlDate &&
           e.payment_method === 'cash' &&
           (e.location_id || null) === (control.location_id || null)

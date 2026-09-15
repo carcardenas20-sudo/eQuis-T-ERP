@@ -1,0 +1,31 @@
+# fly.toml — configuración de despliegue en Fly.io
+# App Express (API + frontend Vite) + WhatsApp (whatsapp-web.js/Chromium) + IMAP
+# La base de datos vive aparte en Neon (Postgres); NO se despliega aquí.
+
+app = "equis-t-erp"            # <-- cámbialo si el nombre ya está tomado (debe ser único global)
+primary_region = "iad"         # Virginia (us-east-1) = misma región que tu Neon → baja latencia con la DB
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  API_PORT = "3001"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  # WhatsApp e IMAP necesitan el proceso SIEMPRE encendido:
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 1
+
+# Volumen persistente para los archivos subidos (/app/uploads)
+# Crear una sola vez con:  fly volumes create uploads --size 1 --region iad
+[[mounts]]
+  source = "uploads"
+  destination = "/app/uploads"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "2048mb"           # 2 GB: Chromium (WhatsApp) + Node cómodos
