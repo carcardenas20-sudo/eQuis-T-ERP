@@ -39,6 +39,64 @@ function round2(n) {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
+// Única fuente de la matemática de caja: agrega ventas, abonos y gastos por
+// (fecha local + sucursal) en un mapa de "días". La usan TANTO la ventana de 60
+// días como el recálculo de días pendientes antiguos, para que un día de caja se
+// calcule siempre igual sin importar su edad (evita que se "descuadre" al envejecer).
+function aggregateCashDays(sales, creditPayments, expenses) {
+  const dataByKey = {};
+  const ensureKey = (date, locationId) => {
+    const key = `${date}_${locationId}`;
+    if (!dataByKey[key]) {
+      dataByKey[key] = { date, location_id: locationId, cash: 0, transfers: 0, card: 0, expenses: [] };
+    }
+    return key;
+  };
+
+  sales.forEach(sale => {
+    const date = toDateOnly(sale.sale_date);
+    if (!date) return;
+    const locationId = sale.location_id || null;
+    const key = ensureKey(date, locationId);
+    const methods = Array.isArray(sale.payment_methods) ? sale.payment_methods : [];
+    if (methods.length > 0) {
+      methods.forEach(pm => {
+        const amt = Number(pm.amount) || 0;
+        if (pm.method === 'cash') dataByKey[key].cash += amt;
+        else if (pm.method === 'transfer' || pm.method === 'qr') dataByKey[key].transfers += amt;
+        else if (pm.method === 'card') dataByKey[key].card += amt;
+      });
+    } else {
+      const amt = Number(sale.total_amount) || 0;
+      if (amt > 0) dataByKey[key].cash += amt;
+    }
+  });
+
+  // Abonos a créditos — se suman al control de efectivo por método de pago
+  creditPayments.forEach(p => {
+    const date = toDateOnly(p.payment_date);
+    if (!date) return;
+    const locationId = p.location_id || null;
+    const key = ensureKey(date, locationId);
+    const amt = Number(p.amount) || 0;
+    if (amt <= 0) return;
+    if (p.method === 'cash') dataByKey[key].cash += amt;
+    else if (p.method === 'transfer' || p.method === 'qr') dataByKey[key].transfers += amt;
+    else if (p.method === 'card') dataByKey[key].card += amt;
+  });
+
+  expenses.forEach(expense => {
+    const date = toDateOnly(expense.expense_date);
+    if (!date) return;
+    if (expense.payment_method !== 'cash') return;
+    const locationId = expense.location_id || null;
+    const key = ensureKey(date, locationId);
+    dataByKey[key].expenses.push(expense);
+  });
+
+  return dataByKey;
+}
+
 export default function CashControlPage() {
   const { currentUser, userLocation, permissions, isRealAdmin, previewRoleId } = useSession();
   const effectiveAdmin = isRealAdmin && !previewRoleId;
@@ -107,55 +165,7 @@ export default function CashControlPage() {
         Payment.filter(paymentsFilter),
       ]);
 
-      const dataByKey = {};
-      const ensureKey = (date, locationId) => {
-        const key = `${date}_${locationId}`;
-        if (!dataByKey[key]) {
-          dataByKey[key] = { date, location_id: locationId, cash: 0, transfers: 0, card: 0, expenses: [] };
-        }
-        return key;
-      };
-
-      sales.forEach(sale => {
-        const date = toDateOnly(sale.sale_date);
-        if (!date) return;
-        const locationId = sale.location_id || null;
-        const key = ensureKey(date, locationId);
-        const methods = Array.isArray(sale.payment_methods) ? sale.payment_methods : [];
-        if (methods.length > 0) {
-          methods.forEach(pm => {
-            const amt = Number(pm.amount) || 0;
-            if (pm.method === 'cash') dataByKey[key].cash += amt;
-            else if (pm.method === 'transfer' || pm.method === 'qr') dataByKey[key].transfers += amt;
-            else if (pm.method === 'card') dataByKey[key].card += amt;
-          });
-        } else {
-          const amt = Number(sale.total_amount) || 0;
-          if (amt > 0) dataByKey[key].cash += amt;
-        }
-      });
-
-      // Abonos a créditos — se suman al control de efectivo por método de pago
-      creditPayments.forEach(p => {
-        const date = toDateOnly(p.payment_date);
-        if (!date) return;
-        const locationId = p.location_id || null;
-        const key = ensureKey(date, locationId);
-        const amt = Number(p.amount) || 0;
-        if (amt <= 0) return;
-        if (p.method === 'cash') dataByKey[key].cash += amt;
-        else if (p.method === 'transfer' || p.method === 'qr') dataByKey[key].transfers += amt;
-        else if (p.method === 'card') dataByKey[key].card += amt;
-      });
-
-      expenses.forEach(expense => {
-        const date = toDateOnly(expense.expense_date);
-        if (!date) return;
-        if (expense.payment_method !== 'cash') return;
-        const locationId = expense.location_id || null;
-        const key = ensureKey(date, locationId);
-        dataByKey[key].expenses.push(expense);
-      });
+      const dataByKey = aggregateCashDays(sales, creditPayments, expenses);
 
       const existingControls = await CashControl.list();
       const controlsArray = [];
@@ -225,8 +235,10 @@ export default function CashControlPage() {
 
       if (updatePromises.length > 0) await Promise.all(updatePromises);
 
-      // Siempre incluir controles no verificados aunque estén fuera del rango de fechas.
-      // Cruzar con los gastos cargados para que ajustes retroactivos se reflejen.
+      // Controles PENDIENTES que quedaron fuera de la ventana de 60 días (aún no
+      // recogidos/verificados y sin actividad dentro de la ventana). Por estructura,
+      // un día pendiente NUNCA debe quedarse con datos incompletos por su edad, así
+      // que lo recalculamos por completo con los datos reales de SU día.
       const controlsInArray = new Set(controlsArray.map(c => c.id));
       const leftoverPending = existingControls.filter(control =>
         !controlsInArray.has(control.id) &&
@@ -235,39 +247,58 @@ export default function CashControlPage() {
         (effectiveLocation === "all" || control.location_id === effectiveLocation)
       );
 
-      // 🐛 FIX efectivo inflado: los gastos se cargaron solo con ventana de 60 días,
-      // pero un control PENDIENTE puede ser más viejo. Si sus gastos quedaron fuera
-      // de la ventana, dejaban de restarse y el neto (y el KPI "sin recoger") se
-      // inflaba. Cargamos aquí los gastos en efectivo anteriores a la ventana que
-      // correspondan a esos controles pendientes, para volver a restarlos.
-      let oldCashExpenses = [];
+      // Cargar los datos (ventas, abonos y gastos) del rango de esos días antiguos y
+      // agregarlos con la MISMA función que la ventana, para que un día pendiente
+      // viejo se calcule idéntico a uno reciente (mismo efectivo, mismos gastos).
       const oldestLeftover = leftoverPending
         .map(c => toDateOnly(c.control_date))
         .filter(Boolean)
         .sort()[0];
+      let oldDataByKey = {};
       if (oldestLeftover && oldestLeftover < windowStartStr) {
-        const oldExpFilter = {
-          payment_method: 'cash',
-          expense_date: { $gte: oldestLeftover, $lt: windowStartStr },
+        const rangeBase = (extra) => {
+          const f = { ...extra };
+          if (effectiveLocation !== "all") f.location_id = effectiveLocation;
+          return f;
         };
-        if (effectiveLocation !== "all") oldExpFilter.location_id = effectiveLocation;
         try {
-          oldCashExpenses = await Expense.filter(oldExpFilter);
+          const [oldSales, oldExpenses, oldCredit] = await Promise.all([
+            Sale.filter(rangeBase({ status: { $in: ['completed', 'credit'] }, sale_date: { $gte: oldestLeftover, $lt: windowStartStr } })),
+            Expense.filter(rangeBase({ expense_date: { $gte: oldestLeftover, $lt: windowStartStr } })),
+            Payment.filter(rangeBase({ type: 'credit_payment', payment_date: { $gte: oldestLeftover, $lt: windowStartStr } })),
+          ]);
+          oldDataByKey = aggregateCashDays(oldSales, oldCredit, oldExpenses);
         } catch (e) {
-          console.error('No se pudieron cargar gastos históricos:', e);
+          console.error('No se pudieron cargar los datos históricos de caja:', e);
         }
       }
-      const expensesForLeftover = expenses.concat(oldCashExpenses);
 
+      const leftoverUpdates = [];
       for (const control of leftoverPending) {
         const controlDate = toDateOnly(control.control_date);
-        const controlExpenses = expensesForLeftover.filter(e =>
-          toDateOnly(e.expense_date) === controlDate &&
-          e.payment_method === 'cash' &&
-          (e.location_id || null) === (control.location_id || null)
-        );
-        controlsArray.push({ ...control, expenses: controlExpenses });
+        const data = oldDataByKey[`${controlDate}_${control.location_id}`];
+        const dayExpenses = data ? data.expenses : [];
+
+        // Recalcular montos del día y corregir el registro si cambió (mismo criterio
+        // de "reabrir" que la ventana: si un monto ya cerrado cambia, se reabre).
+        const newCash = round2(data ? data.cash : 0);
+        const newTransfer = round2(data ? data.transfers : 0);
+        const newCard = round2(data ? data.card : 0);
+        const cashChanged = round2(control.cash_amount) !== newCash;
+        const transferChanged = round2(control.transfer_amount) !== newTransfer;
+        const cardChanged = round2(control.card_amount) !== newCard;
+
+        let merged = { ...control };
+        if (data && (cashChanged || transferChanged || cardChanged)) {
+          const updates = { cash_amount: newCash, transfer_amount: newTransfer, card_amount: newCard };
+          if (cashChanged && control.cash_collected) updates.cash_collected = false;
+          if (transferChanged && control.transfers_verified) updates.transfers_verified = false;
+          leftoverUpdates.push(CashControl.update(control.id, updates));
+          merged = { ...control, ...updates };
+        }
+        controlsArray.push({ ...merged, expenses: dayExpenses });
       }
+      if (leftoverUpdates.length > 0) await Promise.all(leftoverUpdates);
 
       controlsArray.sort((a, b) => new Date(b.control_date) - new Date(a.control_date));
 
