@@ -107,6 +107,9 @@ export default function BankTransfers() {
   const pendingTransfers = payments.filter(p => p.status === 'registrado');
   const executedPayments = payments.filter(p => p.status === 'ejecutado');
 
+  const sumAmount = (list) => list.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const executedTotal = sumAmount(executedPayments);
+
   const pendingWithDeadline = pendingTransfers.map(p => ({
     ...p,
     lastDelivery: getLastDeliveryDate(p),
@@ -122,6 +125,10 @@ export default function BankTransfers() {
   const overdue = filtered.filter(p => p.daysUntil < 0);
   const dueThis = filtered.filter(p => p.daysUntil >= 0 && p.daysUntil <= 2);
   const future = filtered.filter(p => p.daysUntil > 2);
+
+  // Total en tránsito: si hay filtro de fecha, el total de lo mostrado; si no, el
+  // total de TODOS los pagos pendientes de transferencia.
+  const pendingTotal = sumAmount(filterDate ? filtered : pendingTransfers);
 
   if (loading) {
     return (
@@ -189,6 +196,21 @@ export default function BankTransfers() {
           </TabsList>
 
           <TabsContent value="pending">
+            {(filterDate ? filtered.length > 0 : pendingTransfers.length > 0) && (
+              <Card className="mb-4 border-blue-200 bg-blue-50">
+                <CardContent className="p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs sm:text-sm text-blue-700 font-medium">
+                      Total en tránsito{filterDate ? ` (${format(filterDate, 'dd/MM/yyyy')})` : ''}
+                    </p>
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-800 tabular-nums">${pendingTotal.toLocaleString()}</p>
+                  </div>
+                  <Badge className="bg-blue-600 text-white text-xs sm:text-sm">
+                    {(filterDate ? filtered.length : pendingTransfers.length)} pago{(filterDate ? filtered.length : pendingTransfers.length) !== 1 ? 's' : ''}
+                  </Badge>
+                </CardContent>
+              </Card>
+            )}
             {filtered.length === 0 && pendingTransfers.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-12 text-slate-500">
@@ -372,6 +394,17 @@ export default function BankTransfers() {
               </Card>
             ) : (
               <div className="space-y-3">
+                <Card className="border-green-200 bg-green-50">
+                  <CardContent className="p-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs sm:text-sm text-green-700 font-medium">Total ejecutado</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-green-800 tabular-nums">${executedTotal.toLocaleString()}</p>
+                    </div>
+                    <Badge className="bg-green-600 text-white text-xs sm:text-sm">
+                      {executedPayments.length} pago{executedPayments.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </CardContent>
+                </Card>
                 {executedPayments.map(payment => (
                   <Card key={payment.id} className="border-green-200 bg-green-50">
                     <CardContent className="p-4 sm:p-6">
