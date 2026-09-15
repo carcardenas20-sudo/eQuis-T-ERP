@@ -97,6 +97,23 @@ function aggregateCashDays(sales, creditPayments, expenses) {
   return dataByKey;
 }
 
+// Estado del efectivo de un control. El efectivo queda "resuelto" cuando se
+// RECOGIÓ, o cuando fue marcado como FALTANTE (no entregado) y ese faltante ya
+// se REVISÓ. Un faltante sin revisar sigue requiriendo atención.
+function cashSettled(c) {
+  return !!c.cash_collected || (!!c.cash_shortage && !!c.cash_shortage_resolved);
+}
+// Un control ya no requiere atención cuando su efectivo está resuelto y las
+// transferencias verificadas.
+function isFullyClosed(c) {
+  return cashSettled(c) && !!c.transfers_verified;
+}
+// Neto de efectivo del día (efectivo bruto − gastos en efectivo).
+function netCashOf(c) {
+  const expensesTotal = (c.expenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  return (Number(c.cash_amount) || 0) - expensesTotal;
+}
+
 export default function CashControlPage() {
   const { currentUser, userLocation, permissions, isRealAdmin, previewRoleId } = useSession();
   const effectiveAdmin = isRealAdmin && !previewRoleId;
@@ -243,7 +260,7 @@ export default function CashControlPage() {
       const leftoverPending = existingControls.filter(control =>
         !controlsInArray.has(control.id) &&
         !deletedControlIds.has(control.id) && // no re-agregar los duplicados borrados
-        !(control.cash_collected && control.transfers_verified) &&
+        !isFullyClosed(control) && // pendientes de recoger, verificar o faltantes por revisar
         (effectiveLocation === "all" || control.location_id === effectiveLocation)
       );
 
@@ -306,8 +323,7 @@ export default function CashControlPage() {
       const displayControls = applyDateFilter
         ? controlsArray.filter(c =>
             toDateOnly(c.control_date) >= startStr ||
-            !c.cash_collected ||
-            !c.transfers_verified
+            !isFullyClosed(c)
           )
         : controlsArray;
       setControls(displayControls);
@@ -315,7 +331,7 @@ export default function CashControlPage() {
       // Auto-expand the most recent pending date on first load
       if (firstLoadRef.current) {
         firstLoadRef.current = false;
-        const pending = controlsArray.filter(c => !c.cash_collected || !c.transfers_verified);
+        const pending = controlsArray.filter(c => !isFullyClosed(c));
         if (pending.length > 0) {
           const mostRecent = pending.reduce((a, b) => a.control_date > b.control_date ? a : b);
           setExpandedDates({ [toDateOnly(mostRecent.control_date)]: true });
@@ -356,6 +372,63 @@ export default function CashControlPage() {
     loadData();
   };
 
+  // Marcar el efectivo del día como FALTANTE (no entregado / no está en el local).
+  // Sale del total "sin recoger" y pasa a "Faltantes por revisar" hasta decidir qué
+  // hacer (descontar a alguien, asumir pérdida, etc.).
+  const handleMarkCashShortage = async (control) => {
+    const note = window.prompt(
+      `Marcar como FALTANTE el efectivo de este día ($${netCashOf(control).toLocaleString()}).\n` +
+      `Quedará en "Faltantes por revisar" y saldrá del total sin recoger.\n\nMotivo / nota (opcional):`,
+      ''
+    );
+    if (note === null) return; // cancelado
+    await CashControl.update(control.id, {
+      cash_shortage: true,
+      cash_shortage_date: new Date().toISOString(),
+      cash_shortage_by: currentUser?.email,
+      cash_shortage_note: note || '',
+      cash_shortage_resolved: false,
+      cash_shortage_resolved_date: null,
+      cash_shortage_resolved_by: null,
+      // Asegurar que NO quede como recogido
+      cash_collected: false,
+      cash_collected_date: null,
+      cash_collected_by: null,
+    });
+    loadData();
+  };
+
+  // Deshacer el faltante: volver el efectivo a PENDIENTE de recoger.
+  const handleUnmarkCashShortage = async (control) => {
+    if (!window.confirm('¿Quitar el faltante y volver el efectivo a PENDIENTE de recoger?')) return;
+    await CashControl.update(control.id, {
+      cash_shortage: false,
+      cash_shortage_date: null,
+      cash_shortage_by: null,
+      cash_shortage_note: null,
+      cash_shortage_resolved: false,
+      cash_shortage_resolved_date: null,
+      cash_shortage_resolved_by: null,
+    });
+    loadData();
+  };
+
+  // Marcar el faltante como REVISADO/RESUELTO (ya se decidió qué hacer con él).
+  const handleResolveCashShortage = async (control) => {
+    const note = window.prompt(
+      '¿Qué se hizo con este faltante? (ej: descontado a Fulano, asumido como pérdida). Nota (opcional):',
+      control.cash_shortage_resolution_note || ''
+    );
+    if (note === null) return;
+    await CashControl.update(control.id, {
+      cash_shortage_resolved: true,
+      cash_shortage_resolved_date: new Date().toISOString(),
+      cash_shortage_resolved_by: currentUser?.email,
+      cash_shortage_resolution_note: note || '',
+    });
+    loadData();
+  };
+
   // Deshacer: volver un cierre marcado a PENDIENTE (por si se marcó por error).
   // Se limpian fecha/autor para que quede como pendiente limpio (no como "reabierto").
   const handleUnmarkCashCollected = async (control) => {
@@ -380,7 +453,8 @@ export default function CashControlPage() {
 
   // Mark ALL pending controls for a specific date as collected+verified
   const handleMarkDayComplete = async (date) => {
-    const dayControls = (byDate[date] || []).filter(c => !c.cash_collected || !c.transfers_verified);
+    // No tocar controles marcados como faltante: se revisan aparte.
+    const dayControls = (byDate[date] || []).filter(c => !isFullyClosed(c) && !c.cash_shortage);
     const now = new Date().toISOString();
     await Promise.all(dayControls.map(c =>
       CashControl.update(c.id, {
@@ -402,7 +476,7 @@ export default function CashControlPage() {
     weekAgo.setDate(weekAgo.getDate() - 7);
     const cutoff = weekAgo.toISOString().slice(0, 10);
     const toMark = controls.filter(
-      c => toDateOnly(c.control_date) < cutoff && (!c.cash_collected || !c.transfers_verified)
+      c => toDateOnly(c.control_date) < cutoff && !isFullyClosed(c) && !c.cash_shortage
     );
     const now = new Date().toISOString();
     await Promise.all(toMark.map(c =>
@@ -449,21 +523,22 @@ export default function CashControlPage() {
   });
 
   const pending = Object.keys(byDate).filter(k =>
-    byDate[k].some(c => !c.cash_collected || !c.transfers_verified)
+    byDate[k].some(c => !isFullyClosed(c))
   ).sort((a, b) => new Date(b) - new Date(a));
 
   const completed = Object.keys(byDate).filter(k =>
-    byDate[k].every(c => c.cash_collected && c.transfers_verified)
+    byDate[k].every(c => isFullyClosed(c))
   ).sort((a, b) => new Date(b) - new Date(a));
 
   const controlsForKPI = controls.filter(c => filters.location === 'all' || c.location_id === filters.location);
+  // "Sin recoger" = efectivo aún por recoger (excluye faltantes, que van aparte).
   const uncollectedTotal = controlsForKPI
-    .filter(c => !c.cash_collected)
-    .reduce((sum, c) => {
-      const expensesTotal = (c.expenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0);
-      const netCash = (Number(c.cash_amount) || 0) - expensesTotal;
-      return sum + Math.max(netCash, 0);
-    }, 0);
+    .filter(c => !c.cash_collected && !c.cash_shortage)
+    .reduce((sum, c) => sum + Math.max(netCashOf(c), 0), 0);
+  // "Faltantes por revisar" = efectivo marcado como no entregado y aún sin resolver.
+  const shortageTotal = controlsForKPI
+    .filter(c => c.cash_shortage && !c.cash_shortage_resolved)
+    .reduce((sum, c) => sum + Math.max(netCashOf(c), 0), 0);
 
   const selectedLocationName = filters.location === 'all'
     ? 'Todas'
@@ -474,7 +549,7 @@ export default function CashControlPage() {
   weekAgo.setDate(weekAgo.getDate() - 7);
   const cutoff = weekAgo.toISOString().slice(0, 10);
   const historicalPendingCount = controls.filter(
-    c => toDateOnly(c.control_date) < cutoff && (!c.cash_collected || !c.transfers_verified)
+    c => toDateOnly(c.control_date) < cutoff && !isFullyClosed(c) && !c.cash_shortage
   ).length;
 
   const renderControl = (c) => {
@@ -485,7 +560,8 @@ export default function CashControlPage() {
     const expensesTotal = (c.expenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0);
     const netCash = cashGross - expensesTotal;
     const totalVentas = cashGross + cardAmt + transferAmt;
-    const allDone = c.cash_collected && c.transfers_verified;
+    const allDone = isFullyClosed(c);
+    const isShortage = !!c.cash_shortage;
 
     return (
       <div key={c.id} className={`p-4 rounded-lg mb-3 border-2 ${allDone ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
@@ -543,7 +619,7 @@ export default function CashControlPage() {
         {/* Action buttons — always visible */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {/* CASH */}
-          <div className={`p-3 rounded-lg border-2 ${c.cash_collected ? 'border-green-300 bg-green-50' : 'border-slate-200 bg-white'}`}>
+          <div className={`p-3 rounded-lg border-2 ${c.cash_collected ? 'border-green-300 bg-green-50' : isShortage ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}>
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">Efectivo</span>
               <span className={`font-bold text-sm ${netCash >= 0 ? 'text-green-700' : 'text-red-600'}`}>
@@ -566,14 +642,55 @@ export default function CashControlPage() {
                   </button>
                 )}
               </div>
+            ) : isShortage ? (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1 text-red-700 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4" />
+                  {c.cash_shortage_resolved ? 'Faltante · revisado' : 'Faltante · sin entregar'}
+                  {c.cash_shortage_by && <span className="text-red-500 ml-1">· {c.cash_shortage_by.split('@')[0]}</span>}
+                </div>
+                {c.cash_shortage_note && <p className="text-[11px] text-red-600 italic">“{c.cash_shortage_note}”</p>}
+                {c.cash_shortage_resolved && c.cash_shortage_resolution_note && (
+                  <p className="text-[11px] text-slate-500">Resuelto: {c.cash_shortage_resolution_note}</p>
+                )}
+                {canManage && (
+                  <div className="flex items-center gap-3 pt-0.5">
+                    {!c.cash_shortage_resolved && (
+                      <button
+                        onClick={() => handleResolveCashShortage(c)}
+                        className="text-[11px] text-emerald-700 hover:text-emerald-800 underline font-medium"
+                        title="Marcar el faltante como revisado/resuelto"
+                      >
+                        Marcar revisado
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleUnmarkCashShortage(c)}
+                      className="text-[11px] text-slate-400 hover:text-red-600 underline"
+                      title="Quitar el faltante y volver a pendiente de recoger"
+                    >
+                      Deshacer
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : canManage ? (
-              <Button
-                size="sm"
-                className="w-full bg-green-600 hover:bg-green-700 text-white text-xs"
-                onClick={() => handleMarkCashCollected(c)}
-              >
-                ✓ Marcar Recogido
-              </Button>
+              <div className="space-y-1.5">
+                <Button
+                  size="sm"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white text-xs"
+                  onClick={() => handleMarkCashCollected(c)}
+                >
+                  ✓ Marcar Recogido
+                </Button>
+                <button
+                  onClick={() => handleMarkCashShortage(c)}
+                  className="w-full text-[11px] text-red-600 hover:text-red-700 underline"
+                  title="El efectivo no fue entregado / no está en el local"
+                >
+                  ⚠ Marcar faltante (no entregado)
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-1 text-amber-600 text-xs font-semibold">
                 <Clock className="w-4 h-4" /> Pendiente de recoger
@@ -710,6 +827,26 @@ export default function CashControlPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* KPI Faltantes — solo aparece si hay efectivo marcado como no entregado */}
+        {shortageTotal > 0 && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-sm text-red-700 font-medium">Faltantes por revisar (efectivo no entregado)</div>
+                  <div className="text-2xl sm:text-3xl font-extrabold text-red-800 tabular-nums break-all">
+                    ${shortageTotal.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-red-600 mt-1">
+                    No está en el local ni recogido. Revísalo y decide qué hacer (descontar / asumir). No suma al "sin recoger".
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Pending */}
         {pending.length > 0 && (
