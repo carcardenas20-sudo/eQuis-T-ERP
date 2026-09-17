@@ -38,7 +38,8 @@ export default function CreditsPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [pendingTransferencia, setPendingTransferencia] = useState(null);
-  
+  const [viewMode, setViewMode] = useState('detalle'); // 'detalle' | 'cliente'
+
   const [filters, setFilters] = useState({
     search: "",
     status: "all",
@@ -182,6 +183,24 @@ export default function CreditsPage() {
   const totalAmount = credits.reduce((sum, credit) => sum + (credit.total_amount || 0), 0);
   const pendingAmount = credits.reduce((sum, credit) => sum + (credit.pending_amount || 0), 0);
   const overdueCredits = credits.filter(credit => credit.status === 'overdue').length;
+
+  // Agrupar el pendiente por cliente (respeta los filtros activos). Solo clientes
+  // que aún deben algo, ordenados de mayor a menor saldo.
+  const creditsByCustomer = (() => {
+    const map = {};
+    credits.forEach(c => {
+      const key = ((c.customer_phone || c.customer_name || '—').trim().toLowerCase()) || '—';
+      if (!map[key]) map[key] = { key, name: c.customer_name || '—', phone: c.customer_phone || '', count: 0, pending: 0, overdue: 0, nextDue: null };
+      const g = map[key];
+      const pend = Number(c.pending_amount) || 0;
+      g.pending += pend;
+      if (pend > 0) g.count += 1;
+      if (c.status === 'overdue') g.overdue += 1;
+      if (c.due_date && pend > 0 && (!g.nextDue || c.due_date < g.nextDue)) g.nextDue = c.due_date;
+      if ((!g.name || g.name === '—') && c.customer_name) g.name = c.customer_name;
+    });
+    return Object.values(map).filter(g => g.pending > 0).sort((a, b) => b.pending - a.pending);
+  })();
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -345,8 +364,76 @@ export default function CreditsPage() {
           </CardContent>
         </Card>
 
+        {/* Toggle de vista: detalle vs por cliente */}
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'detalle' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('detalle')}
+            className={viewMode === 'detalle' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+          >
+            Detalle
+          </Button>
+          <Button
+            variant={viewMode === 'cliente' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('cliente')}
+            className={viewMode === 'cliente' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+          >
+            <UserIcon className="w-4 h-4 mr-1" /> Por cliente
+          </Button>
+        </div>
+
+        {/* Vista: Pendiente por cliente */}
+        {viewMode === 'cliente' && (
+          <Card className="shadow-lg border-0">
+            <CardContent className="p-3 sm:p-6">
+              {isLoading ? (
+                <div className="space-y-2">
+                  {Array(6).fill(0).map((_, i) => <div key={i} className="h-14 bg-slate-100 rounded animate-pulse" />)}
+                </div>
+              ) : creditsByCustomer.length > 0 ? (
+                <>
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                    <h3 className="font-bold text-slate-900">Pendiente por cliente ({creditsByCustomer.length})</h3>
+                    <span className="text-sm text-slate-500">Total: <strong className="text-orange-600">${pendingAmount.toLocaleString()}</strong></span>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {creditsByCustomer.map(g => (
+                      <button
+                        key={g.key}
+                        onClick={() => { setFilters(prev => ({ ...prev, search: g.phone || g.name })); setViewMode('detalle'); }}
+                        className="w-full flex items-center justify-between gap-3 py-3 px-2 text-left hover:bg-slate-50 rounded-lg transition-colors"
+                        title="Ver los créditos de este cliente"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 truncate">{g.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                            {g.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{g.phone}</span>}
+                            <span>{g.count} crédito{g.count !== 1 ? 's' : ''}</span>
+                            {g.overdue > 0 && <span className="text-red-600 font-medium">{g.overdue} vencido{g.overdue !== 1 ? 's' : ''}</span>}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-orange-600 tabular-nums">${g.pending.toLocaleString()}</p>
+                          {g.nextDue && <p className="text-xs text-slate-400">vence {format(new Date(g.nextDue + 'T00:00:00'), "dd/MM/yy", { locale: es })}</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12 text-slate-500">
+                  <UserIcon className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  No hay clientes con saldo pendiente.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Mobile cards */}
-        {!isLoading && credits.length > 0 && (
+        {viewMode === 'detalle' && !isLoading && credits.length > 0 && (
           <div className="md:hidden space-y-3">
             {credits.map(credit => (
               <div key={credit.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
@@ -393,6 +480,7 @@ export default function CreditsPage() {
         )}
 
         {/* Desktop table */}
+        {viewMode === 'detalle' && (
         <Card className="hidden md:block shadow-lg border-0">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -466,8 +554,9 @@ export default function CreditsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
-        {isLoading && (
+        {viewMode === 'detalle' && isLoading && (
           <div className="md:hidden space-y-3">
             {Array(4).fill(0).map((_, i) => (
               <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 animate-pulse space-y-3">
@@ -478,7 +567,7 @@ export default function CreditsPage() {
             ))}
           </div>
         )}
-        {!isLoading && credits.length === 0 && (
+        {viewMode === 'detalle' && !isLoading && credits.length === 0 && (
           <div className="text-center py-12 text-slate-500 border rounded-xl bg-white">
             <CreditCard className="w-12 h-12 mx-auto mb-3 text-slate-300" />
             {filters.search ? "No se encontraron créditos con ese criterio" : "No hay créditos registrados aún"}
