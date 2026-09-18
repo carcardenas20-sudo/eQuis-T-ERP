@@ -7,7 +7,9 @@ import { Location } from "@/entities/Location";
 import { User } from "@/entities/User";
 import { PriceList } from "@/entities/PriceList";
 import { Credit } from "@/entities/Credit";
-import { BarChart3, Users, MapPin, Package, Percent, TrendingUp, UserCheck, ShoppingBag, Building2, Menu, X, Activity } from "lucide-react";
+import { BarChart3, Users, MapPin, Package, Percent, TrendingUp, UserCheck, ShoppingBag, Building2, Menu, X, Activity, FileSpreadsheet, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { exportReportsExcel, exportReportsPDF } from "@/utils/reportExport";
 import ReportFilters from "../components/reports/ReportFilters";
 import SalesOverTimeReport from "../components/reports/SalesOverTimeReport";
 import SalesByProductReport from "../components/reports/SalesByProductReport";
@@ -101,21 +103,33 @@ export default function Reports() {
 
   const loadDataForReports = useCallback(async () => {
     if (!currentUser) return;
-    
+
     setIsLoading(true);
     try {
-      let salesFilter = {};
-      let creditsFilter = {};
-      
       const isAdmin = currentUser.role === 'admin';
+
+      // ⚡ Acotar por fecha en la BD: antes se cargaba TODO el histórico de ventas
+      // e ítems, por eso iba lento. Ahora solo el rango elegido (+2 días de colchón
+      // a cada lado por diferencias de zona horaria; los componentes recortan fino).
+      const addDaysStr = (dateStr, days) => {
+        const d = new Date((dateStr || new Date().toISOString().slice(0, 10)) + 'T00:00:00');
+        d.setDate(d.getDate() + days);
+        return d.toISOString().slice(0, 10);
+      };
+      const queryStart = addDaysStr(filters.startDate, -2);
+      const queryEndExcl = addDaysStr(filters.endDate, 3); // exclusivo: cubre fin +2 días completos
+
+      const salesFilter = { sale_date: { $gte: queryStart, $lt: queryEndExcl } };
+      const creditsFilter = {};
       if (!isAdmin && currentUser.location_id) {
         salesFilter.location_id = currentUser.location_id;
         creditsFilter.location_id = currentUser.location_id;
+      } else if (filters.location && filters.location !== 'all') {
+        salesFilter.location_id = filters.location;
       }
 
-      const [sales, saleItems, products, customers, locations, users, priceLists, credits] = await Promise.all([
+      const [sales, products, customers, locations, users, priceLists, credits] = await Promise.all([
         Sale.filter(salesFilter),
-        SaleItem.list(),
         Product.list(),
         Customer.list(),
         Location.list(),
@@ -123,12 +137,24 @@ export default function Reports() {
         PriceList.list(),
         Credit.filter(creditsFilter),
       ]);
+
+      // Ítems solo de las ventas del rango, por lotes (evita un IN gigante).
+      const saleIds = sales.map(s => s.id).filter(Boolean);
+      let saleItems = [];
+      if (saleIds.length > 0) {
+        const CHUNK = 400;
+        const chunks = [];
+        for (let i = 0; i < saleIds.length; i += CHUNK) chunks.push(saleIds.slice(i, i + CHUNK));
+        const results = await Promise.all(chunks.map(ids => SaleItem.filter({ sale_id: { $in: ids } })));
+        saleItems = results.flat();
+      }
+
       setReportData({ sales, saleItems, products, customers, locations, users, priceLists, credits });
     } catch (error) {
       console.error("Error loading report data:", error);
     }
     setIsLoading(false);
-  }, [currentUser]);
+  }, [currentUser, filters.startDate, filters.endDate, filters.location]);
 
   useEffect(() => {
     if (currentUser) {
@@ -138,6 +164,16 @@ export default function Reports() {
 
   const ActiveReportComponent = reportComponents[activeReport];
   const isAdmin = currentUser?.role === 'admin';
+  const hasData = !isLoading && (reportData.sales?.length > 0);
+
+  const handleExportExcel = () => {
+    try { exportReportsExcel(reportData, filters); }
+    catch (e) { console.error(e); alert('No se pudo exportar a Excel.'); }
+  };
+  const handleExportPDF = () => {
+    try { exportReportsPDF(reportData, filters); }
+    catch (e) { console.error(e); alert('No se pudo exportar a PDF.'); }
+  };
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-50">
@@ -230,6 +266,31 @@ export default function Reports() {
             currentUser={currentUser}
             userLocation={userLocation}
           />
+
+          {/* Exportar — genera un reporte general organizado del rango filtrado */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
+            <span className="text-xs text-slate-500 sm:mr-auto">
+              Exporta el reporte general del rango seleccionado (todas las hojas: resumen, día, producto, categoría, vendedor, sucursal y detalle).
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              disabled={!hasData}
+              className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            >
+              <FileSpreadsheet className="w-4 h-4" /> Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={!hasData}
+              className="gap-2 border-red-300 text-red-700 hover:bg-red-50"
+            >
+              <FileText className="w-4 h-4" /> PDF
+            </Button>
+          </div>
           
           <div className="bg-white p-4 lg:p-6 rounded-xl shadow-lg border border-slate-200">
             {isLoading ? (
