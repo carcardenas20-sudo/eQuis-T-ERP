@@ -94,20 +94,105 @@ export default function BankTransfers() {
     return emp ? emp.name : employeeId;
   };
 
-  const handleMarkAsExecuted = async (payment) => {
+  // Abonos parciales de transferencia (guardados en data.transfer_payments).
+  const getAbonos = (p) => (Array.isArray(p.transfer_payments) ? p.transfer_payments : []);
+  const getPaid = (p) => getAbonos(p).reduce((s, a) => s + (Number(a.amount) || 0), 0);
+  const getRemaining = (p) => Math.max(0, (Number(p.amount) || 0) - getPaid(p));
+
+  // Registrar un abono parcial (se transfirió una parte). Si con este abono se
+  // completa el total, el pago pasa a "ejecutado" automáticamente.
+  const handleRegisterPartial = async (payment) => {
+    const remaining = getRemaining(payment);
+    const raw = window.prompt(
+      `Abono a ${getEmployeeName(payment.employee_id)}\n` +
+      `Total: $${(Number(payment.amount) || 0).toLocaleString()}  ·  Ya abonado: $${getPaid(payment).toLocaleString()}  ·  Falta: $${remaining.toLocaleString()}\n\n` +
+      `¿Cuánto se transfirió ahora?`,
+      String(remaining)
+    );
+    if (raw === null) return;
+    const amount = Math.round(Number(String(raw).replace(/[^0-9.-]/g, '')) || 0);
+    if (amount <= 0) { alert('Ingresa un monto válido.'); return; }
+    if (amount > remaining) { alert(`El abono no puede superar lo que falta ($${remaining.toLocaleString()}).`); return; }
+    const note = window.prompt('Nota del abono (opcional):', '');
+    if (note === null) return;
+    const nowIso = new Date().toISOString();
+    const transfer_payments = [...getAbonos(payment), { amount, date: nowIso, note: note || '' }];
+    const paid = transfer_payments.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+    const fully = paid >= (Number(payment.amount) || 0) - 0.5;
     try {
-      await base44.entities.Payment.update(payment.id, { status: 'ejecutado' });
-      alert("Pago marcado como ejecutado");
+      await base44.entities.Payment.update(payment.id, {
+        transfer_payments,
+        status: fully ? 'ejecutado' : 'registrado',
+        ...(fully ? { transfer_executed_date: nowIso } : {}),
+      });
+      loadData();
+    } catch (error) {
+      console.error('Error registrando abono:', error);
+      alert('No se pudo registrar el abono.');
+    }
+  };
+
+  // Marcar como ejecutado = pagar de una vez lo que falte (o el total). Registra
+  // el saldo restante como un abono para que el historial y los totales cuadren.
+  const handleMarkAsExecuted = async (payment) => {
+    const remaining = getRemaining(payment);
+    const paid = getPaid(payment);
+    const msg = paid > 0
+      ? `¿Marcar como ejecutado? Se registrará el saldo restante ($${remaining.toLocaleString()}) como transferido.`
+      : `¿Marcar como ejecutado (pago completo $${(Number(payment.amount) || 0).toLocaleString()})?`;
+    if (!window.confirm(msg)) return;
+    const nowIso = new Date().toISOString();
+    const transfer_payments = remaining > 0
+      ? [...getAbonos(payment), { amount: remaining, date: nowIso, note: paid > 0 ? 'Saldo restante' : 'Pago completo' }]
+      : getAbonos(payment);
+    try {
+      await base44.entities.Payment.update(payment.id, {
+        status: 'ejecutado',
+        transfer_executed_date: nowIso,
+        transfer_payments,
+      });
       loadData();
     } catch (error) {
       console.error("Error actualizando pago:", error);
+      alert('Error actualizando el pago.');
     }
+  };
+
+  // Bloque visual con el avance de abonos (solo si hay parciales reales).
+  const renderPartial = (payment) => {
+    const paid = getPaid(payment);
+    const remaining = getRemaining(payment);
+    const abonos = getAbonos(payment);
+    if (paid <= 0) return null;
+    if (remaining <= 0 && abonos.length <= 1) return null; // pago completo simple
+    const total = Number(payment.amount) || 0;
+    const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+    return (
+      <div className="mt-3 bg-white rounded-lg p-3 border border-slate-200">
+        <div className="flex justify-between text-xs sm:text-sm mb-1">
+          <span className="text-emerald-700 font-semibold">Abonado ${paid.toLocaleString()}</span>
+          {remaining > 0 && <span className="text-red-600 font-semibold">Falta ${remaining.toLocaleString()}</span>}
+        </div>
+        <div className="h-2 bg-slate-200 rounded overflow-hidden">
+          <div className="h-full bg-emerald-500" style={{ width: pct + '%' }} />
+        </div>
+        <div className="mt-2 space-y-0.5">
+          {abonos.map((a, i) => (
+            <p key={i} className="text-[11px] text-slate-500">
+              • ${Number(a.amount || 0).toLocaleString()} · {(() => { try { return format(new Date(a.date), 'dd/MM/yy'); } catch { return ''; } })()}{a.note ? ` — ${a.note}` : ''}
+            </p>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const pendingTransfers = payments.filter(p => p.status === 'registrado');
   const executedPayments = payments.filter(p => p.status === 'ejecutado');
 
   const sumAmount = (list) => list.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const sumRemaining = (list) => list.reduce((s, p) => s + getRemaining(p), 0);
+  const sumPaid = (list) => list.reduce((s, p) => s + getPaid(p), 0);
   const executedTotal = sumAmount(executedPayments);
 
   const pendingWithDeadline = pendingTransfers.map(p => ({
@@ -126,9 +211,11 @@ export default function BankTransfers() {
   const dueThis = filtered.filter(p => p.daysUntil >= 0 && p.daysUntil <= 2);
   const future = filtered.filter(p => p.daysUntil > 2);
 
-  // Total en tránsito: si hay filtro de fecha, el total de lo mostrado; si no, el
-  // total de TODOS los pagos pendientes de transferencia.
-  const pendingTotal = sumAmount(filterDate ? filtered : pendingTransfers);
+  // Total en tránsito = lo que FALTA por transferir (no el monto completo), para
+  // reflejar los pagos parciales. También expongo cuánto se ha abonado ya.
+  const pendingBase = filterDate ? filtered : pendingTransfers;
+  const pendingTotal = sumRemaining(pendingBase);
+  const pendingPaid = sumPaid(pendingBase);
 
   if (loading) {
     return (
@@ -201,9 +288,12 @@ export default function BankTransfers() {
                 <CardContent className="p-4 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs sm:text-sm text-blue-700 font-medium">
-                      Total en tránsito{filterDate ? ` (${format(filterDate, 'dd/MM/yyyy')})` : ''}
+                      Falta por transferir{filterDate ? ` (${format(filterDate, 'dd/MM/yyyy')})` : ''}
                     </p>
                     <p className="text-2xl sm:text-3xl font-bold text-blue-800 tabular-nums">${pendingTotal.toLocaleString()}</p>
+                    {pendingPaid > 0 && (
+                      <p className="text-xs text-emerald-700 mt-0.5">Ya abonado (parciales): ${pendingPaid.toLocaleString()}</p>
+                    )}
                   </div>
                   <Badge className="bg-blue-600 text-white text-xs sm:text-sm">
                     {(filterDate ? filtered.length : pendingTransfers.length)} pago{(filterDate ? filtered.length : pendingTransfers.length) !== 1 ? 's' : ''}
@@ -263,12 +353,20 @@ export default function BankTransfers() {
                                </div>
                              </div>
 
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              <Button 
+                            {renderPartial(payment)}
+                            <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                              <Button
+                                variant="outline"
+                                onClick={() => handleRegisterPartial(payment)}
+                                className="w-full sm:flex-1 text-sm border-blue-300 text-blue-700 hover:bg-blue-50"
+                              >
+                                Abono parcial
+                              </Button>
+                              <Button
                                 onClick={() => handleMarkAsExecuted(payment)}
                                 className="w-full sm:flex-1 text-sm bg-red-600 hover:bg-red-700 text-white"
                               >
-                                Marcar como Ejecutado
+                                {getPaid(payment) > 0 ? 'Saldar y ejecutar' : 'Marcar como Ejecutado'}
                               </Button>
                               <div className="w-full sm:w-auto"><PaymentVoucher payment={payment} deliveries={deliveries} products={products} employeeName={getEmployeeName(payment.employee_id)} /></div>
                             </div>
@@ -315,12 +413,20 @@ export default function BankTransfers() {
                                </div>
                              </div>
 
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              <Button 
+                            {renderPartial(payment)}
+                            <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                              <Button
+                                variant="outline"
+                                onClick={() => handleRegisterPartial(payment)}
+                                className="w-full sm:flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                              >
+                                Abono parcial
+                              </Button>
+                              <Button
                                 onClick={() => handleMarkAsExecuted(payment)}
                                 className="w-full sm:flex-1 bg-amber-600 hover:bg-amber-700 text-white"
                               >
-                                Marcar como Ejecutado
+                                {getPaid(payment) > 0 ? 'Saldar y ejecutar' : 'Marcar como Ejecutado'}
                               </Button>
                               <div className="w-full sm:w-auto"><PaymentVoucher payment={payment} deliveries={deliveries} products={products} employeeName={getEmployeeName(payment.employee_id)} /></div>
                             </div>
@@ -364,13 +470,21 @@ export default function BankTransfers() {
                                </div>
                              </div>
 
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              <Button 
+                            {renderPartial(payment)}
+                            <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                              <Button
+                                variant="outline"
+                                onClick={() => handleRegisterPartial(payment)}
+                                className="w-full sm:flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                              >
+                                Abono parcial
+                              </Button>
+                              <Button
                                 onClick={() => handleMarkAsExecuted(payment)}
                                 variant="outline"
                                 className="w-full sm:flex-1"
                               >
-                                Marcar como Ejecutado
+                                {getPaid(payment) > 0 ? 'Saldar y ejecutar' : 'Marcar como Ejecutado'}
                               </Button>
                               <div className="w-full sm:w-auto"><PaymentVoucher payment={payment} deliveries={deliveries} products={products} employeeName={getEmployeeName(payment.employee_id)} /></div>
                             </div>
@@ -419,6 +533,7 @@ export default function BankTransfers() {
                           <PaymentVoucher payment={payment} deliveries={deliveries} products={products} employeeName={getEmployeeName(payment.employee_id)} />
                         </div>
                       </div>
+                      {getAbonos(payment).length > 1 && renderPartial(payment)}
                     </CardContent>
                   </Card>
                 ))}
