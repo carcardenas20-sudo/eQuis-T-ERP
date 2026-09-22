@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Devolucion } from "@/api/publicEntities";
-import { CheckCircle2, RotateCcw, Plus, X, ChevronDown, ChevronUp, AlertCircle, Clock, Package } from "lucide-react";
+import { CheckCircle2, RotateCcw, Plus, X, ChevronDown, ChevronUp, AlertCircle, Clock, Package, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const getColombiaToday = () => {
@@ -23,14 +23,16 @@ const DEFECT_TYPES = [
   { value: "otro",      label: "⚠️ Otro" },
 ];
 
-function DevolucionCard({ dev, employees, products, onRetornar }) {
+function DevolucionCard({ dev, employees, products, onRetornar, onEdit }) {
   const [open, setOpen] = useState(false);
   const [qty, setQty] = useState("");
   const [saving, setSaving] = useState(false);
 
   const emp = employees.find(e => e.employee_id === dev.employee_id);
   const prod = products.find(p => p.reference === dev.product_reference);
-  const pending = dev.quantity_sent - (dev.quantity_returned || 0);
+  const enviadas = Number(dev.quantity_sent) || 0;
+  const retornadas = Number(dev.quantity_returned) || 0;
+  const pending = enviadas - retornadas;
   const defect = DEFECT_TYPES.find(d => d.value === dev.defect_type);
 
   const handleRetornar = async () => {
@@ -55,6 +57,13 @@ function DevolucionCard({ dev, employees, products, onRetornar }) {
           <p className="text-sm font-semibold text-slate-800 truncate">{emp?.name || dev.employee_id}</p>
           <p className="text-xs text-slate-500 truncate">{prod?.name || dev.product_reference}</p>
         </div>
+        <button
+          onClick={() => onEdit?.(dev)}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-orange-600 hover:bg-orange-50 shrink-0"
+          title="Editar devolución"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
         <div className="text-right shrink-0">
           <span className="text-lg font-bold text-orange-700">{pending}</span>
           <p className="text-xs text-slate-400">pendientes</p>
@@ -152,35 +161,60 @@ function DevolucionCard({ dev, employees, products, onRetornar }) {
   );
 }
 
-function NuevaDevolucionForm({ employees, products, onCreated, onCancel }) {
-  const [emp, setEmp] = useState("");
-  const [ref, setRef] = useState("");
-  const [qty, setQty] = useState("");
-  const [defectType, setDefectType] = useState("");
-  const [notes, setNotes] = useState("");
+function DevolucionForm({ employees, products, devolucion, onSaved, onCancel }) {
+  const isEdit = !!devolucion;
+  const [emp, setEmp] = useState(devolucion?.employee_id || "");
+  const [ref, setRef] = useState(devolucion?.product_reference || "");
+  const [qty, setQty] = useState(devolucion ? String(Number(devolucion.quantity_sent) || "") : "");
+  const [defectType, setDefectType] = useState(devolucion?.defect_type || "");
+  const [notes, setNotes] = useState(devolucion?.notes || "");
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
     if (!emp || !ref || !qty) { alert("Completa operario, referencia y cantidad."); return; }
+    const nQty = parseInt(qty);
+    if (!nQty || nQty < 1) { alert("Ingresa una cantidad válida."); return; }
     setSaving(true);
-    await Devolucion.create({
-      employee_id: emp,
-      product_reference: ref,
-      quantity_sent: parseInt(qty),
-      quantity_returned: 0,
-      date_sent: getColombiaToday(),
-      defect_type: defectType || null,
-      notes: notes || "",
-      status: "abierta",
-    });
+    try {
+      if (isEdit) {
+        const yaRetornado = Number(devolucion.quantity_returned) || 0;
+        if (nQty < yaRetornado) {
+          alert(`No puedes dejar la cantidad (${nQty}) por debajo de lo ya retornado (${yaRetornado}).`);
+          setSaving(false);
+          return;
+        }
+        await Devolucion.update(devolucion.id, {
+          employee_id: emp,
+          product_reference: ref,
+          quantity_sent: nQty,
+          defect_type: defectType || null,
+          notes: notes || "",
+          status: yaRetornado >= nQty ? "cerrada" : "abierta",
+        });
+      } else {
+        await Devolucion.create({
+          employee_id: emp,
+          product_reference: ref,
+          quantity_sent: nQty,
+          quantity_returned: 0,
+          date_sent: getColombiaToday(),
+          defect_type: defectType || null,
+          notes: notes || "",
+          status: "abierta",
+        });
+      }
+      onSaved();
+    } catch (e) {
+      console.error("Error guardando devolución:", e);
+      alert("No se pudo guardar la devolución. Intenta de nuevo.");
+    }
     setSaving(false);
-    onCreated();
   };
 
   return (
     <div className="bg-white rounded-xl border-2 border-orange-300 shadow-sm p-4 space-y-3">
       <div className="flex items-center justify-between mb-1">
-        <p className="text-sm font-bold text-slate-800">Nueva devolución</p>
+        <p className="text-sm font-bold text-slate-800">{isEdit ? "Editar devolución" : "Nueva devolución"}</p>
         <button onClick={onCancel} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
       </div>
 
@@ -228,7 +262,7 @@ function NuevaDevolucionForm({ employees, products, onCreated, onCancel }) {
 
       <Button onClick={handleSubmit} disabled={saving}
         className="w-full bg-orange-600 hover:bg-orange-700 text-white h-11 font-semibold">
-        {saving ? "Guardando..." : "Registrar devolución"}
+        {saving ? "Guardando..." : (isEdit ? "Guardar cambios" : "Registrar devolución")}
       </Button>
     </div>
   );
@@ -237,6 +271,7 @@ function NuevaDevolucionForm({ employees, products, onCreated, onCancel }) {
 export default function RouteDevoluciones({ employees, products, devoluciones, onSaved }) {
   const [view, setView] = useState("abiertas"); // "abiertas" | "historial"
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null); // devolución que se está editando
   const [filterEmp, setFilterEmp] = useState("");
   const [saved, setSaved] = useState(false);
 
@@ -256,23 +291,35 @@ export default function RouteDevoluciones({ employees, products, devoluciones, o
   const employeesWithDev = employees.filter(e => empIdsWithDev.includes(e.employee_id));
 
   const handleRetornar = async (dev, qty) => {
-    const newReturned = (dev.quantity_returned || 0) + qty;
-    const newStatus = newReturned >= dev.quantity_sent ? "cerrada" : "abierta";
+    const newReturned = (Number(dev.quantity_returned) || 0) + Number(qty);
+    const newStatus = newReturned >= (Number(dev.quantity_sent) || 0) ? "cerrada" : "abierta";
     const now = new Date().toISOString();
-    // Guardar fecha/hora de retorno — no afecta inventario
-    await Devolucion.update(dev.id, {
-      quantity_returned: newReturned,
-      status: newStatus,
-      date_returned: now,
-    });
+    try {
+      // Guardar fecha/hora de retorno — no afecta inventario
+      await Devolucion.update(dev.id, {
+        quantity_returned: newReturned,
+        status: newStatus,
+        date_returned: now,
+      });
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onSaved(); }, 1000);
+    } catch (e) {
+      console.error("Error guardando el retorno:", e);
+      alert("No se pudo guardar el retorno. Intenta de nuevo.");
+    }
+  };
+
+  const handleFormSaved = () => {
+    setShowForm(false);
+    setEditing(null);
     setSaved(true);
     setTimeout(() => { setSaved(false); onSaved(); }, 1000);
   };
 
-  const handleCreated = () => {
+  const startEdit = (dev) => {
+    setEditing(dev);
     setShowForm(false);
-    setSaved(true);
-    setTimeout(() => { setSaved(false); onSaved(); }, 1000);
+    setView(dev.status === "cerrada" ? "historial" : "abiertas");
   };
 
   return (
@@ -310,7 +357,7 @@ export default function RouteDevoluciones({ employees, products, devoluciones, o
           </button>
         </div>
         <button
-          onClick={() => setShowForm(s => !s)}
+          onClick={() => { setEditing(null); setShowForm(s => !s); }}
           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all font-bold text-lg ${
             showForm ? "bg-slate-200 text-slate-600" : "bg-orange-600 text-white shadow hover:bg-orange-700"
           }`}
@@ -327,13 +374,14 @@ export default function RouteDevoluciones({ employees, products, devoluciones, o
         </div>
       )}
 
-      {/* Formulario nueva */}
-      {showForm && (
-        <NuevaDevolucionForm
+      {/* Formulario nueva / edición */}
+      {(showForm || editing) && (
+        <DevolucionForm
           employees={employees}
           products={products}
-          onCreated={handleCreated}
-          onCancel={() => setShowForm(false)}
+          devolucion={editing}
+          onSaved={handleFormSaved}
+          onCancel={() => { setShowForm(false); setEditing(null); }}
         />
       )}
 
@@ -383,6 +431,7 @@ export default function RouteDevoluciones({ employees, products, devoluciones, o
                 employees={employees}
                 products={products}
                 onRetornar={handleRetornar}
+                onEdit={startEdit}
               />
             ))
           )}
@@ -410,8 +459,15 @@ export default function RouteDevoluciones({ employees, products, devoluciones, o
                     <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-700 truncate">{emp?.name || dev.employee_id}</p>
-                      <p className="text-xs text-slate-400 truncate">{prod?.name || dev.product_reference} · {dev.quantity_sent} uds{defect ? ` · ${defect.label}` : ""}</p>
+                      <p className="text-xs text-slate-400 truncate">{prod?.name || dev.product_reference} · {Number(dev.quantity_sent) || 0} uds{defect ? ` · ${defect.label}` : ""}</p>
                     </div>
+                    <button
+                      onClick={() => startEdit(dev)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-orange-600 hover:bg-orange-50 shrink-0"
+                      title="Editar devolución"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
                     <div className="text-right shrink-0">
                       <p className="text-xs text-green-700 font-semibold">Cerrada</p>
                       <p className="text-xs text-slate-400">{fmtDate(dev.date_sent)}</p>
