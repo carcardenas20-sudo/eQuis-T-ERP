@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Sale } from "@/entities/Sale";
 import { SaleItem } from "@/entities/SaleItem";
 import { Payment } from "@/entities/Payment";
@@ -32,6 +32,10 @@ export default function SalesPage() {
   const [editingSale, setEditingSale] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  // Freno síncrono contra doble-anulación (doble clic / carrera): guarda los ids
+  // de ventas que se están anulando ahora mismo. Evita que la misma factura genere
+  // devoluciones de inventario repetidas (bug que infló el stock: una hasta 19 veces).
+  const anulandoRef = useRef(new Set());
 
   // Sesión centralizada
   const { currentUser, permissions, userRole, userLocation: sessionLocation, isLoading: isSessionLoading } = useSession();
@@ -286,9 +290,27 @@ export default function SalesPage() {
       3. Eliminará la factura permanentemente.
     `;
 
+    // Freno síncrono: si ya se está anulando esta factura, no volver a entrar
+    // (mata el doble-clic / la carrera que duplicaba las devoluciones).
+    if (anulandoRef.current.has(saleToDelete.id)) return;
+
     if (window.confirm(confirmationMessage)) {
+      anulandoRef.current.add(saleToDelete.id);
       setIsProcessing(true);
       try {
+        // Idempotencia dura: si esta venta YA tiene una devolución registrada, no
+        // volver a revertir (evita duplicar el stock si se anula dos veces / desde
+        // otra pestaña o tras recargar).
+        const yaRevertida = await InventoryMovement.filter({
+          reference_id: saleToDelete.id,
+          movement_type: 'return',
+        });
+        if (yaRevertida && yaRevertida.length > 0) {
+          alert('Esta factura ya fue anulada anteriormente. No se repitió la reversión.');
+          await loadSales();
+          return;
+        }
+
         // 1. Find all sale items for this sale
         const saleItems = await SaleItem.filter({ sale_id: saleToDelete.id });
 
@@ -349,8 +371,10 @@ export default function SalesPage() {
       } catch (error) {
         console.error("Error deleting sale:", error);
         alert("Ocurrió un error al anular la factura. Por favor, intenta de nuevo.");
+      } finally {
+        anulandoRef.current.delete(saleToDelete.id);
+        setIsProcessing(false);
       }
-      setIsProcessing(false);
     }
   };
 
