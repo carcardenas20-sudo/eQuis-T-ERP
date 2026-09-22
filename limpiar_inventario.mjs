@@ -28,7 +28,7 @@ const dupExtras = await q(`
            to_char(movement_date,'YYYY-MM-DD') d,
            ROW_NUMBER() OVER (PARTITION BY to_char(movement_date,'YYYY-MM-DD'), movement_type, product_id, location_id, quantity, data->>'reason' ORDER BY created_date) rn
     FROM entity_inventory_movement
-    WHERE movement_type IN ('transfer_in','transfer_out','transfer_return','return')
+    WHERE movement_type IN ('transfer_in','transfer_out','transfer_return','return','entry','merchandise_assignment')
   )
   SELECT id, d, movement_type, product_id, location_id, quantity, reason FROM ranked WHERE rn > 1`);
 

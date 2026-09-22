@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Purchase, PurchaseItem, Product, Supplier, Location, Inventory } from "@/entities/all";
 import { InventoryMovement } from "@/entities/InventoryMovement";
 import { Plus, ShoppingBag, Package, TrendingUp, Filter, RefreshCw } from "lucide-react";
@@ -19,6 +19,10 @@ import {
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState([]);
+  // Freno síncrono contra doble-recepción (doble clic / carrera): evita que la
+  // misma compra sume el inventario y cree entradas repetidas (bug que infló
+  // Taller: una compra recibida hasta 9 veces).
+  const recibiendoRef = useRef(new Set());
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -396,7 +400,22 @@ export default function PurchasesPage() {
   };
 
   const handleReceivePurchase = async (purchase) => {
+    // Freno síncrono: no reprocesar la misma compra si ya se está recibiendo
+    // (mata el doble-clic que duplicaba las entradas de inventario).
+    if (recibiendoRef.current.has(purchase.id)) return;
+    // Idempotencia: una compra ya recibida NO se vuelve a recibir.
+    if (purchase.status === 'received') {
+      alert('Esta compra ya fue recibida. No se repitió la entrada de inventario.');
+      return;
+    }
+    recibiendoRef.current.add(purchase.id);
     try {
+      // Releer el estado actual por si otra pestaña/persona ya la recibió.
+      const fresh = await Purchase.filter({ id: purchase.id });
+      if (fresh?.[0]?.status === 'received') {
+        alert('Esta compra ya fue recibida. No se repitió la entrada de inventario.');
+        return;
+      }
       // Get purchase items
       const purchaseItems = await PurchaseItem.filter({ purchase_id: purchase.id });
       
@@ -451,6 +470,8 @@ export default function PurchasesPage() {
     } catch (error) {
       console.error("Error receiving purchase:", error);
       alert("Error al recibir la compra. Inténtalo de nuevo.");
+    } finally {
+      recibiendoRef.current.delete(purchase.id);
     }
   };
 
