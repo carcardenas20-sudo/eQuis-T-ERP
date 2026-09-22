@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Presupuesto, Producto, MateriaPrima, Color, Remision, Operacion } from "@/api/entitiesChaquetas";
-import { Inventory, StockMovement, AccountPayable } from "@/entities/all";
+import { Inventory, StockMovement } from "@/entities/all";
 import { base44 } from "@/api/base44Combined";
 const TareaPlanta = base44.entities.TareaPlanta;
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -245,59 +245,31 @@ const [showSugerencias, setShowSugerencias] = useState(false);
         }
       }
 
-      // Al aprobar: crear cuenta por pagar para ojaletear externo (idempotente)
-      if (wasApproved || isNewApproved) {
-        try {
-          const presNum = data.numero_presupuesto || presupuestoActualizado.numero_presupuesto || '';
-          const PROVEEDOR_OJALETEAR = '0c2eaa41-083c-4156-8ec2-73a2f01954f4'; // Claudia Montoya
-
-          // Idempotencia: no duplicar si ya existe para este presupuesto
-          const existentes = await AccountPayable.filter({ supplier_id: PROVEEDOR_OJALETEAR });
-          const yaExiste = (existentes || []).some(ap => ap.data?.presupuesto_id === presupuestoActualizado.id);
-
-          if (!yaExiste) {
-            // Sumar todas las unidades de todos los productos con ojaletear externo
-            let totalUds = 0;
-            let precioUnit = 80;
-            for (const productoItem of (data.productos || [])) {
-              const oj = productoItem.ojaletear;
-              if (!oj || oj.tipo !== 'externo') continue;
-              precioUnit = Number(oj.precio_unit) || 80;
-              totalUds += (productoItem.combinaciones || []).reduce((s, c) =>
-                s + (c.tallas_cantidades || []).reduce((ss, tc) => ss + (Number(tc.cantidad) || 0), 0), 0);
-            }
-
-            if (totalUds > 0) {
-              const total = totalUds * precioUnit;
-              await AccountPayable.create({
-                supplier_id: PROVEEDOR_OJALETEAR,
-                supplier_name: 'Claudia Montoya',
-                description: `Ojaletear ${totalUds} uds — ${presNum}`,
-                type: 'servicio_ojaletear',
-                category: 'otros',
-                status: 'pending',
-                total_amount: total,
-                pending_amount: total,
-                paid_amount: 0,
-                data: {
-                  presupuesto_id: presupuestoActualizado.id,
-                  presupuesto_numero: presNum,
-                  cantidad: totalUds,
-                  precio_unit: precioUnit,
-                },
-              });
-            }
-          }
-        } catch (err) {
-          console.error("Error creando cuenta por pagar ojaletear:", err);
-        }
-      }
+      // El pago del ojaletear externo YA NO se crea como cuenta por pagar.
+      // Ahora se controla desde la tarjeta de cada presupuesto: un botón "Marcar
+      // pagado" que guarda fecha y hora del pago (ver handleOjaletearPago +
+      // TarjetaPresupuesto). Así el pago del trabajo externo queda junto a su
+      // presupuesto, no mezclado en Cuentas por Pagar.
 
       setShowForm(false);
       setEditingPresupuesto(null);
       loadData();
     } catch (err) {
       alert('Error al guardar el presupuesto: ' + err.message);
+    }
+  };
+
+  // Pago del ojaletear externo: se marca/desmarca desde la tarjeta del presupuesto
+  // y guarda la fecha/hora exacta del pago (no va a Cuentas por Pagar).
+  const handleOjaletearPago = async (presupuesto, pagar) => {
+    try {
+      await Presupuesto.update(presupuesto.id, pagar
+        ? { ojaletear_pagado: true, ojaletear_pagado_fecha: new Date().toISOString() }
+        : { ojaletear_pagado: false, ojaletear_pagado_fecha: null });
+      loadData();
+    } catch (e) {
+      console.error('Error al marcar el pago de ojaletear:', e);
+      alert('No se pudo actualizar el pago de ojaletear.');
     }
   };
 
@@ -556,6 +528,7 @@ const [showSugerencias, setShowSugerencias] = useState(false);
                 onEdit={() => handleEdit(presupuesto)}
                 onCopy={() => handleCopy(presupuesto)}
                 onDelete={handleDelete}
+                onOjaletearPago={handleOjaletearPago}
               />
             ))
           )}

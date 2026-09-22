@@ -25,7 +25,23 @@ const getStatusColor = (estado) => {
   return colors[estado] || colors.borrador;
 };
 
-function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy }) {
+function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, onOjaletearPago }) {
+  // Ojaletear EXTERNO: suma unidades y monto de los productos con ojaletear externo.
+  // El pago de este trabajo se marca desde la tarjeta (no en Cuentas por Pagar).
+  const ojaletearExterno = (() => {
+    let uds = 0, precio = 0;
+    for (const p of (presupuesto.productos || [])) {
+      const oj = p.ojaletear;
+      if (!oj || oj.tipo !== 'externo') continue;
+      precio = Number(oj.precio_unit) || 80;
+      uds += (p.combinaciones || []).reduce((s, c) =>
+        s + (c.tallas_cantidades || []).reduce((ss, tc) => ss + (Number(tc.cantidad) || 0), 0), 0);
+    }
+    return uds > 0 ? { uds, precio, total: uds * precio } : null;
+  })();
+  const ojPagado = !!presupuesto.ojaletear_pagado;
+  const ojFecha = presupuesto.ojaletear_pagado_fecha;
+
   const totalUnidades = presupuesto.productos?.reduce((sum, producto) => {
     const unidadesProducto = (producto.combinaciones || []).reduce((combSum, comb) => {
       const unidadesCombinacion = (comb.tallas_cantidades || []).reduce((tallaSum, talla) => tallaSum + (talla.cantidad || 0), 0);
@@ -360,6 +376,42 @@ function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy }
                 </div>
               );
             })()}
+
+            {/* Ojaletear externo: control de pago del trabajo externo, con fecha/hora */}
+            {ojaletearExterno && (
+              <div className={`mt-3 rounded-lg px-2.5 py-2 border ${ojPagado ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs min-w-0">
+                    <div className={`font-semibold ${ojPagado ? 'text-green-700' : 'text-amber-700'}`}>Ojaletear externo</div>
+                    <div className="text-slate-500">{ojaletearExterno.uds} uds · ${ojaletearExterno.total.toLocaleString()}</div>
+                  </div>
+                  {ojPagado ? (
+                    <span className="flex items-center gap-1 text-green-700 text-xs font-semibold whitespace-nowrap">✓ Pagado</span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap shrink-0"
+                      onClick={(e) => { e.stopPropagation(); if (window.confirm(`¿Marcar el ojaletear externo como PAGADO ahora?\n${ojaletearExterno.uds} uds · $${ojaletearExterno.total.toLocaleString()}`)) onOjaletearPago?.(presupuesto, true); }}
+                    >
+                      Marcar pagado
+                    </Button>
+                  )}
+                </div>
+                {ojPagado && ojFecha && (
+                  <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-green-200">
+                    <span className="text-[11px] text-green-700">
+                      Pagado el {(() => { try { return format(new Date(ojFecha), "dd/MM/yyyy 'a las' HH:mm"); } catch { return ''; } })()}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); if (window.confirm('¿Quitar la marca de pagado del ojaletear?')) onOjaletearPago?.(presupuesto, false); }}
+                      className="text-[11px] text-slate-400 hover:text-red-600 underline"
+                    >
+                      Deshacer
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
           </div>
 
