@@ -14,6 +14,13 @@ const fmtDate = (d) => {
   return `${day}/${m}/${y}`;
 };
 
+const fmtDateTime = (iso) => {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("es-CO", { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch { return "—"; }
+};
+
 const DEFECT_TYPES = [
   { value: "costura",   label: "🧵 Costura" },
   { value: "cremallera",label: "🔧 Cremallera" },
@@ -23,10 +30,39 @@ const DEFECT_TYPES = [
   { value: "otro",      label: "⚠️ Otro" },
 ];
 
+// Eventos de retorno de una devolución. Usa el arreglo dev.retornos (nuevo);
+// para registros viejos sin arreglo, sintetiza uno con lo retornado + la última
+// fecha para no perder la información histórica.
+function getRetornos(dev) {
+  if (Array.isArray(dev.retornos) && dev.retornos.length) return dev.retornos;
+  const ret = Number(dev.quantity_returned) || 0;
+  if (ret > 0) return [{ cantidad: ret, fecha: dev.date_returned || null, aprox: true }];
+  return [];
+}
+
+function RetornoTimeline({ dev }) {
+  const retornos = getRetornos(dev);
+  if (!retornos.length) return <p className="text-xs text-slate-400 italic">Aún no hay retornos registrados.</p>;
+  return (
+    <div className="space-y-1.5">
+      {retornos.map((r, i) => (
+        <div key={i} className="flex items-center gap-2 text-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+          <span className="font-semibold text-green-700 shrink-0">+{Number(r.cantidad) || 0}</span>
+          <span className="text-slate-300">·</span>
+          <span className="text-slate-500 truncate">{r.fecha ? fmtDateTime(r.fecha) : "fecha no registrada"}{r.aprox ? " (aprox.)" : ""}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DevolucionCard({ dev, employees, products, onRetornar, onEdit }) {
   const [open, setOpen] = useState(false);
+  const [showHist, setShowHist] = useState(false);
   const [qty, setQty] = useState("");
   const [saving, setSaving] = useState(false);
+  const nRetornos = getRetornos(dev).length;
 
   const emp = employees.find(e => e.employee_id === dev.employee_id);
   const prod = products.find(p => p.reference === dev.product_reference);
@@ -103,6 +139,24 @@ function DevolucionCard({ dev, employees, products, onRetornar, onEdit }) {
           {Math.round(((dev.quantity_returned || 0) / dev.quantity_sent) * 100)}% retornado
         </p>
       </div>
+
+      {/* Historial de retornos (fechas) */}
+      {nRetornos > 0 && (
+        <div className="px-4 pb-2">
+          <button
+            onClick={() => setShowHist(s => !s)}
+            className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700"
+          >
+            {showHist ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            Historial de retornos ({nRetornos})
+          </button>
+          {showHist && (
+            <div className="mt-2 pl-1 border-l-2 border-green-100 ml-1">
+              <div className="pl-2"><RetornoTimeline dev={dev} /></div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Retorno inline */}
       {!open ? (
@@ -268,6 +322,43 @@ function DevolucionForm({ employees, products, devolucion, onSaved, onCancel }) 
   );
 }
 
+function HistorialRow({ dev, employees, products, onEdit }) {
+  const [open, setOpen] = useState(false);
+  const emp = employees.find(e => e.employee_id === dev.employee_id);
+  const prod = products.find(p => p.reference === dev.product_reference);
+  const defect = DEFECT_TYPES.find(d => d.value === dev.defect_type);
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="px-4 py-3 flex items-center gap-3">
+        <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+        <button onClick={() => setOpen(s => !s)} className="flex-1 min-w-0 text-left">
+          <p className="text-sm font-semibold text-slate-700 truncate">{emp?.name || dev.employee_id}</p>
+          <p className="text-xs text-slate-400 truncate">{prod?.name || dev.product_reference} · {Number(dev.quantity_sent) || 0} uds{defect ? ` · ${defect.label}` : ""}</p>
+        </button>
+        <button onClick={() => onEdit(dev)} className="p-1.5 rounded-lg text-slate-400 hover:text-orange-600 hover:bg-orange-50 shrink-0" title="Editar devolución">
+          <Pencil className="w-4 h-4" />
+        </button>
+        <button onClick={() => setOpen(s => !s)} className="text-right shrink-0">
+          <p className="text-xs text-green-700 font-semibold">Cerrada</p>
+          <p className="text-xs text-slate-400 flex items-center gap-0.5 justify-end">{fmtDate(dev.date_sent)} {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}</p>
+        </button>
+      </div>
+      {open && (
+        <div className="px-4 pb-3 pt-2 border-t border-slate-100 bg-slate-50 space-y-2">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <Clock className="w-3.5 h-3.5 shrink-0" /> Enviada: {fmtDate(dev.date_sent)}
+            {dev.notes ? <span className="italic text-slate-400 truncate">· "{dev.notes}"</span> : null}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 mb-1">Retornos ({getRetornos(dev).length}):</p>
+            <RetornoTimeline dev={dev} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RouteDevoluciones({ employees, products, devoluciones, onSaved }) {
   const [view, setView] = useState("abiertas"); // "abiertas" | "historial"
   const [showForm, setShowForm] = useState(false);
@@ -290,16 +381,29 @@ export default function RouteDevoluciones({ employees, products, devoluciones, o
   const empIdsWithDev = [...new Set(devoluciones.map(d => d.employee_id))];
   const employeesWithDev = employees.filter(e => empIdsWithDev.includes(e.employee_id));
 
+  // Resumen (respeta el filtro por operario)
+  const num = (v) => Number(v) || 0;
+  const scope = [...filteredOpen, ...filteredClosed];
+  const totPendiente = filteredOpen.reduce((s, d) => s + (num(d.quantity_sent) - num(d.quantity_returned)), 0);
+  const totRetornado = scope.reduce((s, d) => s + num(d.quantity_returned), 0);
+  const totEnviado = scope.reduce((s, d) => s + num(d.quantity_sent), 0);
+
   const handleRetornar = async (dev, qty) => {
-    const newReturned = (Number(dev.quantity_returned) || 0) + Number(qty);
+    const q = Number(qty);
+    const newReturned = (Number(dev.quantity_returned) || 0) + q;
     const newStatus = newReturned >= (Number(dev.quantity_sent) || 0) ? "cerrada" : "abierta";
     const now = new Date().toISOString();
+    // Registrar cada retorno como un evento (cantidad + fecha/hora) para tener el
+    // historial completo, no solo el acumulado.
+    const retornos = Array.isArray(dev.retornos) ? [...dev.retornos] : [];
+    retornos.push({ cantidad: q, fecha: now });
     try {
       // Guardar fecha/hora de retorno — no afecta inventario
       await Devolucion.update(dev.id, {
         quantity_returned: newReturned,
         status: newStatus,
         date_returned: now,
+        retornos,
       });
       setSaved(true);
       setTimeout(() => { setSaved(false); onSaved(); }, 1000);
@@ -371,6 +475,24 @@ export default function RouteDevoluciones({ employees, products, devoluciones, o
         <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
           <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
           <p className="text-sm font-semibold text-green-800">¡Guardado correctamente!</p>
+        </div>
+      )}
+
+      {/* Resumen */}
+      {scope.length > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 text-center">
+            <p className="text-[11px] text-orange-600 font-medium">Pendiente</p>
+            <p className="text-lg font-bold text-orange-700 tabular-nums">{totPendiente}</p>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-center">
+            <p className="text-[11px] text-green-600 font-medium">Retornado</p>
+            <p className="text-lg font-bold text-green-700 tabular-nums">{totRetornado}</p>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-center">
+            <p className="text-[11px] text-slate-500 font-medium">Enviado</p>
+            <p className="text-lg font-bold text-slate-700 tabular-nums">{totEnviado}</p>
+          </div>
         </div>
       )}
 
@@ -450,31 +572,9 @@ export default function RouteDevoluciones({ employees, products, devoluciones, o
             filteredClosed
               .slice()
               .sort((a, b) => (b.date_sent || "").localeCompare(a.date_sent || ""))
-              .map(dev => {
-                const emp = employees.find(e => e.employee_id === dev.employee_id);
-                const prod = products.find(p => p.reference === dev.product_reference);
-                const defect = DEFECT_TYPES.find(d => d.value === dev.defect_type);
-                return (
-                  <div key={dev.id} className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-700 truncate">{emp?.name || dev.employee_id}</p>
-                      <p className="text-xs text-slate-400 truncate">{prod?.name || dev.product_reference} · {Number(dev.quantity_sent) || 0} uds{defect ? ` · ${defect.label}` : ""}</p>
-                    </div>
-                    <button
-                      onClick={() => startEdit(dev)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-orange-600 hover:bg-orange-50 shrink-0"
-                      title="Editar devolución"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs text-green-700 font-semibold">Cerrada</p>
-                      <p className="text-xs text-slate-400">{fmtDate(dev.date_sent)}</p>
-                    </div>
-                  </div>
-                );
-              })
+              .map(dev => (
+                <HistorialRow key={dev.id} dev={dev} employees={employees} products={products} onEdit={startEdit} />
+              ))
           )}
         </div>
       )}
