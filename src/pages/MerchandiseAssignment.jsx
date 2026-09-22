@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { localClient } from "@/api/localClient";
 import { Location } from "@/entities/Location";
 import { Inventory } from "@/entities/Inventory";
@@ -17,6 +17,9 @@ export default function MerchandiseAssignment() {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
+  // Freno síncrono contra doble-asignación (doble clic / carrera): evita crear
+  // movimientos merchandise_assignment repetidos que inflan el inventario.
+  const asignandoRef = useRef(new Set());
   // assignments[dateKey][ref][locationId] = qty
   const [assignments, setAssignments] = useState({});
   const [showRevert, setShowRevert] = useState(false);
@@ -142,25 +145,37 @@ export default function MerchandiseAssignment() {
 
   const handleConfirm = async (group) => {
     const { dateKey, deliveryIds, items } = group;
-    const itemsList = Object.values(items);
+    // Freno síncrono: no reprocesar el mismo grupo (mata el doble-clic que
+    // duplicaba las asignaciones de inventario).
+    if (asignandoRef.current.has(dateKey)) return;
+    asignandoRef.current.add(dateKey);
+    try {
+      const itemsList = Object.values(items);
 
-    // Validar que no se asigne más de lo disponible por referencia
-    for (const item of itemsList) {
-      const assigned = getAssignedForRef(dateKey, item.product_reference);
-      if (assigned > item.quantity) {
-        alert(`"${item.product_name}": solo hay ${item.quantity} unidades pero asignaste ${assigned}.`);
+      // Validar que no se asigne más de lo disponible por referencia
+      for (const item of itemsList) {
+        const assigned = getAssignedForRef(dateKey, item.product_reference);
+        if (assigned > item.quantity) {
+          alert(`"${item.product_name}": solo hay ${item.quantity} unidades pero asignaste ${assigned}.`);
+          return;
+        }
+      }
+
+      const totalAssigned = getTotalAssignedAll(dateKey);
+      if (totalAssigned === 0) {
+        alert("Debes asignar al menos una unidad.");
         return;
       }
-    }
 
-    const totalAssigned = getTotalAssignedAll(dateKey);
-    if (totalAssigned === 0) {
-      alert("Debes asignar al menos una unidad.");
-      return;
-    }
+      setSaving(dateKey);
 
-    setSaving(dateKey);
-    try {
+      // Idempotencia: si estas entregas ya fueron asignadas, no repetir.
+      const frescas = await Promise.all(deliveryIds.map(id => Delivery.filter({ id })));
+      if (frescas.some(f => f?.[0]?.inventory_assigned)) {
+        alert('Estas entregas ya fueron asignadas. No se repitió la asignación.');
+        return;
+      }
+
       // Cargar inventario fresco del servidor para evitar datos stale
       let liveInventory = await Inventory.list();
 
@@ -220,8 +235,10 @@ export default function MerchandiseAssignment() {
       loadData();
     } catch (err) {
       alert("Error al asignar: " + err.message);
+    } finally {
+      asignandoRef.current.delete(dateKey);
+      setSaving(null);
     }
-    setSaving(null);
   };
 
   // Agrupar entregas asignadas por fecha
