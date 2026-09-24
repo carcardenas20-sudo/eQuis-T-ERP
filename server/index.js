@@ -757,6 +757,36 @@ app.get('/{*path}', (_req, res) => {
 async function runMigrations(client) {
   const migrations = [
     {
+      // FASE 1 multiempresa (fundación, invisible): crea Empresa 1 = eQuis-T y
+      // agrega company_id (con DEFAULT = Empresa 1) a todas las tablas. Al usar
+      // DEFAULT, Postgres sella TODAS las filas existentes y las nuevas como
+      // Empresa 1 automáticamente. Nada lee company_id todavía → eQuis-T igual.
+      name: 'multiempresa_foundation_v1',
+      sql: async () => {
+        const C1 = 'equist'; // id fijo de Empresa 1 (eQuis-T)
+        await client.query(
+          `INSERT INTO entity_company (id, name, is_active, data, created_date, updated_date)
+           VALUES ($1, 'eQuis-T', true, '{"is_default":true}'::jsonb, NOW(), NOW())
+           ON CONFLICT (id) DO NOTHING`,
+          [C1]
+        );
+        const tables = [
+          ...Object.values(ENTITY_SCHEMAS).map(s => s.table).filter(t => t && t !== 'entity_company'),
+          'app_entities',
+          'app_users',
+        ];
+        for (const t of tables) {
+          try {
+            await client.query(`ALTER TABLE IF EXISTS ${t} ADD COLUMN IF NOT EXISTS company_id TEXT DEFAULT '${C1}'`);
+            await client.query(`CREATE INDEX IF NOT EXISTS idx_${t}_company_id ON ${t}(company_id)`);
+          } catch (e) {
+            console.warn(`multiempresa: no se pudo alterar ${t}:`, e.message);
+          }
+        }
+        console.log('✅ Migration: multiempresa foundation (Empresa 1 + company_id en todas las tablas)');
+      }
+    },
+    {
       name: 'deduplicate_employees_by_employee_id',
       sql: async () => {
         // Keep the oldest record per employee_id, delete the rest

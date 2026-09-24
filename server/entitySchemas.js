@@ -11,6 +11,19 @@
 export const ENTITY_SCHEMAS = {
 
   // ============================================================
+  // MULTIEMPRESA
+  // ============================================================
+  // Empresas (inquilinos). Cada registro del sistema lleva company_id.
+  Company: {
+    table: 'entity_company',
+    typed: {
+      name: 'TEXT',
+      is_active: 'BOOLEAN DEFAULT true',
+    },
+    indexes: ['name'],
+  },
+
+  // ============================================================
   // COMERCIAL (equistpos)
   // ============================================================
 
