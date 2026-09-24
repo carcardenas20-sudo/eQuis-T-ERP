@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { SessionProvider, useSession } from "./components/providers/SessionProvider";
+import CompanySwitcher from "./components/layout/CompanySwitcher";
 import { ThemeProvider } from "./components/providers/ThemeProvider";
 import { ThemeToggle } from "./components/layout/ThemeToggle";
 import BottomTabBar from "./components/layout/BottomTabBar";
@@ -285,6 +286,9 @@ function LayoutContent({ children }) {
           </div>
           <div className="hidden lg:block"><ThemeToggle /></div>
         </div>
+
+        {/* Selector de empresa (multiempresa; solo super-admin y con 2+ empresas) */}
+        <div className="px-4 pt-3 empty:hidden"><CompanySwitcher isAdmin={isAdmin} /></div>
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto overscroll-contain">

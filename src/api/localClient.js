@@ -16,11 +16,24 @@ export function setToken(t) {
   try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch {}
 }
 
+// Multiempresa: empresa activa que elige el super-admin (vacío = su empresa por
+// defecto). Se manda como header X-Company-Id; el servidor solo lo respeta si el
+// usuario es admin, así que para el resto no cambia nada.
+const COMPANY_KEY = 'equist_active_company';
+export function getActiveCompany() {
+  try { return localStorage.getItem(COMPANY_KEY) || ''; } catch { return ''; }
+}
+export function setActiveCompany(id) {
+  try { if (id) localStorage.setItem(COMPANY_KEY, id); else localStorage.removeItem(COMPANY_KEY); } catch {}
+}
+
 async function apiFetch(path, options = {}) {
   const token = getToken();
+  const company = getActiveCompany();
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(company ? { 'X-Company-Id': company } : {}),
     ...(options.headers || {}),
   };
   const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
