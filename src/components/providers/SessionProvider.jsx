@@ -19,7 +19,12 @@ export function SessionProvider({ children }) {
     error: null
   });
 
-  const [previewRoleId, setPreviewRoleIdState] = useState(() => sessionStorage.getItem(PREVIEW_KEY) || null);
+  // Vista previa de roles deshabilitada: siempre arrancar como el admin real y
+  // limpiar cualquier previa guardada (la barra de "Vista previa como" se quitó).
+  const [previewRoleId, setPreviewRoleIdState] = useState(() => {
+    try { sessionStorage.removeItem(PREVIEW_KEY); } catch {}
+    return null;
+  });
 
   useEffect(() => {
     let cancelled = false;

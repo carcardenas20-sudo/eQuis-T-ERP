@@ -6,7 +6,6 @@ import CompanySwitcher from "./components/layout/CompanySwitcher";
 import { ThemeProvider } from "./components/providers/ThemeProvider";
 import { ThemeToggle } from "./components/layout/ThemeToggle";
 import BottomTabBar from "./components/layout/BottomTabBar";
-import RolePreviewBanner from "./components/layout/RolePreviewBanner";
 import { AnimatePresence, motion } from "framer-motion";
 
 import {
@@ -244,15 +243,13 @@ function LayoutContent({ children }) {
     analisis:   { dot: "#f59e0b", text: "#f59e0b" },
   };
 
-  const bannerOffset = isRealAdmin ? "pt-7" : "";
+  const bannerOffset = "";
 
   return (
     <div className={`min-h-[100dvh] bg-slate-50 overflow-x-hidden ${bannerOffset}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
-      <RolePreviewBanner />
-
       {/* Mobile Header */}
-      <div className={`lg:hidden flex items-center justify-between px-4 py-3 sticky z-[150] border-b ${isRealAdmin ? 'top-7' : 'top-0'}`}
+      <div className={`lg:hidden flex items-center justify-between px-4 py-3 sticky z-[150] border-b top-0`}
         style={{ background: sidebarBg, borderColor: sidebarBorder }}>
         <button onClick={() => setSidebarOpen(p => !p)} className="p-2 rounded-lg transition-colors"
           style={{ color: '#a5b4fc' }}>
@@ -270,7 +267,7 @@ function LayoutContent({ children }) {
       {sidebarOpen && <div onClick={closeSidebar} className="fixed inset-0 bg-black/60 z-[100] lg:hidden backdrop-blur-sm" />}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 bottom-0 w-64 transform transition-transform duration-300 z-[200] flex flex-col overflow-hidden ${isRealAdmin ? 'top-7' : 'top-0'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+      <aside className={`fixed left-0 bottom-0 w-64 transform transition-transform duration-300 z-[200] flex flex-col overflow-hidden top-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{ background: sidebarBg, borderRight: `1px solid ${sidebarBorder}` }}>
 
         {/* Logo */}
