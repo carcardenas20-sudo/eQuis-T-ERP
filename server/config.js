@@ -15,5 +15,5 @@ export const JWT_EXPIRES = '30d';
 
 // Entity types that require admin role for write operations (POST/PUT/DELETE)
 export const ADMIN_ONLY_WRITE_ENTITIES = new Set([
-  'User', 'Role', 'SystemSettings', 'Location'
+  'User', 'Role', 'SystemSettings', 'Location', 'Company'
 ]);

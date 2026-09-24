@@ -54,6 +54,7 @@ const comercialGroups = [
   {
     title: "Configuración", items: [
       { title: "Configuración", url: createPageUrl("Settings"), icon: Settings, permissions: ["settings_system", "users_view", "locations_view"] },
+      { title: "Empresas", url: createPageUrl("Empresas"), icon: Building2, permissions: ["settings_system"] },
       { title: "WhatsApp Calidad", url: createPageUrl("Admin_WhatsApp"), icon: MessageCircle, permissions: ["settings_system"] },
     ]
   },

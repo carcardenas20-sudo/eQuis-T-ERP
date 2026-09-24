@@ -25,6 +25,7 @@ import Settings from './pages/Settings';
 import TestPermisos from './pages/TestPermisos';
 import Transfers from './pages/Transfers';
 import Users from './pages/Users';
+import Empresas from './pages/Empresas';
 import MerchandiseAssignment from './pages/MerchandiseAssignment';
 
 // ── MÓDULO ANÁLISIS ───────────────────────────────────────────
@@ -94,6 +95,7 @@ export const PAGES = {
   "TestPermisos": TestPermisos,
   "Transfers": Transfers,
   "Users": Users,
+  "Empresas": Empresas,
   "MerchandiseAssignment": MerchandiseAssignment,
 
   // Producción / Chaquetas
