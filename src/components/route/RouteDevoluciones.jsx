@@ -222,7 +222,17 @@ function DevolucionForm({ employees, products, devolucion, onSaved, onCancel }) 
   const [qty, setQty] = useState(devolucion ? String(Number(devolucion.quantity_sent) || "") : "");
   const [defectType, setDefectType] = useState(devolucion?.defect_type || "");
   const [notes, setNotes] = useState(devolucion?.notes || "");
+  // Retornos editables (solo en edición): permite corregir la cantidad de cada
+  // retorno o borrarlo. El total retornado se recalcula desde aquí.
+  const [retornos, setRetornos] = useState(() =>
+    isEdit ? getRetornos(devolucion).map(r => ({ cantidad: String(Number(r.cantidad) || 0), fecha: r.fecha || new Date().toISOString() })) : []
+  );
   const [saving, setSaving] = useState(false);
+
+  const sumRet = retornos.reduce((s, r) => s + (Number(r.cantidad) || 0), 0);
+  const updateRetorno = (i, val) => setRetornos(rs => rs.map((r, idx) => idx === i ? { ...r, cantidad: val } : r));
+  const removeRetorno = (i) => setRetornos(rs => rs.filter((_, idx) => idx !== i));
+  const addRetorno = () => setRetornos(rs => [...rs, { cantidad: "", fecha: new Date().toISOString() }]);
 
   const handleSubmit = async () => {
     if (!emp || !ref || !qty) { alert("Completa operario, referencia y cantidad."); return; }
@@ -231,9 +241,12 @@ function DevolucionForm({ employees, products, devolucion, onSaved, onCancel }) 
     setSaving(true);
     try {
       if (isEdit) {
-        const yaRetornado = Number(devolucion.quantity_returned) || 0;
-        if (nQty < yaRetornado) {
-          alert(`No puedes dejar la cantidad (${nQty}) por debajo de lo ya retornado (${yaRetornado}).`);
+        const limpios = retornos
+          .map(r => ({ cantidad: Number(r.cantidad) || 0, fecha: r.fecha || new Date().toISOString() }))
+          .filter(r => r.cantidad > 0);
+        const totalRet = limpios.reduce((s, r) => s + r.cantidad, 0);
+        if (totalRet > nQty) {
+          alert(`Los retornos (${totalRet}) no pueden superar la cantidad enviada (${nQty}).`);
           setSaving(false);
           return;
         }
@@ -241,9 +254,12 @@ function DevolucionForm({ employees, products, devolucion, onSaved, onCancel }) 
           employee_id: emp,
           product_reference: ref,
           quantity_sent: nQty,
+          quantity_returned: totalRet,
+          retornos: limpios,
+          date_returned: limpios.length ? limpios[limpios.length - 1].fecha : null,
           defect_type: defectType || null,
           notes: notes || "",
-          status: yaRetornado >= nQty ? "cerrada" : "abierta",
+          status: totalRet >= nQty ? "cerrada" : "abierta",
         });
       } else {
         await Devolucion.create({
@@ -313,6 +329,48 @@ function DevolucionForm({ employees, products, devolucion, onSaved, onCancel }) 
           placeholder="Detalles adicionales..."
           className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
       </div>
+
+      {/* Retornos: corregir cantidad o borrar cada uno (solo al editar) */}
+      {isEdit && (
+        <div className="border-t border-slate-100 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-slate-600">Retornos registrados</label>
+            <span className={`text-xs font-semibold ${sumRet > (parseInt(qty) || 0) ? "text-red-600" : "text-slate-500"}`}>
+              {sumRet} / {parseInt(qty) || 0} enviadas
+            </span>
+          </div>
+          <div className="space-y-2">
+            {retornos.length === 0 && (
+              <p className="text-xs text-slate-400 italic">Sin retornos. Agrega uno si el operario ya devolvió parte.</p>
+            )}
+            {retornos.map((r, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  type="number" min="0" value={r.cantidad}
+                  onChange={e => updateRetorno(i, e.target.value)}
+                  className="w-20 border border-slate-300 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-400"
+                />
+                <span className="text-xs text-slate-400 flex-1 truncate">
+                  {r.fecha ? fmtDateTime(r.fecha) : "hoy"}
+                </span>
+                <button
+                  onClick={() => removeRetorno(i)}
+                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0"
+                  title="Borrar este retorno"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={addRetorno}
+            className="mt-2 flex items-center gap-1 text-xs font-medium text-green-700 hover:text-green-800"
+          >
+            <Plus className="w-3.5 h-3.5" /> Agregar retorno
+          </button>
+        </div>
+      )}
 
       <Button onClick={handleSubmit} disabled={saving}
         className="w-full bg-orange-600 hover:bg-orange-700 text-white h-11 font-semibold">
@@ -499,6 +557,7 @@ export default function RouteDevoluciones({ employees, products, devoluciones, o
       {/* Formulario nueva / edición */}
       {(showForm || editing) && (
         <DevolucionForm
+          key={editing ? editing.id : "nueva"}
           employees={employees}
           products={products}
           devolucion={editing}
