@@ -6,6 +6,32 @@ import { ENTITY_SCHEMAS, splitRecord, mergeRecord } from '../entitySchemas.js';
 
 const router = express.Router();
 
+// ── Multiempresa: candado por empresa ────────────────────────────────────────
+// Estas entidades NO se filtran por empresa: Company es el registro de empresas
+// (no pertenece a una empresa); User tiene su propia ruta/tabla.
+const NOT_SCOPED = new Set(['Company', 'User']);
+const isScoped = (type) => !NOT_SCOPED.has(type);
+
+// Resuelve la empresa activa de la petición: la del usuario, y si es super-admin
+// (rol admin) puede cambiarla con el header X-Company-Id (para el selector).
+// Fail-open a 'equist' (Empresa 1) ante cualquier problema, para no romper nada.
+async function resolveCompany(req, res, next) {
+  try {
+    const { rows } = await query('SELECT role, company_id FROM app_users WHERE id = $1', [req.userId]);
+    const u = rows[0];
+    const userCompany = u?.company_id || 'equist';
+    const isSuperAdmin = req.userRole === 'admin' || u?.role === 'admin';
+    const requested = req.headers['x-company-id'];
+    req.companyId = (isSuperAdmin && requested) ? String(requested) : userCompany;
+    req.isSuperAdmin = isSuperAdmin;
+  } catch {
+    req.companyId = 'equist';
+    req.isSuperAdmin = false;
+  }
+  next();
+}
+router.use(resolveCompany);
+
 // RBAC: deny writes on privileged entity types unless caller is admin
 function requireAdminForPrivileged(req, res, next) {
   const { type } = req.params;
@@ -234,6 +260,12 @@ router.get('/:type', async (req, res) => {
         }
       }
 
+      // Candado por empresa
+      if (isScoped(type)) {
+        params.push(req.companyId);
+        whereClauses.push(`company_id = $${params.length}`);
+      }
+
       const whereStr = whereClauses.length > 0 ? ' WHERE ' + whereClauses.join(' AND ') : '';
       const typedColsSel = typedCols.join(', ');
       const selectCols = typedCols.length > 0 ? `id, ${typedColsSel}, data, created_date, updated_date, created_by_id` : 'id, data, created_date, updated_date, created_by_id';
@@ -264,6 +296,11 @@ router.get('/:type', async (req, res) => {
       } catch {
         return res.status(400).json({ error: 'Parámetro _filter inválido' });
       }
+    }
+    // Candado por empresa (los tipos sin esquema siempre se scopean)
+    if (isScoped(type)) {
+      params.push(req.companyId);
+      whereClauses.push(`company_id = $${params.length}`);
     }
     const whereExtra = whereClauses.length > 0 ? ' AND ' + whereClauses.join(' AND ') : '';
     params.push(limit);
@@ -307,13 +344,17 @@ router.get('/:type/:id', async (req, res) => {
     if (schema) {
       const typedCols = Object.keys(schema.typed);
       const selectCols = typedCols.length > 0 ? `id, ${typedCols.join(', ')}, data, created_date, updated_date, created_by_id` : 'id, data, created_date, updated_date, created_by_id';
-      const result = await query(`SELECT ${selectCols} FROM ${schema.table} WHERE id = $1`, [id]);
+      const scoped = isScoped(type);
+      const result = await query(
+        `SELECT ${selectCols} FROM ${schema.table} WHERE id = $1${scoped ? ' AND company_id = $2' : ''}`,
+        scoped ? [id, req.companyId] : [id]
+      );
       if (!result.rows[0]) return res.status(404).json({ error: 'No encontrado' });
       return res.json(mergeRecord(result.rows[0], schema));
     }
 
     // Fallback
-    const result = await query('SELECT id, data, created_date, updated_date, created_by_id FROM app_entities WHERE entity_type = $1 AND id = $2', [type, id]);
+    const result = await query('SELECT id, data, created_date, updated_date, created_by_id FROM app_entities WHERE entity_type = $1 AND id = $2 AND company_id = $3', [type, id, req.companyId]);
     if (!result.rows[0]) return res.status(404).json({ error: 'No encontrado' });
     const r = result.rows[0];
     return res.json({ ...r.data, id: r.id, created_date: r.created_date, updated_date: r.updated_date, created_by_id: r.created_by_id });
@@ -361,6 +402,8 @@ router.post('/:type', async (req, res) => {
         now,
         createdBy,
       ];
+      // Candado por empresa: sellar el registro con la empresa activa
+      if (isScoped(type)) { colNames.push('company_id'); colValues.push(req.companyId); }
       const placeholders = colValues.map((_, i) => `$${i + 1}`).join(', ');
       const updateCols = [...typedCols.map(c => `${c} = EXCLUDED.${c}`), 'data = EXCLUDED.data', 'updated_date = EXCLUDED.updated_date'];
       const result = await query(
@@ -372,8 +415,8 @@ router.post('/:type', async (req, res) => {
 
     // Fallback
     await query(
-      'INSERT INTO app_entities (id, entity_type, data, created_date, updated_date, created_by_id) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT(id, entity_type) DO UPDATE SET data=EXCLUDED.data, updated_date=EXCLUDED.updated_date',
-      [id, type, JSON.stringify(recordData), now, now, createdBy]
+      'INSERT INTO app_entities (id, entity_type, data, created_date, updated_date, created_by_id, company_id) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT(id, entity_type) DO UPDATE SET data=EXCLUDED.data, updated_date=EXCLUDED.updated_date',
+      [id, type, JSON.stringify(recordData), now, now, createdBy, req.companyId]
     );
     return res.json({ ...recordData, id, created_date: now, updated_date: now, created_by_id: createdBy });
   } catch (err) {
@@ -427,8 +470,10 @@ router.put('/:type/:id', async (req, res) => {
         }
       }
       params.push(id);
+      let whereClause = `id = $${params.length}`;
+      if (isScoped(type)) { params.push(req.companyId); whereClause += ` AND company_id = $${params.length}`; }
       const result = await query(
-        `UPDATE ${schema.table} SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
+        `UPDATE ${schema.table} SET ${sets.join(', ')} WHERE ${whereClause} RETURNING *`,
         params
       );
       if (!result.rows[0]) return res.status(404).json({ error: 'No encontrado' });
@@ -437,8 +482,8 @@ router.put('/:type/:id', async (req, res) => {
 
     // Fallback
     const result = await query(
-      'UPDATE app_entities SET data = data || $1::jsonb, updated_date = $2 WHERE entity_type = $3 AND id = $4 RETURNING *',
-      [JSON.stringify(updates), now, type, id]
+      'UPDATE app_entities SET data = data || $1::jsonb, updated_date = $2 WHERE entity_type = $3 AND id = $4 AND company_id = $5 RETURNING *',
+      [JSON.stringify(updates), now, type, id, req.companyId]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'No encontrado' });
     const r = result.rows[0];
@@ -459,9 +504,13 @@ router.delete('/:type/:id', async (req, res) => {
     if (type === 'User') {
       await query('UPDATE app_users SET is_active = false WHERE id = $1', [id]);
     } else if (schema) {
-      await query(`DELETE FROM ${schema.table} WHERE id = $1`, [id]);
+      const scoped = isScoped(type);
+      await query(
+        `DELETE FROM ${schema.table} WHERE id = $1${scoped ? ' AND company_id = $2' : ''}`,
+        scoped ? [id, req.companyId] : [id]
+      );
     } else {
-      await query('DELETE FROM app_entities WHERE entity_type = $1 AND id = $2', [type, id]);
+      await query('DELETE FROM app_entities WHERE entity_type = $1 AND id = $2 AND company_id = $3', [type, id, req.companyId]);
     }
     res.json({ ok: true });
   } catch (err) {
