@@ -40,6 +40,7 @@ import CustomerForm from "../components/pos/CustomerForm";
 import ExchangeModal from "../components/pos/ExchangeModal";
 import QuoteModal from "../components/pos/QuoteModal";
 import HoldCartManager from "../components/pos/HoldCartManager";
+import { useActiveCompany, buildCompanyInfo } from "@/hooks/useActiveCompany";
 
 
 
@@ -72,6 +73,7 @@ export default function POS() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState(null);
   const [systemSettings, setSystemSettings] = useState(null);
+  const activeCompany = useActiveCompany();
 
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [activeTab, setActiveTab] = useState("products");
@@ -518,15 +520,7 @@ export default function POS() {
         const cartItem = cartSnapshot.find(ci => ci.product.sku === si.product_id);
         return { ...si, product: cartItem?.product || null };
       });
-      const companyInfo = systemSettings ? {
-        name: systemSettings.company_name || 'JacketMaster POS',
-        address: systemSettings.company_address || 'Dirección no configurada',
-        document: systemSettings.company_document || 'NIT no configurado',
-        phone: systemSettings.company_phone || 'Teléfono no configurado',
-        email: systemSettings.company_email || '',
-        receiptHeader: systemSettings.receipt_header || '',
-        receiptFooter: systemSettings.receipt_footer || '¡Gracias por su compra!'
-      } : {};
+      const companyInfo = buildCompanyInfo(systemSettings, activeCompany);
       setPostSaleInfo({ sale, items: enrichedItems, companyInfo });
 
       // Vincular la confirmación bancaria si venía de una

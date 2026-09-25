@@ -8,8 +8,9 @@ const router = express.Router();
 
 // ── Multiempresa: candado por empresa ────────────────────────────────────────
 // Estas entidades NO se filtran por empresa: Company es el registro de empresas
-// (no pertenece a una empresa); User tiene su propia ruta/tabla.
-const NOT_SCOPED = new Set(['Company', 'User']);
+// (no pertenece a una empresa); User tiene su propia ruta/tabla (su empresa va en
+// app_users.company_id); Role = plantillas de permisos compartidas por todas las empresas.
+const NOT_SCOPED = new Set(['Company', 'User', 'Role']);
 const isScoped = (type) => !NOT_SCOPED.has(type);
 
 // Resuelve la empresa activa de la petición: la del usuario, y si es super-admin
@@ -234,7 +235,7 @@ router.get('/:type', async (req, res) => {
     // User entity: dedicated table with role-based field visibility
     if (type === 'User') {
       const fields = isAdmin
-        ? 'id, email, full_name, role, role_id, location_id, is_active, created_date, updated_date, data'
+        ? 'id, email, full_name, role, role_id, location_id, is_active, company_id, created_date, updated_date, data'
         : 'id, full_name, role, role_id, location_id, is_active';
       const result = await query(
         `SELECT ${fields} FROM app_users WHERE is_active = true ORDER BY full_name`
@@ -247,6 +248,7 @@ router.get('/:type', async (req, res) => {
         role_id: u.role_id,
         location_id: u.location_id,
         is_active: u.is_active,
+        company_id: u.company_id,
         ...(isAdmin ? { email: u.email, created_date: u.created_date, updated_date: u.updated_date } : {}),
       })));
     }
@@ -351,7 +353,7 @@ router.get('/:type/:id', async (req, res) => {
 
     if (type === 'User') {
       const fields = isAdmin
-        ? 'id, email, full_name, role, role_id, location_id, is_active, created_date, updated_date, data'
+        ? 'id, email, full_name, role, role_id, location_id, is_active, company_id, created_date, updated_date, data'
         : 'id, full_name, role, role_id, location_id, is_active';
       const result = await query(`SELECT ${fields} FROM app_users WHERE id = $1`, [id]);
       if (!result.rows[0]) return res.status(404).json({ error: 'No encontrado' });
@@ -364,6 +366,7 @@ router.get('/:type/:id', async (req, res) => {
         role_id: u.role_id,
         location_id: u.location_id,
         is_active: u.is_active,
+        company_id: u.company_id,
         ...(isAdmin ? { email: u.email, created_date: u.created_date, updated_date: u.updated_date } : {}),
       });
     }
@@ -401,15 +404,16 @@ router.post('/:type', async (req, res) => {
     const now = new Date().toISOString();
 
     if (type === 'User') {
-      const { email, password, full_name, role, role_id, location_id, ...rest } = req.body;
+      const { email, password, full_name, role, role_id, location_id, company_id: _cid, ...rest } = req.body;
       let password_hash = null;
       if (password) {
         const { default: bcrypt } = await import('bcryptjs');
         password_hash = await bcrypt.hash(password, 10);
       }
       const result = await query(
-        'INSERT INTO app_users (id, email, password_hash, full_name, role, role_id, location_id, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email, full_name=EXCLUDED.full_name, role=EXCLUDED.role, role_id=EXCLUDED.role_id, location_id=EXCLUDED.location_id, data=EXCLUDED.data RETURNING *',
-        [id, email?.toLowerCase(), password_hash, full_name, role || 'user', role_id, location_id, JSON.stringify(rest)]
+        'INSERT INTO app_users (id, email, password_hash, full_name, role, role_id, location_id, data, company_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email, full_name=EXCLUDED.full_name, role=EXCLUDED.role, role_id=EXCLUDED.role_id, location_id=EXCLUDED.location_id, data=EXCLUDED.data RETURNING *',
+        // El usuario nuevo queda en la empresa activa de quien lo crea (el selector del admin).
+        [id, email?.toLowerCase(), password_hash, full_name, role || 'user', role_id, location_id, JSON.stringify(rest), req.companyId || 'equist']
       );
       const u = result.rows[0];
       return res.json({ ...u.data, id: u.id, email: u.email, full_name: u.full_name, role: u.role, role_id: u.role_id, location_id: u.location_id, is_active: u.is_active, created_date: u.created_date, updated_date: u.updated_date });
@@ -465,7 +469,7 @@ router.put('/:type/:id', async (req, res) => {
     const now = new Date().toISOString();
 
     if (type === 'User') {
-      const { email, password, full_name, role, role_id, location_id, is_active, id: _id, created_date, updated_date, ...rest } = req.body;
+      const { email, password, full_name, role, role_id, location_id, is_active, company_id: _cid, id: _id, created_date, updated_date, ...rest } = req.body;
       const sets = ['updated_date = NOW()'];
       const params = [id];
       if (email !== undefined) { params.push(email.toLowerCase()); sets.push(`email = $${params.length}`); }

@@ -197,11 +197,11 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
     // Buscar primero en la tabla propia, luego en app_entities (compatibilidad con traslados viejos)
     let trasRow = null, useAppEntities = false;
     try {
-      const { rows } = await query(`SELECT id, numero_traslado, estado, origen_location_id, destino_location_id, data FROM entity_traslado WHERE id = $1`, [traslado_id]);
+      const { rows } = await query(`SELECT id, numero_traslado, estado, origen_location_id, destino_location_id, data, company_id FROM entity_traslado WHERE id = $1`, [traslado_id]);
       if (rows.length) trasRow = rows[0];
     } catch (_) {}
     if (!trasRow) {
-      const { rows } = await query(`SELECT id, data FROM app_entities WHERE entity_type = 'Traslado' AND id = $1`, [traslado_id]);
+      const { rows } = await query(`SELECT id, data, company_id FROM app_entities WHERE entity_type = 'Traslado' AND id = $1`, [traslado_id]);
       if (rows.length) { trasRow = rows[0]; useAppEntities = true; }
     }
     if (!trasRow) return res.status(404).json({ error: 'Traslado no encontrado' });
@@ -238,6 +238,8 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
     }
 
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+    // Multiempresa: el inventario y los movimientos quedan en la empresa del traslado.
+    const companyId = trasRow.company_id || 'equist';
     const { rows: allInv } = await query(`SELECT id, product_id, location_id, current_stock, available_stock FROM entity_inventory`);
 
     for (const item of (traslado.items || [])) {
@@ -246,9 +248,9 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
       const diferencia = item.cantidad_enviada - totalRecibido;
 
       // Salida del origen
-      await query(`INSERT INTO entity_inventory_movement (id, movement_type, product_id, location_id, quantity, movement_date, data) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [
+      await query(`INSERT INTO entity_inventory_movement (id, movement_type, product_id, location_id, quantity, movement_date, data, company_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [
         crypto.randomUUID(), 'transfer_out', pId, traslado.origen_location_id, -totalRecibido, today,
-        JSON.stringify({ reason: `Traslado ${traslado.numero_traslado}` }),
+        JSON.stringify({ reason: `Traslado ${traslado.numero_traslado}` }), companyId,
       ]);
       const origInv = allInv
         .filter(r => r.product_id === pId && r.location_id === traslado.origen_location_id)
@@ -262,23 +264,23 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
       } else {
         // No existía fila de inventario en el origen: crearla (en negativo) para NO
         // perder la salida. Antes se saltaba en silencio → el inventario global se inflaba.
-        await query(`INSERT INTO entity_inventory (id, product_id, location_id, current_stock, available_stock, data) VALUES ($1,$2,$3,$4,$5,$6)`, [
-          crypto.randomUUID(), pId, traslado.origen_location_id, -totalRecibido, 0, JSON.stringify({}),
+        await query(`INSERT INTO entity_inventory (id, product_id, location_id, current_stock, available_stock, data, company_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [
+          crypto.randomUUID(), pId, traslado.origen_location_id, -totalRecibido, 0, JSON.stringify({}), companyId,
         ]);
       }
 
       // Si hay diferencia, registrar retorno al origen
       if (diferencia > 0) {
-        await query(`INSERT INTO entity_inventory_movement (id, movement_type, product_id, location_id, quantity, movement_date, data) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [
+        await query(`INSERT INTO entity_inventory_movement (id, movement_type, product_id, location_id, quantity, movement_date, data, company_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [
           crypto.randomUUID(), 'transfer_return', pId, traslado.origen_location_id, diferencia, today,
-          JSON.stringify({ reason: `Diferencia en recepción — Traslado ${traslado.numero_traslado} (enviado ${item.cantidad_enviada}, recibido ${totalRecibido})` }),
+          JSON.stringify({ reason: `Diferencia en recepción — Traslado ${traslado.numero_traslado} (enviado ${item.cantidad_enviada}, recibido ${totalRecibido})` }), companyId,
         ]);
       }
 
       // Entrada al destino
-      await query(`INSERT INTO entity_inventory_movement (id, movement_type, product_id, location_id, quantity, movement_date, data) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [
+      await query(`INSERT INTO entity_inventory_movement (id, movement_type, product_id, location_id, quantity, movement_date, data, company_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [
         crypto.randomUUID(), 'transfer_in', pId, traslado.destino_location_id, totalRecibido, today,
-        JSON.stringify({ reason: `Traslado ${traslado.numero_traslado}` }),
+        JSON.stringify({ reason: `Traslado ${traslado.numero_traslado}` }), companyId,
       ]);
       const destInv = allInv
         .filter(r => r.product_id === pId && r.location_id === traslado.destino_location_id)
@@ -290,8 +292,8 @@ app.post('/api/portal/functions/aceptarTraslado', async (req, res) => {
           destInv.id,
         ]);
       } else {
-        await query(`INSERT INTO entity_inventory (id, product_id, location_id, current_stock, available_stock, data) VALUES ($1,$2,$3,$4,$5,$6)`, [
-          crypto.randomUUID(), pId, traslado.destino_location_id, totalRecibido, totalRecibido, JSON.stringify({}),
+        await query(`INSERT INTO entity_inventory (id, product_id, location_id, current_stock, available_stock, data, company_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [
+          crypto.randomUUID(), pId, traslado.destino_location_id, totalRecibido, totalRecibido, JSON.stringify({}), companyId,
         ]);
       }
     }

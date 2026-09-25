@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { SessionProvider, useSession } from "./components/providers/SessionProvider";
 import CompanySwitcher from "./components/layout/CompanySwitcher";
+import { useActiveCompany } from "@/hooks/useActiveCompany";
 import { ThemeProvider } from "./components/providers/ThemeProvider";
 import { ThemeToggle } from "./components/layout/ThemeToggle";
 import BottomTabBar from "./components/layout/BottomTabBar";
@@ -167,6 +168,19 @@ function LayoutContent({ children }) {
 
   // In preview mode, disable admin bypass so permission filtering works realistically
   const isAdmin = isRealAdmin && !previewRoleId;
+  // Marca de la empresa activa (multiempresa): nombre, iniciales y color en el menú.
+  const activeCompany = useActiveCompany();
+  const brandName = activeCompany?.display_name || activeCompany?.name || "eQuis-T";
+  const brandInitials = brandName.replace(/[^A-Za-z0-9]/g, "").slice(0, 2) || "eQ";
+  const brandColor = activeCompany?.brand_color;
+  // Letra oscura sobre colores claros (ej. amarillo), blanca sobre oscuros.
+  const brandTextColor = (() => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(brandColor || "");
+    if (!m) return undefined;
+    const n = parseInt(m[1], 16);
+    const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+    return lum > 0.6 ? "#111827" : "#ffffff";
+  })();
 
   const hasModuleAccess = (mk) => {
     if (isAdmin) return true;
@@ -256,10 +270,11 @@ function LayoutContent({ children }) {
           {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <span className="text-white font-bold text-xs">eQ</span>
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center"
+            style={brandColor ? { background: brandColor } : undefined}>
+            <span className="text-white font-bold text-xs" style={brandTextColor ? { color: brandTextColor } : undefined}>{brandInitials}</span>
           </div>
-          <h1 className="text-sm font-semibold text-white">eQuis-T</h1>
+          <h1 className="text-sm font-semibold text-white">{brandName}</h1>
         </div>
         <ThemeToggle />
       </div>
@@ -274,11 +289,11 @@ function LayoutContent({ children }) {
         <div className="px-5 py-5 flex items-center justify-between" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', boxShadow: '0 4px 12px rgba(99,102,241,0.4)' }}>
-              <span className="text-white font-bold text-sm">eQ</span>
+              style={{ background: brandColor || 'linear-gradient(135deg, #4f46e5, #6366f1)', boxShadow: '0 4px 12px rgba(99,102,241,0.4)' }}>
+              <span className="text-white font-bold text-sm" style={brandTextColor ? { color: brandTextColor } : undefined}>{brandInitials}</span>
             </div>
             <div>
-              <p className="text-white font-semibold text-sm leading-none tracking-tight">eQuis-T</p>
+              <p className="text-white font-semibold text-sm leading-none tracking-tight">{brandName}</p>
               <p className="text-[11px] mt-0.5" style={{ color: '#6366f1' }}>Sistema Unificado</p>
             </div>
           </div>

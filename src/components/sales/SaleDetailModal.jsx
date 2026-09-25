@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product, SystemSettings } from "@/entities/all"; // Added SystemSettings
+import { useActiveCompany, buildCompanyInfo } from "@/hooks/useActiveCompany";
 import { 
   Dialog, 
   DialogContent, 
@@ -38,6 +39,7 @@ const statusLabels = {
 export default function SaleDetailModal({ sale, onClose }) {
   const [products, setProducts] = useState([]);
   const [systemSettings, setSystemSettings] = useState(null);
+  const activeCompany = useActiveCompany();
   const [printFormat, setPrintFormat] = useState('58mm');
   const [isExporting, setIsExporting] = useState(false);
   
@@ -76,23 +78,7 @@ export default function SaleDetailModal({ sale, onClose }) {
     };
 
     // Use system settings or fallback to defaults
-    const companyInfo = systemSettings ? {
-      name: systemSettings.company_name || "JacketMaster POS",
-      address: systemSettings.company_address || "Dirección no configurada",
-      document: systemSettings.company_document || "NIT no configurado",
-      phone: systemSettings.company_phone || "Teléfono no configurado",
-      email: systemSettings.company_email || "",
-      receiptHeader: systemSettings.receipt_header || "",
-      receiptFooter: systemSettings.receipt_footer || "¡Gracias por su compra!"
-    } : {
-      name: "JacketMaster POS",
-      address: "Dirección no configurada",
-      document: "NIT no configurado", 
-      phone: "Teléfono no configurado",
-      email: "",
-      receiptHeader: "",
-      receiptFooter: "¡Gracias por su compra!"
-    };
+    const companyInfo = buildCompanyInfo(systemSettings, activeCompany);
 
     const printableContent = generatePrintableHTML(sale, enrichedItemsForPrint, companyInfo, paymentMethodLabels, printFormat);
 
@@ -159,23 +145,7 @@ export default function SaleDetailModal({ sale, onClose }) {
       courtesy: "Cortesía"
     };
 
-    const companyInfo = systemSettings ? {
-      name: systemSettings.company_name || "JacketMaster POS",
-      address: systemSettings.company_address || "Dirección no configurada",
-      document: systemSettings.company_document || "NIT no configurado",
-      phone: systemSettings.company_phone || "Teléfono no configurado",
-      email: systemSettings.company_email || "",
-      receiptHeader: systemSettings.receipt_header || "",
-      receiptFooter: systemSettings.receipt_footer || "¡Gracias por su compra!"
-    } : {
-      name: "JacketMaster POS",
-      address: "Dirección no configurada",
-      document: "NIT no configurado", 
-      phone: "Teléfono no configurado",
-      email: "",
-      receiptHeader: "",
-      receiptFooter: "¡Gracias por su compra!"
-    };
+    const companyInfo = buildCompanyInfo(systemSettings, activeCompany);
 
     const printableContent = generatePrintableHTML(sale, enrichedItemsForPrint, companyInfo, paymentMethodLabels, printFormat);
 
@@ -391,23 +361,7 @@ export default function SaleDetailModal({ sale, onClose }) {
   };
 
   // Company info for WhatsApp/PDF when needed outside specific handlers
-  const derivedCompanyInfo = systemSettings ? {
-    name: systemSettings.company_name || "JacketMaster POS",
-    address: systemSettings.company_address || "Dirección no configurada",
-    document: systemSettings.company_document || "NIT no configurado",
-    phone: systemSettings.company_phone || "Teléfono no configurado",
-    email: systemSettings.company_email || "",
-    receiptHeader: systemSettings.receipt_header || "",
-    receiptFooter: systemSettings.receipt_footer || "¡Gracias por su compra!"
-  } : {
-    name: "JacketMaster POS",
-    address: "Dirección no configurada",
-    document: "NIT no configurado",
-    phone: "Teléfono no configurado",
-    email: "",
-    receiptHeader: "",
-    receiptFooter: "¡Gracias por su compra!"
-  };
+  const derivedCompanyInfo = buildCompanyInfo(systemSettings, activeCompany);
 
   return (
     <Dialog open={true} onOpenChange={onClose}>

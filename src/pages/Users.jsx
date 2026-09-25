@@ -13,6 +13,7 @@ import { Location } from "@/entities/Location";
 import { Role } from "@/entities/Role";
 import UserForm from "../components/users/UserForm";
 import RoleManager from "../components/settings/RoleManager";
+import { useActiveCompany, getCurrentCompanyId } from "@/hooks/useActiveCompany";
 
 const COMERCIAL_PERMS = ["pos_sales","sales_view","customers_view","products_view","expenses_view","reports_basic","credits_view","inventory_view"];
 
@@ -47,7 +48,11 @@ function ModuleBadges({ modules }) {
 }
 
 export default function UsersPage({ embedded = false }) {
-  const { isRealAdmin, permissions, isLoading: isSessionLoading } = useSession();
+  const { currentUser, isRealAdmin, permissions, isLoading: isSessionLoading } = useSession();
+  // Multiempresa: se gestionan los usuarios de la empresa activa (los admin se ven siempre).
+  const activeCompany = useActiveCompany();
+  const companyId = getCurrentCompanyId(currentUser, isRealAdmin);
+  const companyName = activeCompany?.display_name || activeCompany?.name || "";
 
   const [users, setUsers] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -68,14 +73,14 @@ export default function UsersPage({ embedded = false }) {
         Location.list(),
         Role.list()
       ]);
-      setUsers(usersData);
+      setUsers(usersData.filter(u => u.role === 'admin' || (u.company_id || 'equist') === companyId));
       setLocations(locationsData);
       setRoles(rolesData);
     } catch (error) {
       console.error("Error loading data:", error);
     }
     setIsLoading(false);
-  }, []);
+  }, [companyId]);
 
   useEffect(() => {
     loadData();
@@ -225,6 +230,11 @@ export default function UsersPage({ embedded = false }) {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Usuarios y Permisos</h1>
           <p className="text-slate-600 mt-1">Administra usuarios, roles y accesos del personal.</p>
+          {companyName && (
+            <p className="text-sm text-slate-500 mt-1">
+              Usuarios de <strong className="text-slate-700">{companyName}</strong>. Los nuevos quedan en esta empresa y solo verán sus datos. Los roles son compartidos entre empresas.
+            </p>
+          )}
         </div>
 
         <div className="flex gap-2 mb-4 border-b border-slate-200">
