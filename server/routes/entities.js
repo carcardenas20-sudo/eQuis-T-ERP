@@ -121,8 +121,8 @@ async function requirePermissionForSensitiveEdit(req, res, next) {
 // ── Numeración de facturas por empresa ──────────────────────────────────────
 // Cada empresa lleva su contador en entity_company.data (invoice_prefix, invoice_next).
 // El número se asigna aquí (servidor) con un UPDATE atómico: dos ventas simultáneas
-// nunca reciben el mismo número. Si la empresa no tiene contador configurado
-// (o es el ámbito virtual 'comun'), la venta queda sin número, como antes.
+// nunca reciben el mismo número. Si la empresa no tiene contador configurado,
+// la venta queda sin número, como antes.
 async function assignInvoiceNumber(saleId, companyId, idFromClient) {
   try {
     // POST con id existente = upsert de una venta ya creada: conservar su número

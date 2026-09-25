@@ -3,8 +3,6 @@ import { base44 } from "@/api/base44Combined";
 import { getActiveCompany, setActiveCompany } from "@/api/localClient";
 import { Building2 } from "lucide-react";
 
-// Ámbito virtual "Común" (grupo): empleados y gastos compartidos por las empresas.
-const COMUN = { id: "comun", name: "Común (grupo)" };
 const DEFAULT_ID = "equist"; // Empresa 1 = eQuis-T
 
 // Selector de empresa para el super-admin. Cambia el contexto de TODO el sistema
@@ -16,7 +14,15 @@ export default function CompanySwitcher({ isAdmin }) {
   useEffect(() => {
     if (!isAdmin) return;
     base44.entities.Company.list()
-      .then(list => setCompanies((list || []).filter(c => c.is_active !== false)))
+      .then(list => {
+        const activas = (list || []).filter(c => c.is_active !== false);
+        setCompanies(activas);
+        // Empresa guardada que ya no existe (o el antiguo ámbito "Común") → volver a eQuis-T.
+        if (activas.length && active !== DEFAULT_ID && !activas.some(c => c.id === active)) {
+          setActiveCompany("");
+          window.location.reload();
+        }
+      })
       .catch(() => {});
   }, [isAdmin]);
 
@@ -29,23 +35,15 @@ export default function CompanySwitcher({ isAdmin }) {
     window.location.reload();
   };
 
-  const options = [...companies, COMUN];
-  const isComun = active === COMUN.id;
-
   return (
-    <div
-      className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 ${
-        isComun ? "bg-amber-50 border-amber-300" : "bg-white border-slate-200"
-      }`}
-      title="Empresa activa"
-    >
-      <Building2 className={`w-4 h-4 shrink-0 ${isComun ? "text-amber-600" : "text-slate-500"}`} />
+    <div className="flex items-center gap-1.5 rounded-lg border px-2 py-1.5 bg-white border-slate-200" title="Empresa activa">
+      <Building2 className="w-4 h-4 shrink-0 text-slate-500" />
       <select
         value={active}
         onChange={e => onChange(e.target.value)}
         className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer max-w-[160px]"
       >
-        {options.map(c => (
+        {companies.map(c => (
           <option key={c.id} value={c.id}>{c.name}</option>
         ))}
       </select>
