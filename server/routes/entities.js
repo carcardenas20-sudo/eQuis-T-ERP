@@ -118,6 +118,34 @@ async function requirePermissionForSensitiveEdit(req, res, next) {
   }
 }
 
+// ── Numeración de facturas por empresa ──────────────────────────────────────
+// Cada empresa lleva su contador en entity_company.data (invoice_prefix, invoice_next).
+// El número se asigna aquí (servidor) con un UPDATE atómico: dos ventas simultáneas
+// nunca reciben el mismo número. Si la empresa no tiene contador configurado
+// (o es el ámbito virtual 'comun'), la venta queda sin número, como antes.
+async function assignInvoiceNumber(saleId, companyId, idFromClient) {
+  try {
+    // POST con id existente = upsert de una venta ya creada: conservar su número
+    // (o su ausencia) en vez de gastar uno nuevo o borrarlo.
+    if (idFromClient) {
+      const ex = await query('SELECT invoice_number FROM entity_sale WHERE id = $1', [saleId]);
+      if (ex.rows[0]) return ex.rows[0].invoice_number;
+    }
+    const { rows } = await query(
+      `UPDATE entity_company
+         SET data = jsonb_set(data, '{invoice_next}', to_jsonb((data->>'invoice_next')::bigint + 1)),
+             updated_date = NOW()
+       WHERE id = $1 AND (data->>'invoice_next') ~ '^[0-9]+$'
+       RETURNING (data->>'invoice_next')::bigint - 1 AS n, COALESCE(data->>'invoice_prefix', '') AS prefix`,
+      [companyId]
+    );
+    return rows[0] ? `${rows[0].prefix}${rows[0].n}` : null;
+  } catch (e) {
+    console.warn('Numeración de factura omitida por error:', e.message);
+    return null; // fail-open: la venta se guarda igual, sin número
+  }
+}
+
 router.use('/:type', requireAdminForPrivileged);
 router.use('/:type/:id', requireAdminForPrivileged);
 router.use('/:type/:id', requirePermissionForSensitiveDelete);
@@ -390,6 +418,10 @@ router.post('/:type', async (req, res) => {
     const schema = ENTITY_SCHEMAS[type];
     const { id: _id, created_date, updated_date, created_by_id, ...recordData } = req.body;
 
+    if (type === 'Sale' && !recordData.invoice_number) {
+      recordData.invoice_number = await assignInvoiceNumber(id, req.companyId, !!req.body.id);
+    }
+
     if (schema) {
       const { typedValues, dataRest } = splitRecord(schema, recordData);
       const typedCols = Object.keys(schema.typed);
@@ -457,6 +489,14 @@ router.put('/:type/:id', async (req, res) => {
 
     const schema = ENTITY_SCHEMAS[type];
     const { id: _id, created_date, updated_date, created_by_id, ...updates } = req.body;
+
+    // El contador de facturas nunca retrocede al editar la empresa: si el formulario
+    // se abrió antes de unas ventas, guardaría un número viejo y se repetirían facturas.
+    if (type === 'Company' && updates.invoice_next !== undefined) {
+      const cur = await query(`SELECT (data->>'invoice_next') AS n FROM entity_company WHERE id = $1`, [id]);
+      const current = Number(cur.rows[0]?.n);
+      if (Number.isFinite(current) && Number(updates.invoice_next) < current) updates.invoice_next = current;
+    }
 
     if (schema) {
       const { typedValues, dataRest } = splitRecord(schema, updates);
