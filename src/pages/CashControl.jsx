@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ChevronDown, ChevronUp, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import TransferDetail from "@/components/cashcontrol/TransferDetail";
 
 function formatDateDisplay(dateStr) {
   if (!dateStr) return '';
@@ -48,7 +49,7 @@ function aggregateCashDays(sales, creditPayments, expenses) {
   const ensureKey = (date, locationId) => {
     const key = `${date}_${locationId}`;
     if (!dataByKey[key]) {
-      dataByKey[key] = { date, location_id: locationId, cash: 0, transfers: 0, card: 0, expenses: [] };
+      dataByKey[key] = { date, location_id: locationId, cash: 0, transfers: 0, card: 0, expenses: [], transferItems: [] };
     }
     return key;
   };
@@ -63,7 +64,17 @@ function aggregateCashDays(sales, creditPayments, expenses) {
       methods.forEach(pm => {
         const amt = Number(pm.amount) || 0;
         if (pm.method === 'cash') dataByKey[key].cash += amt;
-        else if (pm.method === 'transfer' || pm.method === 'qr') dataByKey[key].transfers += amt;
+        else if (pm.method === 'transfer' || pm.method === 'qr') {
+          dataByKey[key].transfers += amt;
+          // Detalle de cada transferencia (para cuadrar contra el banco y hallar anomalías).
+          dataByKey[key].transferItems.push({
+            source: 'sale', key: `${sale.id}_${dataByKey[key].transferItems.length}`,
+            sale_id: sale.id, invoice: sale.invoice_number, time: sale.sale_date || sale.created_date,
+            amount: amt, method: pm.method, reference: pm.reference || '', bank_account_id: pm.bank_account || '',
+            customer: sale.customer_name || '', seller_id: sale.created_by_id,
+            sale_total: Number(sale.total_amount) || 0, sale_status: sale.status, mixed: methods.length > 1,
+          });
+        }
         else if (pm.method === 'card') dataByKey[key].card += amt;
       });
     } else {
@@ -73,6 +84,7 @@ function aggregateCashDays(sales, creditPayments, expenses) {
   });
 
   // Abonos a créditos — se suman al control de efectivo por método de pago
+  const salesById = Object.fromEntries(sales.map(x => [x.id, x]));
   creditPayments.forEach(p => {
     const date = toDateOnly(p.payment_date);
     if (!date) return;
@@ -81,7 +93,16 @@ function aggregateCashDays(sales, creditPayments, expenses) {
     const amt = Number(p.amount) || 0;
     if (amt <= 0) return;
     if (p.method === 'cash') dataByKey[key].cash += amt;
-    else if (p.method === 'transfer' || p.method === 'qr') dataByKey[key].transfers += amt;
+    else if (p.method === 'transfer' || p.method === 'qr') {
+      dataByKey[key].transfers += amt;
+      const credSale = salesById[p.sale_id];
+      dataByKey[key].transferItems.push({
+        source: 'abono', key: p.id, sale_id: p.sale_id, invoice: credSale?.invoice_number,
+        time: p.payment_date || p.created_date, amount: amt, method: p.method,
+        reference: p.reference || '', bank_account_id: p.bank_account_id || '',
+        customer: credSale?.customer_name || '', seller_id: p.created_by_id,
+      });
+    }
     else if (p.method === 'card') dataByKey[key].card += amt;
   });
 
@@ -131,6 +152,7 @@ export default function CashControlPage() {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [expandedDates, setExpandedDates] = useState({});
+  const [openTransfers, setOpenTransfers] = useState({}); // control.id -> detalle abierto
   const firstLoadRef = useRef(true);
 
   const loadData = useCallback(async () => {
@@ -247,7 +269,7 @@ export default function CashControlPage() {
             transfers_verified: false
           });
         }
-        controlsArray.push({ ...control, expenses: data.expenses });
+        controlsArray.push({ ...control, expenses: data.expenses, transferItems: data.transferItems });
       }
 
       if (updatePromises.length > 0) await Promise.all(updatePromises);
@@ -295,6 +317,7 @@ export default function CashControlPage() {
         const controlDate = toDateOnly(control.control_date);
         const data = oldDataByKey[`${controlDate}_${control.location_id}`];
         const dayExpenses = data ? data.expenses : [];
+        const dayTransfers = data ? data.transferItems : [];
 
         // Recalcular montos del día y corregir el registro si cambió (mismo criterio
         // de "reabrir" que la ventana: si un monto ya cerrado cambia, se reabre).
@@ -313,7 +336,7 @@ export default function CashControlPage() {
           leftoverUpdates.push(CashControl.update(control.id, updates));
           merged = { ...control, ...updates };
         }
-        controlsArray.push({ ...merged, expenses: dayExpenses });
+        controlsArray.push({ ...merged, expenses: dayExpenses, transferItems: dayTransfers });
       }
       if (leftoverUpdates.length > 0) await Promise.all(leftoverUpdates);
 
@@ -704,6 +727,14 @@ export default function CashControlPage() {
               <span className="text-sm font-medium">Transferencias</span>
               <span className="font-bold text-blue-700 text-sm">${transferAmt.toLocaleString()}</span>
             </div>
+            {(c.transferItems?.length > 0) && (
+              <button
+                onClick={() => setOpenTransfers(o => ({ ...o, [c.id]: !o[c.id] }))}
+                className="w-full mb-2 text-[11px] text-purple-700 hover:text-purple-900 underline text-left"
+              >
+                {openTransfers[c.id] ? 'Ocultar detalle' : `Ver detalle (${c.transferItems.length})`}
+              </button>
+            )}
             {c.transfers_verified ? (
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1 text-blue-700 text-xs font-semibold">
@@ -744,6 +775,8 @@ export default function CashControlPage() {
             <Badge variant="outline" className="text-xs text-slate-500">Informativo</Badge>
           </div>
         </div>
+
+        {openTransfers[c.id] && <TransferDetail items={c.transferItems} total={transferAmt} />}
 
         <Button
           variant="ghost"

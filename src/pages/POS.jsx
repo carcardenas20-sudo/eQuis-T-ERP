@@ -392,7 +392,11 @@ export default function POS() {
       const saleDateTime = new Date().toISOString();
       const saleDate = saleDateTime.split('T')[0]; // YYYY-MM-DD para inventory
 
+      // Id generado aquí: si la red reenvía la petición (conexión inestable), el
+      // servidor recibe el MISMO id y actualiza la venta en vez de duplicarla.
+      const newId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined);
       const sale = await Sale.create({
+        id: newId(),
         location_id: selectedLocationId,
         customer_name: customer?.name || "Cliente General",
         customer_document: customer?.document || "",
@@ -417,6 +421,7 @@ export default function POS() {
       for (const payment of paymentData) {
         if (payment.method !== 'credit') {
           const newPayment = {
+            id: newId(),
             sale_id: sale.id,
             payment_date: saleDateTime, // ✅ Misma fecha/hora
             amount: payment.amount,
