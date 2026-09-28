@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Combined";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import PaymentsHistory from "../components/payments/PaymentsHistory";
 import ActivityHistory from "../components/history/ActivityHistory";
 import AdvanceForm from "../components/payments/AdvanceForm";
 import AdvancesPanel from "../components/payments/AdvancesPanel";
-import { ADVANCE_TYPE, DEDUCTION_TYPE, DEDUCTION_STATUS, buildAdvances, splitAllocations, money } from "@/utils/advances";
+import { ADVANCE_TYPE, DEDUCTION_TYPE, DEDUCTION_STATUS, buildAdvances, splitAllocations, suggestedDeduction, money } from "@/utils/advances";
 
 export default function Payments() {
   const [employees, setEmployees] = useState([]);
@@ -32,6 +32,8 @@ export default function Payments() {
   const [advanceFormFor, setAdvanceFormFor] = useState(null); // null | {} (sin empleado) | employee
   const [savingAdvance, setSavingAdvance] = useState(false);
   const [activeTab, setActiveTab] = useState(null);
+  // Candado contra doble clic: un pago (y su descuento de anticipo) no se registra dos veces.
+  const savingPaymentRef = useRef(false);
 
   useEffect(() => {
     loadData();
@@ -167,6 +169,8 @@ export default function Payments() {
   const activeAdvancesCount = advances.filter(x => !x.settled).length;
 
   const handleCreatePayment = async (paymentData, deductions = []) => {
+    if (savingPaymentRef.current) return;
+    savingPaymentRef.current = true;
     try {
       const employee = employees.find(e => e.employee_id === paymentData.employee_id);
       const employeeName = employee?.name || paymentData.employee_id;
@@ -253,20 +257,29 @@ export default function Payments() {
     } catch (error) {
       console.error("Error al guardar el pago:", error);
       alert("Hubo un error al guardar el pago.");
+    } finally {
+      savingPaymentRef.current = false;
     }
   };
 
 
 
   const handleDeletePayment = async (payment) => {
+    // Un anticipo se anula por su propio flujo (no se deja borrar si ya tiene descuentos:
+    // quedarían entregas "pagadas" con un anticipo que ya no existe).
+    if (payment.payment_type === ADVANCE_TYPE) {
+      const item = advances.find(x => x.advance.id === payment.id);
+      if (item) return handleDeleteAdvance(item);
+    }
     // Un pago con anticipo descontado son varios registros (pago + cruces): se borran juntos
     // para que las entregas y el saldo del anticipo vuelvan a quedar como estaban.
     const siblings = payment.liquidation_id
       ? historyPayments.filter(p => p.liquidation_id === payment.liquidation_id && p.id !== payment.id)
       : [];
-    const extra = siblings.length > 0
+    const executed = [payment, ...siblings].some(p => p.status === 'ejecutado');
+    const extra = (siblings.length > 0
       ? '\n\nEste pago tiene un descuento de anticipo: también se eliminará ese descuento y el anticipo volverá a quedar pendiente por ese valor.'
-      : payment.payment_type === ADVANCE_TYPE ? '\n\nEs un anticipo.' : '';
+      : '') + (executed ? '\n\nOJO: la transferencia de este pago ya fue marcada como ejecutada.' : '');
     const shown = payment.payment_type === DEDUCTION_TYPE ? payment.deducted_amount : payment.amount;
     if (window.confirm(`¿Estás seguro de eliminar este pago de $${(Number(shown) || 0).toLocaleString()}?${extra}`)) {
       try {
@@ -374,6 +387,35 @@ export default function Payments() {
           deliveryPayments.push({ delivery_id: delivery.id, amount: toApply });
           remaining -= toApply;
         }
+      }
+
+      // Si tiene anticipos por descontar, se liquida igual que en "Registrar Pago":
+      // cruce del anticipo + pago por lo que queda.
+      const empAdvances = activeAdvancesOf(request.employee_id);
+      if (empAdvances.length > 0) {
+        let available = deliveryPayments.reduce((s, dp) => s + dp.amount, 0);
+        const deductions = empAdvances.map(item => {
+          const amount = suggestedDeduction(item, available);
+          available -= amount;
+          return { advance_id: item.advance.id, amount };
+        }).filter(d => d.amount > 0);
+        const totalDed = deductions.reduce((s, d) => s + d.amount, 0);
+        if (!window.confirm(
+          `${request.employee_name} tiene anticipo por descontar.\n\n` +
+          `Solicitado: ${money(request.requested_amount)}\nDescuento de anticipo: −${money(totalDed)}\n` +
+          `A transferir: ${money(request.requested_amount - totalDed)}\n\n¿Continuar?`
+        )) { setProcessingRequest(null); return; }
+        await handleCreatePayment({
+          employee_id: request.employee_id,
+          employee_name: request.employee_name,
+          amount: request.requested_amount - totalDed,
+          payment_date: todayStr,
+          payment_type: 'solicitud_aprobada',
+          description: `Solicitud aprobada — ${request.employee_name} (−${money(totalDed)} anticipo)`,
+          delivery_payments: deliveryPayments,
+        }, deductions);
+        setProcessingRequest(null);
+        return;
       }
 
       // Crear el pago vinculado a las entregas que cubre

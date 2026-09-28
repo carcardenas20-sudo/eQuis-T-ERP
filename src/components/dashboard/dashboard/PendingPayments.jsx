@@ -56,7 +56,7 @@ export default function PendingPayments({ employees, deliveries, payments, purch
     });
 
     const genericPayments = empPayments
-      .filter(p => (!p.delivery_payments || p.delivery_payments.length === 0) && (!p.delivery_ids || p.delivery_ids.length === 0))
+      .filter(p => p.payment_type !== 'anticipo' && (!p.delivery_payments || p.delivery_payments.length === 0) && (!p.delivery_ids || p.delivery_ids.length === 0))
       .sort((a, b) => new Date(a.payment_date) - new Date(b.payment_date));
 
     pendingDeliveries.sort((a, b) => new Date(a.delivery_date) - new Date(b.delivery_date));

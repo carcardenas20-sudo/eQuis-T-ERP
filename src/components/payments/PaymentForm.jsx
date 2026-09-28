@@ -203,6 +203,9 @@ export default function PaymentForm({ employee, payment, pendingDeliveries, adva
                         onChange={e => setEditedAdvance(v => ({ ...v, [advance_id]: e.target.value }))}
                         className="w-32"
                       />
+                      {editedAdvance[advance_id] !== undefined && !skipAdvance[advance_id] && Number(editedAdvance[advance_id]) > amount && (
+                        <span className="text-[11px] text-red-600">máx. {money(amount)}</span>
+                      )}
                     </div>
                   </div>
                 );
