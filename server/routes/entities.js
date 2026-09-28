@@ -59,6 +59,9 @@ const DELETE_PERMISSION = {
   // El frontend oculta el botón "Anular" con el mismo criterio → los usuarios legítimos pasan
   // y esto solo frena el abuso directo por API.
   Sale: ['pos_delete_sales', 'sales_cancel'],
+  // Cancelar/eliminar traslados: solo admin o quien tenga el permiso explícito
+  // (los líderes de punto NO: borrar un traslado aceptado deja el inventario sin rastro).
+  Traslado: 'transfers_delete',
 };
 
 // Igual que arriba pero para EDITAR (PUT/PATCH). Solo Sale por ahora: es el único PUT que el

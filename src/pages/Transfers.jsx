@@ -25,6 +25,8 @@ const ESTADO_CFG = {
 export default function TransfersPage() {
   const { permissions, isRealAdmin } = useSession();
   const puedeEnviar = isRealAdmin || permissions?.includes("inventory_transfer");
+  // Cancelar/eliminar traslados: solo admin o con permiso explícito (el servidor también lo exige).
+  const puedeEliminar = isRealAdmin || permissions?.includes("transfers_delete");
   const { currentUser: sessionUser } = useSession();
   const [activeTab, setActiveTab] = useState(() => puedeEnviar ? "enviar" : "recibir");
   const [isLoading, setIsLoading] = useState(true);
@@ -370,9 +372,11 @@ export default function TransfersPage() {
                           <button onClick={() => iniciarEdicion(t)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">
                             Editar
                           </button>
-                          <button onClick={() => handleCancelar(t)} className="text-xs text-red-500 hover:text-red-700 font-medium">
-                            Cancelar
-                          </button>
+                          {puedeEliminar && (
+                            <button onClick={() => handleCancelar(t)} className="text-xs text-red-500 hover:text-red-700 font-medium">
+                              Cancelar
+                            </button>
+                          )}
                         </div>
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
@@ -436,9 +440,11 @@ export default function TransfersPage() {
                           {t.notas && <p className="text-xs text-slate-400 mt-1 italic">{t.notas}</p>}
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          <button onClick={() => handleCancelar(t)} className="text-xs text-red-500 hover:text-red-700 font-medium px-2">
-                            Cancelar
-                          </button>
+                          {puedeEliminar && (
+                            <button onClick={() => handleCancelar(t)} className="text-xs text-red-500 hover:text-red-700 font-medium px-2">
+                              Cancelar
+                            </button>
+                          )}
                           <Button onClick={() => setReceivingId(t.id)} className="bg-emerald-600 hover:bg-emerald-700">
                             <Package className="w-4 h-4 mr-1.5" /> Recibir
                           </Button>
@@ -480,9 +486,11 @@ export default function TransfersPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-slate-400">{fmtDate(t.created_date)}</span>
-                        <button onClick={() => handleCancelar(t)} className="text-xs text-red-400 hover:text-red-600">
-                          Eliminar
-                        </button>
+                        {puedeEliminar && (
+                          <button onClick={() => handleCancelar(t)} className="text-xs text-red-400 hover:text-red-600">
+                            Eliminar
+                          </button>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm">

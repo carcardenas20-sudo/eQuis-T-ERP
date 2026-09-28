@@ -47,6 +47,7 @@ const ALL_PERMISSIONS = [
   { id: "inventory_adjust",   label: "Ajustar Stock",        category: "Inventario", level: "Intermedio",  description: "Corregir cantidades de inventario" },
   { id: "inventory_receive",  label: "Recibir Mercancía",    category: "Inventario", level: "Intermedio",  description: "Registrar entrada de mercancía" },
   { id: "inventory_transfer", label: "Trasladar Stock",      category: "Inventario", level: "Avanzado",    description: "Trasladar stock entre sucursales" },
+  { id: "transfers_delete",   label: "Eliminar/Cancelar Traslados", category: "Inventario", level: "Avanzado", description: "Cancelar traslados pendientes o eliminar traslados del historial" },
 
   // ── CLIENTES ───────────────────────────────────────────────
   { id: "customers_view",   label: "Ver Clientes",     category: "Clientes", level: "Básico",      description: "Consultar información de clientes" },
