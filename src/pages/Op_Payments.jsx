@@ -14,6 +14,32 @@ import AdvanceForm from "../components/payments/AdvanceForm";
 import AdvancesPanel from "../components/payments/AdvancesPanel";
 import { ADVANCE_TYPE, DEDUCTION_TYPE, DEDUCTION_STATUS, buildAdvances, splitAllocations, suggestedDeduction, money } from "@/utils/advances";
 
+// Desglose claro para quien tiene anticipo: lo que se le debe por entregas,
+// menos el anticipo, = lo que realmente se le paga (o lo que aún debe).
+function NetBreakdown({ pending, owed }) {
+  const net = (Number(pending) || 0) - (Number(owed) || 0);
+  return (
+    <div className="-mt-2 mb-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs space-y-1">
+      <div className="flex justify-between text-slate-700">
+        <span>Entregas por pagarle</span><b className="tabular-nums">{money(pending)}</b>
+      </div>
+      <div className="flex justify-between text-amber-800">
+        <span>💸 Anticipo por descontar</span><b className="tabular-nums">−{money(owed)}</b>
+      </div>
+      <div className="flex justify-between pt-1 border-t border-amber-200 text-sm">
+        {net >= 0 ? (
+          <><span className="font-semibold text-emerald-800">Neto a pagarle</span><b className="tabular-nums text-emerald-800">{money(net)}</b></>
+        ) : (
+          <><span className="font-semibold text-red-700">Aún debe</span><b className="tabular-nums text-red-700">{money(-net)}</b></>
+        )}
+      </div>
+      {net < 0 && (
+        <p className="text-[11px] text-red-600">En el próximo pago recibe $0; lo que debe se descuenta de sus siguientes entregas.</p>
+      )}
+    </div>
+  );
+}
+
 export default function Payments() {
   const [employees, setEmployees] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
@@ -633,12 +659,7 @@ export default function Payments() {
                               {(() => {
                                 const owed = activeAdvancesOf(employee.employee_id).reduce((s, x) => s + x.balance, 0);
                                 if (owed <= 0) return null;
-                                return (
-                                  <div className="-mt-2 mb-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex justify-between">
-                                    <span>💸 Anticipo por descontar</span>
-                                    <b className="tabular-nums">{money(owed)}</b>
-                                  </div>
-                                );
+                                return <NetBreakdown pending={pending.total} owed={owed} />;
                               })()}
                             </CardContent>
                             {pending.total > 0 && (
@@ -676,6 +697,7 @@ export default function Payments() {
               <TabsContent value="advances">
                 <AdvancesPanel
                   advances={advances}
+                  pendingByEmployee={Object.fromEntries(Object.entries(pendingPayments).map(([k, v]) => [k, v.total]))}
                   onNew={() => setAdvanceFormFor({})}
                   onDelete={handleDeleteAdvance}
                 />

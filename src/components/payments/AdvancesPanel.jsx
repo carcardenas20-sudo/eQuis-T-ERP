@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { HandCoins, Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2, Clock } from "lucide-react";
 import { money, fmtDay } from "@/utils/advances";
 
-function AdvanceCard({ item, onDelete }) {
+function AdvanceCard({ item, onDelete, pending }) {
   const a = item.advance;
   const pct = Number(a.amount) > 0 ? Math.min(100, Math.round((item.deducted / Number(a.amount)) * 100)) : 0;
   const modeText = a.advance_mode === "cuotas" && Number(a.advance_installment) > 0
@@ -56,6 +56,21 @@ function AdvanceCard({ item, onDelete }) {
         <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
       </div>
 
+      {!item.settled && pending !== undefined && (() => {
+        const net = (Number(pending) || 0) - item.balance;
+        return (
+          <div className="mt-3 p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-0.5">
+            <div className="flex justify-between"><span className="text-slate-600">Entregas por pagarle hoy</span><b className="tabular-nums">{money(pending)}</b></div>
+            <div className="flex justify-between"><span className="text-slate-600">Menos lo que falta del anticipo</span><b className="tabular-nums text-amber-700">−{money(item.balance)}</b></div>
+            <div className="flex justify-between pt-1 border-t border-slate-200">
+              {net >= 0
+                ? <><span className="font-semibold text-emerald-700">Neto a pagarle</span><b className="tabular-nums text-emerald-700">{money(net)}</b></>
+                : <><span className="font-semibold text-red-700">Aún debe</span><b className="tabular-nums text-red-700">{money(-net)}</b></>}
+            </div>
+          </div>
+        );
+      })()}
+
       {item.deductions.length > 0 && (
         <div className="mt-3 space-y-0.5">
           {item.deductions.map((d) => (
@@ -69,7 +84,7 @@ function AdvanceCard({ item, onDelete }) {
   );
 }
 
-export default function AdvancesPanel({ advances, onNew, onDelete }) {
+export default function AdvancesPanel({ advances, onNew, onDelete, pendingByEmployee = {} }) {
   const [showSettled, setShowSettled] = useState(false);
   const active = advances.filter((x) => !x.settled);
   const settled = advances.filter((x) => x.settled);
@@ -109,7 +124,7 @@ export default function AdvancesPanel({ advances, onNew, onDelete }) {
           <p className="text-center text-slate-500 py-6">No hay anticipos activos.</p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
-            {active.map((item) => <AdvanceCard key={item.advance.id} item={item} onDelete={onDelete} />)}
+            {active.map((item) => <AdvanceCard key={item.advance.id} item={item} onDelete={onDelete} pending={Math.max(0, pendingByEmployee[item.advance.employee_id] || 0)} />)}
           </div>
         )}
 
