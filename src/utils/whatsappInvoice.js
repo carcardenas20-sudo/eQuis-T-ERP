@@ -50,6 +50,7 @@ function renderReceipt(pdf, sale, items, companyInfo, printFormat, startY) {
   if (companyInfo.receiptHeader) centerText(companyInfo.receiptHeader, 6.5);
   if (companyInfo.address) centerText(companyInfo.address, 6.5);
   centerText(`NIT: ${companyInfo.document || ''}  Tel: ${companyInfo.phone || ''}`, 6.5);
+  if (companyInfo.locationName) centerText(`Punto de venta: ${companyInfo.locationName}`, 7, true);
   y += 1;
   solidLine();
 

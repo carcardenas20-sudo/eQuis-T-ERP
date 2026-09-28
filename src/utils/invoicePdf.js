@@ -51,6 +51,7 @@ export function generatePrintableHTML(sale, enrichedItems, companyInfo, paymentM
             ${companyInfo.receiptHeader ? `<div style="font-size:${fsSm};font-style:italic;margin-top:1pt;">${companyInfo.receiptHeader}</div>` : ''}
             <div style="font-size:${fsSm};margin-top:2pt;">${companyInfo.address || ''}</div>
             <div style="font-size:${fsSm};">NIT: ${companyInfo.document || ''} &nbsp; Tel: ${companyInfo.phone || ''}</div>
+            ${companyInfo.locationName ? `<div style="font-size:${fsSm};font-weight:700;margin-top:2pt;">Punto de venta: ${companyInfo.locationName}</div>` : ''}
           </td></tr>
           ${sepSolid}
           ${row('Factura #' + (sale.invoice_number || (sale.id || '').slice(-8)), fecha)}
@@ -98,6 +99,7 @@ export function generatePrintableHTML(sale, enrichedItems, companyInfo, paymentM
         ${companyInfo.receiptHeader ? `<p style="margin:4px 0;font-style:italic;color:#666;">${companyInfo.receiptHeader}</p>` : ''}
         <p style="margin:2px 0;">${companyInfo.address || ''}</p>
         <p style="margin:2px 0;">NIT: ${companyInfo.document || ''} · Tel: ${companyInfo.phone || ''}</p>
+        ${companyInfo.locationName ? `<p style="margin:2px 0;font-weight:700;">Punto de venta: ${companyInfo.locationName}</p>` : ''}
       </div>
       <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:14px;">
         <div>

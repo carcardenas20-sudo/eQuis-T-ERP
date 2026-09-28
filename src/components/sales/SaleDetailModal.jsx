@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product, SystemSettings } from "@/entities/all"; // Added SystemSettings
-import { useActiveCompany, buildCompanyInfo } from "@/hooks/useActiveCompany";
+import { useActiveCompany, buildCompanyInfo, useInvoiceCompanyInfo } from "@/hooks/useActiveCompany";
 import { 
   Dialog, 
   DialogContent, 
@@ -40,6 +40,7 @@ export default function SaleDetailModal({ sale, onClose }) {
   const [products, setProducts] = useState([]);
   const [systemSettings, setSystemSettings] = useState(null);
   const activeCompany = useActiveCompany();
+  const { locationNameOf } = useInvoiceCompanyInfo();
   const [printFormat, setPrintFormat] = useState('58mm');
   const [isExporting, setIsExporting] = useState(false);
   
@@ -78,7 +79,7 @@ export default function SaleDetailModal({ sale, onClose }) {
     };
 
     // Use system settings or fallback to defaults
-    const companyInfo = buildCompanyInfo(systemSettings, activeCompany);
+    const companyInfo = buildCompanyInfo(systemSettings, activeCompany, locationNameOf(sale.location_id));
 
     const printableContent = generatePrintableHTML(sale, enrichedItemsForPrint, companyInfo, paymentMethodLabels, printFormat);
 
@@ -145,7 +146,7 @@ export default function SaleDetailModal({ sale, onClose }) {
       courtesy: "Cortesía"
     };
 
-    const companyInfo = buildCompanyInfo(systemSettings, activeCompany);
+    const companyInfo = buildCompanyInfo(systemSettings, activeCompany, locationNameOf(sale.location_id));
 
     const printableContent = generatePrintableHTML(sale, enrichedItemsForPrint, companyInfo, paymentMethodLabels, printFormat);
 
@@ -243,6 +244,7 @@ export default function SaleDetailModal({ sale, onClose }) {
               ${companyInfo.receiptHeader ? `<div style="font-size:${fsSm};font-style:italic;margin-top:1pt;">${companyInfo.receiptHeader}</div>` : ''}
               <div style="font-size:${fsSm};margin-top:2pt;">${companyInfo.address}</div>
               <div style="font-size:${fsSm};">NIT: ${companyInfo.document} &nbsp; Tel: ${companyInfo.phone}</div>
+              ${companyInfo.locationName ? `<div style="font-size:${fsSm};font-weight:700;margin-top:2pt;">Punto de venta: ${companyInfo.locationName}</div>` : ''}
             </td></tr>
 
             ${sepSolid}
@@ -301,6 +303,7 @@ export default function SaleDetailModal({ sale, onClose }) {
           ${companyInfo.receiptHeader ? `<p style="margin:4px 0;font-style:italic;color:#666;">${companyInfo.receiptHeader}</p>` : ''}
           <p style="margin:2px 0;">${companyInfo.address}</p>
           <p style="margin:2px 0;">NIT: ${companyInfo.document} · Tel: ${companyInfo.phone}</p>
+          ${companyInfo.locationName ? `<p style="margin:2px 0;font-weight:700;">Punto de venta: ${companyInfo.locationName}</p>` : ''}
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:14px;">
           <div>
@@ -361,7 +364,7 @@ export default function SaleDetailModal({ sale, onClose }) {
   };
 
   // Company info for WhatsApp/PDF when needed outside specific handlers
-  const derivedCompanyInfo = buildCompanyInfo(systemSettings, activeCompany);
+  const derivedCompanyInfo = buildCompanyInfo(systemSettings, activeCompany, locationNameOf(sale.location_id));
 
   return (
     <Dialog open={true} onOpenChange={onClose}>

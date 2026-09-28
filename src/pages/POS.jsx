@@ -525,7 +525,7 @@ export default function POS() {
         const cartItem = cartSnapshot.find(ci => ci.product.sku === si.product_id);
         return { ...si, product: cartItem?.product || null };
       });
-      const companyInfo = buildCompanyInfo(systemSettings, activeCompany);
+      const companyInfo = buildCompanyInfo(systemSettings, activeCompany, locations.find(l => l.id === selectedLocationId)?.name);
       setPostSaleInfo({ sale, items: enrichedItems, companyInfo });
 
       // Vincular la confirmación bancaria si venía de una

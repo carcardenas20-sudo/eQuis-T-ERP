@@ -6,6 +6,7 @@ import { Eye, FileText, Edit, Trash2, Send, ChevronRight, ChevronDown, Loader2, 
 import { Skeleton } from "@/components/ui/skeleton";
 import { SaleItem } from "@/entities/SaleItem";
 import { sendInvoiceWhatsApp } from "@/utils/whatsappInvoice";
+import { useInvoiceCompanyInfo } from "@/hooks/useActiveCompany";
 
 const statusColors = {
   completed: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
@@ -70,6 +71,7 @@ const formatDate = (dateString) => {
 };
 
 export default function SalesTable({ sales, onViewDetail, onEditSale, onDeleteSale, canDelete = true, canEdit = true, isLoading, isProcessing }) {
+  const { companyInfoFor } = useInvoiceCompanyInfo();
   const [expandedId, setExpandedId] = useState(null);
   const [itemsCache, setItemsCache] = useState({});
   const [loadingId, setLoadingId] = useState(null);
@@ -146,7 +148,7 @@ export default function SalesTable({ sales, onViewDetail, onEditSale, onDeleteSa
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1.5 justify-end">
                         <Button variant="outline" size="icon" title="Enviar por WhatsApp"
-                          onClick={() => sendInvoiceWhatsApp({ sale, items: itemsCache[sale.id] || sale.items || [], companyInfo: {}, printFormat: '80mm' })}
+                          onClick={() => sendInvoiceWhatsApp({ sale, items: itemsCache[sale.id] || sale.items || [], companyInfo: companyInfoFor(sale.location_id), printFormat: '80mm' })}
                           disabled={isProcessing} className="h-8 w-8 text-green-600">
                           <Send className="w-4 h-4" />
                         </Button>
