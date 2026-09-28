@@ -63,6 +63,7 @@ const ALL_PERMISSIONS = [
 
   // ── GASTOS ─────────────────────────────────────────────────
   { id: "expenses_view",              label: "Ver Gastos",               category: "Gastos", level: "Básico",      description: "Consultar gastos registrados" },
+  { id: "supplier_payments",          label: "Pagar a Proveedores (efectivo del punto)", category: "Gastos", level: "Intermedio", description: "Abonar en efectivo a cuentas de proveedores, en orden y sin ver los montos adeudados" },
   { id: "expenses_create",            label: "Registrar Gastos",         category: "Gastos", level: "Intermedio",  description: "Crear nuevos gastos" },
   { id: "expenses_edit",              label: "Editar Gastos",            category: "Gastos", level: "Intermedio",  description: "Modificar gastos existentes" },
   { id: "expenses_delete",            label: "Eliminar Gastos",          category: "Gastos", level: "Gerencial",   description: "Eliminar gastos del sistema" },

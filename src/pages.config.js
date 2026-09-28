@@ -7,6 +7,7 @@
 import AccountsPayable from './pages/AccountsPayable';
 import BankAccounts from './pages/BankAccounts';
 import CashControl from './pages/CashControl';
+import PagosProveedores from './pages/PagosProveedores';
 import Credits from './pages/Credits';
 import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
@@ -77,6 +78,7 @@ export const PAGES = {
   "AccountsPayable": AccountsPayable,
   "BankAccounts": BankAccounts,
   "CashControl": CashControl,
+  "PagosProveedores": PagosProveedores,
   "Credits": Credits,
   "Customers": Customers,
   "Dashboard": Dashboard,
