@@ -18,9 +18,11 @@ export default function PaymentVoucher({ payment, deliveries, products, employee
 
   // ─── Resolver las entregas cubiertas por este pago ───────────────────
   const getCoveredDeliveries = () => {
-    if (payment.delivery_payments && payment.delivery_payments.length > 0) {
+    // Pago con anticipo descontado: mostrar TODAS las entregas liquidadas (no solo la parte transferida).
+    const dps = payment.liquidated_delivery_payments?.length ? payment.liquidated_delivery_payments : payment.delivery_payments;
+    if (dps && dps.length > 0) {
       return deliveries.filter(d =>
-        payment.delivery_payments.some(dp => dp.delivery_id === d.id)
+        dps.some(dp => dp.delivery_id === d.id)
       );
     }
     if (payment.delivery_ids && payment.delivery_ids.length > 0) {
@@ -107,6 +109,45 @@ export default function PaymentVoucher({ payment, deliveries, products, employee
       </tr>
     `).join("");
 
+    const isAdvance = payment.payment_type === 'anticipo';
+    const deducted = Number(payment.advance_deducted) || 0;
+    const advanceModeText = payment.advance_mode === 'cuotas' && Number(payment.advance_installment) > 0
+      ? `en cuotas de ${fmtMoney(payment.advance_installment)} por pago`
+      : 'completo en el próximo pago';
+
+    const deliveriesSectionHtml = isAdvance ? `
+        <div style="padding:24px 32px">
+          <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:16px 18px">
+            <div style="font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Anticipo sobre próximos pagos</div>
+            <div style="font-size:14px;color:#78350f">Este valor se descontará ${advanceModeText}.</div>
+            ${payment.advance_reason ? `<div style="font-size:13px;color:#92400e;margin-top:6px">Motivo: ${payment.advance_reason}</div>` : ''}
+          </div>
+        </div>` : `
+        <div style="padding:24px 32px">
+          <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Detalle de entregas cubiertas</div>
+          <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+            <thead>
+              <tr style="background:#1e3a8a;color:white">
+                <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Fecha</th>
+                <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Producto</th>
+                <th style="padding:9px 12px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Cant.</th>
+                <th style="padding:9px 12px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Vlr. Unit.</th>
+                <th style="padding:9px 12px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${detailRowsHtml}
+              ${totals.length > 0 ? totalsRowsHtml : ""}
+            </tbody>
+          </table>
+        </div>`;
+
+    const deductionHtml = deducted > 0 ? `
+        <div style="margin:0 32px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:10px;padding:12px 16px;font-size:14px;color:#78350f">
+          <div style="display:flex;justify-content:space-between"><span>Valor de las entregas</span><b>${fmtMoney(Number(payment.amount) + deducted)}</b></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px"><span>Descuento de anticipo</span><b>−${fmtMoney(deducted)}</b></div>
+        </div>` : '';
+
     const html = `
       <div style="font-family:'Segoe UI',Arial,sans-serif;width:600px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.12)">
         
@@ -114,7 +155,7 @@ export default function PaymentVoucher({ payment, deliveries, products, employee
         <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:28px 32px;color:white">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
-              <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:0.8;margin-bottom:4px">Comprobante de Pago</div>
+              <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:0.8;margin-bottom:4px">${isAdvance ? 'Comprobante de Anticipo' : 'Comprobante de Pago'}</div>
               <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">Producción eQuis-T</div>
             </div>
             <div style="text-align:right">
@@ -141,29 +182,13 @@ export default function PaymentVoucher({ payment, deliveries, products, employee
           </div>
         </div>
 
-        <!-- Tabla de entregas por fecha -->
-        <div style="padding:24px 32px">
-          <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Detalle de entregas cubiertas</div>
-          <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
-            <thead>
-              <tr style="background:#1e3a8a;color:white">
-                <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Fecha</th>
-                <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Producto</th>
-                <th style="padding:9px 12px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Cant.</th>
-                <th style="padding:9px 12px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Vlr. Unit.</th>
-                <th style="padding:9px 12px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${detailRowsHtml}
-              ${totals.length > 0 ? totalsRowsHtml : ""}
-            </tbody>
-          </table>
-        </div>
+        <!-- Entregas (o anticipo) -->
+        ${deliveriesSectionHtml}
+        ${deductionHtml}
 
         <!-- Total -->
         <div style="margin:0 32px 24px;background:linear-gradient(135deg,#1e3a8a,#2563eb);border-radius:12px;padding:20px 24px;display:flex;justify-content:space-between;align-items:center">
-          <div style="color:rgba(255,255,255,0.85);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:1px">TOTAL PAGADO</div>
+          <div style="color:rgba(255,255,255,0.85);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:1px">${isAdvance ? 'VALOR DEL ANTICIPO' : 'TOTAL PAGADO'}</div>
           <div style="color:white;font-size:28px;font-weight:800;letter-spacing:-1px">${fmtMoney(payment.amount)}</div>
         </div>
 

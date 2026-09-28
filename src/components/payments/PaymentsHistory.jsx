@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreditCard, Calendar, User, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { paymentTypeLabel, paymentDisplayAmount, ADVANCE_TYPE, DEDUCTION_TYPE } from "@/utils/advances";
 
 export default function PaymentsHistory({ payments, employees, paymentRequests = [], onDelete }) {
   const getEmployeeName = (payment) => {
@@ -36,7 +37,12 @@ export default function PaymentsHistory({ payments, employees, paymentRequests =
               <div key={payment.id} className="p-4 border rounded-lg hover:bg-white transition-colors">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center">
                   <div className="mb-2 sm:mb-0">
-                    <p className="font-bold text-lg text-green-700">${(payment.amount || 0).toLocaleString()}</p>
+                    <p className={`font-bold text-lg ${payment.payment_type === DEDUCTION_TYPE ? 'text-amber-700' : 'text-green-700'}`}>
+                      {payment.payment_type === DEDUCTION_TYPE ? '−' : ''}${paymentDisplayAmount(payment).toLocaleString()}
+                    </p>
+                    {payment.payment_type === DEDUCTION_TYPE && (
+                      <p className="text-xs text-amber-700">Cruzado del anticipo · no se transfiere</p>
+                    )}
                     <p className="text-sm text-slate-600 font-medium flex items-center gap-1">
                       <User className="w-3 h-3"/>{getEmployeeName(payment)}
                     </p>
@@ -49,8 +55,11 @@ export default function PaymentsHistory({ payments, employees, paymentRequests =
                   <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
                     <div className="text-sm text-slate-500 flex flex-col sm:items-end gap-1">
                        <p className="flex items-center gap-1"><Calendar className="w-3 h-3"/>{(() => { try { const d = new Date(payment.payment_date); return isNaN(d) ? '—' : format(d, 'dd/MM/yyyy'); } catch { return '—'; } })()}</p>
-                       <Badge variant={payment.payment_type === 'pago_completo' ? 'default' : 'secondary'}>
-                          {payment.payment_type === 'pago_completo' ? 'Pago Completo' : payment.payment_type === 'solicitud_aprobada' ? 'Solicitud aprobada' : 'Avance'}
+                       <Badge
+                          variant={payment.payment_type === 'pago_completo' ? 'default' : 'secondary'}
+                          className={payment.payment_type === ADVANCE_TYPE || payment.payment_type === DEDUCTION_TYPE ? 'bg-amber-100 text-amber-800' : ''}
+                       >
+                          {paymentTypeLabel(payment)}
                        </Badge>
                     </div>
                     <Button

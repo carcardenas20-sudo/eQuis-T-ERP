@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { paymentTypeLabel, paymentDisplayAmount } from "@/utils/advances";
 
 export default function EmployeePaymentsSummary({ payments }) {
   const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -29,14 +30,14 @@ export default function EmployeePaymentsSummary({ payments }) {
               <div key={payment.id || index} className="p-2 bg-slate-50 rounded border">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium text-slate-900">${payment.amount.toLocaleString()}</p>
+                    <p className="font-medium text-slate-900">${paymentDisplayAmount(payment).toLocaleString()}</p>
                     <p className="text-xs text-slate-600 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}
                     </p>
                   </div>
                   <Badge variant={payment.payment_type === 'pago_completo' ? 'default' : 'secondary'} className="text-xs">
-                    {payment.payment_type === 'pago_completo' ? 'Completo' : 'Avance'}
+                    {paymentTypeLabel(payment)}
                   </Badge>
                 </div>
                 {payment.description && (

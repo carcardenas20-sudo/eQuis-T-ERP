@@ -33,6 +33,7 @@ import { format } from "date-fns";
 import EmployeeTimeline from "../components/employees/EmployeeTimeline";
 import EmployeePendingItems from "../components/employees/EmployeePendingItems";
 import EmployeePaymentsSummary from "../components/employees/EmployeePaymentsSummary";
+import { buildAdvances } from "@/utils/advances";
 
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const DIAS_ES = ['','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte','veintiuno','veintidós','veintitrés','veinticuatro','veinticinco','veintiséis','veintisiete','veintiocho','veintinueve','treinta','treinta y uno'];
@@ -200,6 +201,8 @@ export default function EmployeePortal() {
   const [isPaymentWindowOpen, setIsPaymentWindowOpen] = useState(false);
   const [paymentWindowClosesAt, setPaymentWindowClosesAt] = useState(null);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
+  // Anticipos: lo recibido por anticipo y lo que falta por descontar de sus pagos.
+  const [advanceInfo, setAdvanceInfo] = useState({ received: 0, owed: 0 });
   const [solicitudCert, setSolicitudCert] = useState(null);
   const [loadingSolicitud, setLoadingSolicitud] = useState(false);
   const [showCertForm, setShowCertForm] = useState(false);
@@ -265,8 +268,14 @@ export default function EmployeePortal() {
         ]);
 
         const normProducts = (products || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra }));
-        const OPERARIO_TYPES = new Set(['avance', 'pago_completo', 'solicitud_aprobada']);
+        // 'descuento_anticipo' cubre entregas; el 'anticipo' se muestra aparte (no está ligado a entregas).
+        const OPERARIO_TYPES = new Set(['avance', 'pago_completo', 'solicitud_aprobada', 'descuento_anticipo']);
         const operarioPayments = (payments || []).filter(p => OPERARIO_TYPES.has(p.payment_type));
+        const advances = buildAdvances(payments || []);
+        setAdvanceInfo({
+          received: advances.reduce((s, x) => s + (Number(x.advance.amount) || 0), 0),
+          owed: advances.reduce((s, x) => s + x.balance, 0),
+        });
         setData({ deliveries, dispatches, payments: operarioPayments, products: normProducts, purchases: purchases || [] });
         setHasPendingRequest(existingRequests.length > 0);
         // Tomar la solicitud de certificado más reciente
@@ -758,7 +767,7 @@ export default function EmployeePortal() {
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6">
           <Card>
-            <CardContent className="p-6 flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><DollarSign className="w-6 h-6 text-green-600" /></div><div><p className="text-sm text-slate-600">Total Recibido</p><p className="text-2xl font-bold text-green-700">${stats.totalEarned.toLocaleString()}</p></div></CardContent>
+            <CardContent className="p-6 flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><DollarSign className="w-6 h-6 text-green-600" /></div><div><p className="text-sm text-slate-600">Total Recibido</p><p className="text-2xl font-bold text-green-700">${(stats.totalEarned + advanceInfo.received).toLocaleString()}</p></div></CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 flex items-center gap-3">
@@ -771,6 +780,12 @@ export default function EmployeePortal() {
                   {stats.pendingAmount < 0 ? `-$${Math.abs(stats.pendingAmount).toLocaleString()}` : `$${stats.pendingAmount.toLocaleString()}`}
                 </p>
                 {stats.pendingAmount < 0 && <p className="text-xs text-red-500">Deuda pendiente</p>}
+                {advanceInfo.owed > 0 && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    Anticipo por descontar: <b>${advanceInfo.owed.toLocaleString()}</b>
+                    {stats.pendingAmount > 0 && <> · recibirías <b>${Math.max(0, stats.pendingAmount - advanceInfo.owed).toLocaleString()}</b></>}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

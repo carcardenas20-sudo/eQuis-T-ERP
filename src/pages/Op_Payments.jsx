@@ -4,12 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, DollarSign, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, DollarSign, CheckCircle2, XCircle, Clock, HandCoins } from "lucide-react";
 import { format } from "date-fns";
 
 import PaymentForm from "../components/payments/PaymentForm";
 import PaymentsHistory from "../components/payments/PaymentsHistory";
 import ActivityHistory from "../components/history/ActivityHistory";
+import AdvanceForm from "../components/payments/AdvanceForm";
+import AdvancesPanel from "../components/payments/AdvancesPanel";
+import { ADVANCE_TYPE, DEDUCTION_TYPE, DEDUCTION_STATUS, buildAdvances, splitAllocations, money } from "@/utils/advances";
 
 export default function Payments() {
   const [employees, setEmployees] = useState([]);
@@ -24,6 +27,11 @@ export default function Payments() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [editingPayment, setEditingPayment] = useState(null);
   const [processingRequest, setProcessingRequest] = useState(null);
+  // Anticipos: todos los pagos de operarios (incl. anticipos y cruces) para historial y saldos.
+  const [historyPayments, setHistoryPayments] = useState([]);
+  const [advanceFormFor, setAdvanceFormFor] = useState(null); // null | {} (sin empleado) | employee
+  const [savingAdvance, setSavingAdvance] = useState(false);
+  const [activeTab, setActiveTab] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -42,8 +50,11 @@ export default function Payments() {
       setAllEmployees(employeesData);
       setEmployees(employeesData.filter(e => e.is_active));
       setDeliveries(deliveriesData);
-      const OPERARIO_PAYMENT_TYPES = new Set(['avance', 'pago_completo', 'solicitud_aprobada']);
+      // 'descuento_anticipo' cubre entregas (delivery_payments) → cuenta para el pendiente.
+      // 'anticipo' NO: no está ligado a entregas; se descuenta con su cruce al liquidar.
+      const OPERARIO_PAYMENT_TYPES = new Set(['avance', 'pago_completo', 'solicitud_aprobada', DEDUCTION_TYPE]);
       setPayments(paymentsData.filter(p => p.employee_id && OPERARIO_PAYMENT_TYPES.has(p.payment_type)));
+      setHistoryPayments(paymentsData.filter(p => p.employee_id && (OPERARIO_PAYMENT_TYPES.has(p.payment_type) || p.payment_type === ADVANCE_TYPE)));
       setPurchases(purchasesData || []);
       setAllPaymentRequests(requestsData || []);
       setPaymentRequests((requestsData || []).filter(r => r.status === 'pending'));
@@ -151,22 +162,66 @@ export default function Payments() {
   };
 
   const pendingPayments = getPendingPayments();
+  const advances = buildAdvances(historyPayments);
+  const activeAdvancesOf = (employeeId) => advances.filter(x => !x.settled && x.advance.employee_id === employeeId);
+  const activeAdvancesCount = advances.filter(x => !x.settled).length;
 
-  const handleCreatePayment = async (paymentData) => {
+  const handleCreatePayment = async (paymentData, deductions = []) => {
     try {
-      const newPayment = await base44.entities.Payment.create({
-        ...paymentData,
-        status: 'registrado'
-      });
       const employee = employees.find(e => e.employee_id === paymentData.employee_id);
+      const employeeName = employee?.name || paymentData.employee_id;
+      // Pago con descuento de anticipo = varios registros de una misma liquidación:
+      // un cruce por anticipo (sin plata) + el pago a transferir (lo que queda).
+      const liquidation_id = deductions.length > 0 ? `liq_${Date.now()}` : undefined;
+      const { byAdvance, rest } = splitAllocations(paymentData.delivery_payments, deductions);
 
-      await base44.entities.ActivityLog.create({
+      for (const d of byAdvance) {
+        if (d.amount <= 0) continue;
+        const cruce = await base44.entities.Payment.create({
+          employee_id: paymentData.employee_id,
+          employee_name: paymentData.employee_name,
+          amount: 0,
+          deducted_amount: d.amount,
+          advance_id: d.advance_id,
+          payment_date: paymentData.payment_date,
+          payment_type: DEDUCTION_TYPE,
+          status: DEDUCTION_STATUS,
+          description: `Descuento de anticipo — ${money(d.amount)}`,
+          delivery_payments: d.delivery_payments,
+          liquidation_id,
+        });
+        await base44.entities.ActivityLog.create({
+          entity_type: 'Payment',
+          entity_id: cruce.id,
+          action: 'created',
+          description: `Descuento de anticipo - ${money(d.amount)}`,
+          employee_id: paymentData.employee_id,
+          employee_name: employeeName,
+          amount: d.amount,
+        });
+      }
+
+      const newPayment = paymentData.amount > 0.5
+        ? await base44.entities.Payment.create({
+            ...paymentData,
+            delivery_payments: deductions.length > 0 ? rest : paymentData.delivery_payments,
+            ...(liquidation_id ? {
+              liquidation_id,
+              // Para el comprobante: todas las entregas liquidadas y cuánto se cruzó del anticipo.
+              liquidated_delivery_payments: paymentData.delivery_payments,
+              advance_deducted: byAdvance.reduce((s, d) => s + d.amount, 0),
+            } : {}),
+            status: 'registrado'
+          })
+        : null;
+
+      if (newPayment) await base44.entities.ActivityLog.create({
         entity_type: 'Payment',
         entity_id: newPayment.id,
         action: 'created',
         description: `Pago registrado - ${paymentData.payment_type === 'pago_completo' ? 'Pago completo' : 'Avance'} - $${paymentData.amount.toLocaleString()}`,
         employee_id: paymentData.employee_id,
-        employee_name: employee?.name || paymentData.employee_id,
+        employee_name: employeeName,
         amount: paymentData.amount,
         new_data: paymentData
       });
@@ -204,11 +259,21 @@ export default function Payments() {
 
 
   const handleDeletePayment = async (payment) => {
-    if (window.confirm(`¿Estás seguro de eliminar este pago de $${payment.amount.toLocaleString()}?`)) {
+    // Un pago con anticipo descontado son varios registros (pago + cruces): se borran juntos
+    // para que las entregas y el saldo del anticipo vuelvan a quedar como estaban.
+    const siblings = payment.liquidation_id
+      ? historyPayments.filter(p => p.liquidation_id === payment.liquidation_id && p.id !== payment.id)
+      : [];
+    const extra = siblings.length > 0
+      ? '\n\nEste pago tiene un descuento de anticipo: también se eliminará ese descuento y el anticipo volverá a quedar pendiente por ese valor.'
+      : payment.payment_type === ADVANCE_TYPE ? '\n\nEs un anticipo.' : '';
+    const shown = payment.payment_type === DEDUCTION_TYPE ? payment.deducted_amount : payment.amount;
+    if (window.confirm(`¿Estás seguro de eliminar este pago de $${(Number(shown) || 0).toLocaleString()}?${extra}`)) {
       try {
         const employee = employees.find(e => e.employee_id === payment.employee_id);
         
         await base44.entities.Payment.delete(payment.id);
+        for (const sib of siblings) await base44.entities.Payment.delete(sib.id);
 
         await base44.entities.ActivityLog.create({
           entity_type: 'Payment',
@@ -227,6 +292,58 @@ export default function Payments() {
         console.error("Error al eliminar el pago:", error);
         alert("Error al eliminar el pago.");
       }
+    }
+  };
+
+  const handleCreateAdvance = async (data) => {
+    setSavingAdvance(true);
+    try {
+      const adv = await base44.entities.Payment.create(data);
+      await base44.entities.ActivityLog.create({
+        entity_type: 'Payment',
+        entity_id: adv.id,
+        action: 'created',
+        description: `Anticipo registrado - ${money(data.amount)}${data.advance_reason ? ` (${data.advance_reason})` : ''}`,
+        employee_id: data.employee_id,
+        employee_name: data.employee_name,
+        amount: data.amount,
+        new_data: data,
+      });
+      setAdvanceFormFor(null);
+      setActiveTab('advances');
+      await loadData();
+      alert(`Anticipo registrado. Quedó en Transferencias bancarias para transferir ${money(data.amount)}.`);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo registrar el anticipo.');
+    }
+    setSavingAdvance(false);
+  };
+
+  const handleDeleteAdvance = async (item) => {
+    const a = item.advance;
+    if (item.deductions.length > 0) {
+      alert('Este anticipo ya tiene descuentos aplicados. Para anularlo, elimina primero esos pagos desde el Historial.');
+      return;
+    }
+    const warn = item.transferred ? '\n\nOJO: ya fue marcado como transferido.' : '';
+    if (!window.confirm(`¿Anular el anticipo de ${money(a.amount)} a ${a.employee_name}?${warn}`)) return;
+    try {
+      await base44.entities.Payment.delete(a.id);
+      await base44.entities.ActivityLog.create({
+        entity_type: 'Payment',
+        entity_id: a.id,
+        action: 'deleted',
+        description: `Anticipo anulado - ${money(a.amount)}`,
+        employee_id: a.employee_id,
+        employee_name: a.employee_name,
+        amount: a.amount,
+        previous_data: a,
+      });
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo anular el anticipo.');
     }
   };
 
@@ -321,11 +438,20 @@ export default function Payments() {
           <p className="text-slate-600 text-sm sm:text-base">Gestión de pagos por entregas de producción.</p>
         </div>
 
-        {showForm ? (
+        {advanceFormFor ? (
+          <AdvanceForm
+            employees={employees}
+            employee={advanceFormFor.employee_id ? advanceFormFor : null}
+            saving={savingAdvance}
+            onSubmit={handleCreateAdvance}
+            onCancel={() => setAdvanceFormFor(null)}
+          />
+        ) : showForm ? (
           <PaymentForm
             employee={selectedEmployee}
             payment={editingPayment}
             pendingDeliveries={pendingPayments[selectedEmployee?.employee_id]?.deliveries || []}
+            advances={activeAdvancesOf(selectedEmployee?.employee_id)}
             onSubmit={handleCreatePayment}
             onCancel={() => {
               setShowForm(false);
@@ -335,8 +461,8 @@ export default function Payments() {
           />
         ) : (
           <>
-            <Tabs defaultValue={paymentRequests.length > 0 ? "requests" : "pending"} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-4">
+            <Tabs value={activeTab || (paymentRequests.length > 0 ? "requests" : "pending")} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-5 mb-4">
                 <TabsTrigger value="requests" className="text-xs sm:text-sm relative">
                   Solicitudes
                   {paymentRequests.length > 0 && (
@@ -344,6 +470,12 @@ export default function Payments() {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="pending" className="text-xs sm:text-sm">Pendientes</TabsTrigger>
+                <TabsTrigger value="advances" className="text-xs sm:text-sm">
+                  Anticipos
+                  {activeAdvancesCount > 0 && (
+                    <span className="ml-1 bg-amber-500 text-white rounded-full text-xs px-1.5 py-0 font-bold">{activeAdvancesCount}</span>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="history" className="text-xs sm:text-sm">Historial</TabsTrigger>
                 <TabsTrigger value="activity" className="text-xs sm:text-sm">Cambios</TabsTrigger>
               </TabsList>
@@ -365,7 +497,7 @@ export default function Payments() {
                     ) : (
                       <div className="space-y-3">
                         {paymentRequests.map(req => {
-                          const lastPayment = payments.find(p => p.employee_id === req.employee_id);
+                          const lastPayment = payments.find(p => p.employee_id === req.employee_id && p.payment_type !== DEDUCTION_TYPE);
                           return (
                           <div key={req.id} className="flex items-center justify-between gap-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
                             <div className="flex-1 min-w-0">
@@ -425,7 +557,7 @@ export default function Payments() {
                       .filter(emp => pendingPayments[emp.employee_id] && pendingPayments[emp.employee_id].total !== 0)
                       .map(employee => {
                         const pending = pendingPayments[employee.employee_id];
-                        const lastPayment = payments.find(p => p.employee_id === employee.employee_id);
+                        const lastPayment = payments.find(p => p.employee_id === employee.employee_id && p.payment_type !== DEDUCTION_TYPE);
                         const lastRequest = allPaymentRequests.find(r => r.employee_id === employee.employee_id);
                         return (
                           <Card key={employee.id} className="border-slate-200 flex flex-col">
@@ -456,6 +588,16 @@ export default function Payments() {
                                   {pending.total < 0 ? 'Compra interna descuenta del saldo' : `Basado en ${pending.count} entregas pendientes`}
                                 </p>
                               </div>
+                              {(() => {
+                                const owed = activeAdvancesOf(employee.employee_id).reduce((s, x) => s + x.balance, 0);
+                                if (owed <= 0) return null;
+                                return (
+                                  <div className="-mt-2 mb-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex justify-between">
+                                    <span>💸 Anticipo por descontar</span>
+                                    <b className="tabular-nums">{money(owed)}</b>
+                                  </div>
+                                );
+                              })()}
                             </CardContent>
                             {pending.total > 0 && (
                               <div className="p-4 bg-slate-50 border-t">
@@ -465,6 +607,14 @@ export default function Payments() {
                                 >
                                   <Plus className="w-4 h-4 mr-2" />
                                   Registrar Pago
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full mt-1 text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                                  onClick={() => setAdvanceFormFor(employee)}
+                                >
+                                  <HandCoins className="w-4 h-4 mr-1" /> Dar anticipo
                                 </Button>
                               </div>
                             )}
@@ -481,9 +631,17 @@ export default function Payments() {
                 </Card>
               </TabsContent>
 
+              <TabsContent value="advances">
+                <AdvancesPanel
+                  advances={advances}
+                  onNew={() => setAdvanceFormFor({})}
+                  onDelete={handleDeleteAdvance}
+                />
+              </TabsContent>
+
               <TabsContent value="history">
                 <PaymentsHistory
-                  payments={payments}
+                  payments={historyPayments}
                   employees={allEmployees}
                   paymentRequests={allPaymentRequests}
                   onDelete={handleDeletePayment}

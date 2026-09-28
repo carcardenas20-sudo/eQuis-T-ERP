@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, TruckIcon, PackageCheck, DollarSign, ShoppingBag, AlertTriangle, ArrowRightLeft } from "lucide-react";
 import { format } from "date-fns";
+import { paymentTypeLabel, paymentDisplayAmount } from "@/utils/advances";
 
 export default function EmployeeTimeline({ dispatches, deliveries, payments, purchases = [], getProductName, pendingAmount }) {
   // Construir mapa de pagos por entrega
@@ -149,7 +150,7 @@ export default function EmployeeTimeline({ dispatches, deliveries, payments, pur
       date: payment.payment_date,
       data: payment,
       title: `Pago Recibido`,
-      subtitle: `$${payment.amount.toLocaleString()} - ${payment.payment_type === 'pago_completo' ? 'Pago Completo' : 'Avance'}`,
+      subtitle: `$${paymentDisplayAmount(payment).toLocaleString()} - ${paymentTypeLabel(payment)}`,
       icon: DollarSign,
       color: 'green'
     });
