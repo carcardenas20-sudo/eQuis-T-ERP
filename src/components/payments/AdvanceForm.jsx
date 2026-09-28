@@ -75,7 +75,7 @@ export default function AdvanceForm({ employees, employee: preselected, onSubmit
             </div>
             <div className="space-y-1.5">
               <Label>Valor del anticipo *</Label>
-              <Input type="number" min="1" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="200000" />
+              <Input type="number" min="1" step="1" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="200000" />
             </div>
             <div className="space-y-1.5">
               <Label>Fecha</Label>
@@ -104,7 +104,7 @@ export default function AdvanceForm({ employees, employee: preselected, onSubmit
             {mode === "cuotas" && (
               <div className="space-y-1.5 sm:w-1/2">
                 <Label>Valor de cada cuota *</Label>
-                <Input type="number" min="1" step="1000" value={installment} onChange={(e) => setInstallment(e.target.value)} placeholder="50000" />
+                <Input type="number" min="1" step="1" value={installment} onChange={(e) => setInstallment(e.target.value)} placeholder="50000" />
               </div>
             )}
           </div>

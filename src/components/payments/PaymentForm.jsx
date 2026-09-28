@@ -197,7 +197,7 @@ export default function PaymentForm({ employee, payment, pendingDeliveries, adva
                       <Input
                         type="number"
                         min="0"
-                        step="1000"
+                        step="1"
                         disabled={!!skipAdvance[advance_id]}
                         value={editedAdvance[advance_id] !== undefined ? editedAdvance[advance_id] : Math.round(amount)}
                         onChange={e => setEditedAdvance(v => ({ ...v, [advance_id]: e.target.value }))}
