@@ -127,6 +127,11 @@ export default function PayableList({ payables, locations, onEdit, onDelete, onP
                     {getTypeBadge(payable.type)}
                   </div>
                   <p className="text-slate-600 text-sm">{payable.description}</p>
+                  {payable._paid_date && (
+                    <p className="text-xs text-emerald-700 mt-0.5">
+                      Pagada el {payable._paid_date.split('-').reverse().join('/')}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5 shrink-0">
                   {payable.status !== "paid" && (

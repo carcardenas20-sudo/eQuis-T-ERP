@@ -569,6 +569,9 @@ export default function AccountsPayablePage() {
   const [showGastoFijo, setShowGastoFijo] = useState(false);
   const [editandoGastoFijo, setEditandoGastoFijo] = useState(null);
   const [filtroCategoria, setFiltroCategoria] = useState('all');
+  const [pagadasMes, setPagadasMes] = useState('all');
+  const [pagadasCat, setPagadasCat] = useState('all');
+  const [pagadasQ, setPagadasQ] = useState('');
 
   useEffect(() => { if (!isSessionLoading) loadData(); }, [isSessionLoading]);
 
@@ -577,7 +580,7 @@ export default function AccountsPayablePage() {
     try {
       const [allPayables, allSuppliers, allLocations, allOpPayments, allEmployees,
         allPresupuestos, allInventario, allGastosFijos, allPayablePayments] = await Promise.all([
-        AccountPayable.list("-created_date", 500),
+        AccountPayable.list("-created_date", 5000),
         Supplier.list(),
         Location.list(),
         localClient.entities.Payment.list('-payment_date'),
@@ -585,7 +588,7 @@ export default function AccountsPayablePage() {
         Presupuesto.list("-created_date", 200),
         Inventario.list("-updated_date", 300),
         FixedExpense.list(),
-        PayablePayment.list('-payment_date', 1000),
+        PayablePayment.list('-payment_date', 10000),
       ]);
       setPayables(allPayables || []);
       setSuppliers(allSuppliers || []);
@@ -977,6 +980,39 @@ export default function AccountsPayablePage() {
 
   const isAdmin = currentUser?.role === 'admin' || userRole?.name === 'Administrador';
   const paidPayables = payables.filter(p => p.status === 'paid');
+
+  // ── Pagadas: fecha de pago = último abono; filtros por mes, categoría y texto ──
+  const PAID_CAT_LABELS = {
+    materia_prima: 'Materia Prima', materia_prima_credito: 'Mat. Prima (crédito)', alquiler: 'Alquiler',
+    servicios_publicos: 'Servicios Públicos', mantenimiento: 'Mantenimiento', seguros: 'Seguros',
+    gasto_fijo: 'Gasto Fijo', gasto_variable: 'Gasto Variable', salarios_manufactura: 'Operarios', otros: 'Otros',
+  };
+  const paidRows = (() => {
+    const lastAbono = {};
+    for (const a of allAbonos) {
+      const d = String(a.payment_date || '').slice(0, 10);
+      if (d && (!lastAbono[a.payable_id] || d > lastAbono[a.payable_id])) lastAbono[a.payable_id] = d;
+    }
+    return paidPayables
+      .map(p => ({ ...p, _paid_date: lastAbono[p.id] || String(p.updated_date || p.created_date || '').slice(0, 10) }))
+      .sort((a, b) => b._paid_date.localeCompare(a._paid_date));
+  })();
+  const paidMonths = [...new Set(paidRows.map(p => p._paid_date.slice(0, 7)).filter(Boolean))].sort().reverse();
+  const paidCats = [...new Set(paidRows.map(p => p.category || 'otros'))];
+  const paidFiltered = (() => {
+    const q = pagadasQ.trim().toLowerCase();
+    return paidRows.filter(p =>
+      (pagadasMes === 'all' || p._paid_date.startsWith(pagadasMes)) &&
+      (pagadasCat === 'all' || (p.category || 'otros') === pagadasCat) &&
+      (!q || `${p.supplier_name || ''} ${p.description || ''} ${p.invoice_number || ''}`.toLowerCase().includes(q))
+    );
+  })();
+  const paidFilteredTotal = paidFiltered.reduce((s, p) => s + (Number(p.total_amount) || 0), 0);
+  const monthLabel = (ym) => {
+    const [y, m] = ym.split('-');
+    const names = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return `${names[Number(m) - 1] || m} ${y}`;
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-3 sm:p-6">
@@ -1402,9 +1438,41 @@ export default function AccountsPayablePage() {
           </TabsContent>
 
           {/* ─── Pagadas ────────────────────────────────────────────────── */}
-          <TabsContent value="pagadas" className="mt-4">
+          <TabsContent value="pagadas" className="mt-4 space-y-4">
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    placeholder="Buscar proveedor, descripción o factura…"
+                    value={pagadasQ}
+                    onChange={e => setPagadasQ(e.target.value)}
+                  />
+                  <select value={pagadasMes} onChange={e => setPagadasMes(e.target.value)}
+                    className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm">
+                    <option value="all">Todos los meses</option>
+                    {paidMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+                  </select>
+                  <select value={pagadasCat} onChange={e => setPagadasCat(e.target.value)}
+                    className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm">
+                    <option value="all">Todas las categorías</option>
+                    {paidCats.map(c => <option key={c} value={c}>{PAID_CAT_LABELS[c] || c}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="text-slate-600">
+                    {paidFiltered.length} cuenta{paidFiltered.length !== 1 ? 's' : ''} pagada{paidFiltered.length !== 1 ? 's' : ''}
+                    {pagadasMes !== 'all' ? ` en ${monthLabel(pagadasMes)}` : ''}
+                  </span>
+                  <span className="font-bold text-emerald-700">Total pagado: {fmtMoney(paidFilteredTotal)}</span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Ordenadas de la más reciente a la más antigua por fecha del último pago. Los pagos a operarios
+                  quedan en Pagos Op. → Transferencias bancarias (ejecutados).
+                </p>
+              </CardContent>
+            </Card>
             <PayableList
-              payables={paidPayables} locations={locations}
+              payables={paidFiltered} locations={locations}
               onEdit={p => { setEditingPayable(p); setShowForm(true); }}
               onDelete={async id => {
                 if (!confirm("¿Eliminar?")) return;
