@@ -174,6 +174,17 @@ export const ENTITY_SCHEMAS = {
     indexes: ['status', 'location_id'],
   },
 
+  // Saldo a favor de clientes (devoluciones): movimientos + (a favor) / − (usado).
+  CustomerBalance: {
+    table: 'entity_customer_balance',
+    typed: {
+      customer_id: 'TEXT',
+      amount: 'NUMERIC(14,2)',
+      tipo: 'TEXT',
+    },
+    indexes: ['customer_id'],
+  },
+
   Credit: {
     table: 'entity_credit',
     typed: {

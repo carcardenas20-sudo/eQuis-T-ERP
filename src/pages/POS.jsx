@@ -3,6 +3,7 @@ import { Product, Sale, SaleItem, Inventory, PriceList, ProductPrice, Credit, Pa
 import { Producto as ProductoFab } from "@/api/entitiesChaquetas";
 import { Dispatch, Delivery } from "@/api/entitiesProduccion";
 import { InventoryMovement } from "@/entities/InventoryMovement";
+import { localClient } from "@/api/localClient";
 import { sendInvoiceWhatsApp } from '@/utils/whatsappInvoice';
 import { generatePrintableHTML } from '@/utils/invoicePdf';
 import { useSession } from "../components/providers/SessionProvider";
@@ -339,7 +340,7 @@ export default function POS() {
     if (!postSaleInfo) return;
     const { sale, items, companyInfo } = postSaleInfo;
     const widthMM = 58;
-    const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', credit: 'Crédito', courtesy: 'Cortesía' };
+    const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', credit: 'Crédito', courtesy: 'Cortesía', saldo: 'Saldo a favor' };
     const html = generatePrintableHTML(sale, items, companyInfo, labels, '58mm');
     const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;width:100%;max-width:100%;}@page{size:${widthMM}mm auto;margin:0;}@media print{body{width:${widthMM}mm;margin:0;}}</style></head><body>${html}</body></html>`;
     const pw = window.open('', '_blank');
@@ -441,6 +442,21 @@ export default function POS() {
           
           await Payment.create(newPayment);
         }
+      }
+
+      // Saldo a favor usado en esta venta → movimiento negativo en el saldo del cliente
+      const usadoSaldo = paymentData.filter(p => p.method === 'saldo').reduce((s, p) => s + (Number(p.amount) || 0), 0);
+      if (usadoSaldo > 0 && customer?.id) {
+        await localClient.entities.CustomerBalance.create({
+          id: newId(),
+          customer_id: customer.id,
+          customer_name: customer.name || '',
+          amount: -usadoSaldo,
+          tipo: 'uso',
+          sale_id: sale.id,
+          motivo: `Usado en factura #${sale.invoice_number || sale.id.slice(-8)}`,
+          fecha: saleDate,
+        });
       }
 
       for (const item of cart) {

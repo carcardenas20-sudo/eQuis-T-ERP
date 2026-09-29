@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BankAccount } from "@/entities/BankAccount";
+import { getToken, getActiveCompany } from "@/api/localClient";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,8 @@ const paymentMethods = [
   { id: 'transfer', name: 'Transferencia', icon: Smartphone, color: 'bg-purple-500' },
   { id: 'qr', name: 'QR', icon: QrCode, color: 'bg-orange-500' },
   { id: 'credit', name: 'Crédito', icon: Landmark, color: 'bg-sky-500' },
+  // Solo se agrega con el botón "Usar saldo" (no aparece en la cuadrícula de métodos)
+  { id: 'saldo', name: 'Saldo a favor', icon: Landmark, color: 'bg-teal-500', special: true },
 ];
 
 export default function PaymentModal({ total, onConfirm, onCancel, isProcessing, customer, initialMethod }) {
@@ -45,6 +48,25 @@ export default function PaymentModal({ total, onConfirm, onCancel, isProcessing,
     reference: '',
     bank_account: ''
   });
+
+  // Saldo a favor del cliente (por devoluciones)
+  const [saldoFavor, setSaldoFavor] = useState(0);
+  useEffect(() => {
+    if (!customer?.id) { setSaldoFavor(0); return; }
+    const token = getToken();
+    const company = getActiveCompany();
+    fetch(`/api/devoluciones/saldo/${customer.id}`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(company ? { 'X-Company-Id': company } : {}) },
+    }).then(r => r.json()).then(d => setSaldoFavor(Number(d.saldo) || 0)).catch(() => setSaldoFavor(0));
+  }, [customer?.id]);
+  const saldoUsado = () => payments.filter(p => p.method === 'saldo').reduce((s, p) => s + p.amount, 0);
+  const usarSaldo = () => {
+    const disponible = saldoFavor - saldoUsado();
+    const remaining = getRemainingAmount();
+    const amt = Math.min(disponible, remaining);
+    if (amt <= 0) return;
+    setPayments(prev => [...prev, { id: Date.now(), method: 'saldo', amount: amt, reference: 'Saldo a favor', bank_account: '' }]);
+  };
 
   useEffect(() => {
     const loadBankAccounts = async () => {
@@ -195,6 +217,16 @@ export default function PaymentModal({ total, onConfirm, onCancel, isProcessing,
             })()}
           </div>
 
+          {saldoFavor > 0 && (
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-teal-50 border border-teal-200">
+              <div className="text-sm text-teal-900">
+                <b>{customer?.name}</b> tiene saldo a favor de <b>${Math.round(saldoFavor - saldoUsado()).toLocaleString('es-CO')}</b>
+              </div>
+              <Button type="button" size="sm" onClick={usarSaldo} disabled={saldoFavor - saldoUsado() <= 0 || getRemainingAmount() <= 0}
+                className="bg-teal-600 hover:bg-teal-700 shrink-0">Usar saldo</Button>
+            </div>
+          )}
+
           {payments.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-semibold text-gray-900">Pagos Registrados:</h3>
@@ -246,7 +278,7 @@ export default function PaymentModal({ total, onConfirm, onCancel, isProcessing,
                   <h3 className="font-semibold text-gray-900">Agregar Pago:</h3>
 
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {paymentMethods.map((method) => (
+                    {paymentMethods.filter((m) => !m.special).map((method) => (
                       <Button
                         key={method.id}
                         variant={currentPayment.method === method.id ? 'default' : 'outline'}

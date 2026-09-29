@@ -57,6 +57,11 @@ export default function CreditDetailModal({ credit, onClose, onRefresh }) {
   };
 
   const handleDeletePayment = async (payment) => {
+    // Una devolución también movió inventario y saldo del cliente: no se deshace desde aquí.
+    if (payment.method === 'devolucion') {
+      alert('Este abono es una devolución de productos (movió inventario). No se puede eliminar desde aquí.');
+      return;
+    }
     if (!confirm(`¿Eliminar este abono de $${payment.amount?.toLocaleString()}?`)) return;
     setDeletingId(payment.id);
     try {
@@ -101,6 +106,7 @@ export default function CreditDetailModal({ credit, onClose, onRefresh }) {
       card: "Tarjeta",
       transfer: "Transferencia",
       qr: "QR",
+      devolucion: "Devolución",
       other: "Otro"
     };
     return methods[method] || method;

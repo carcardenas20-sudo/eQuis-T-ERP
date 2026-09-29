@@ -13,7 +13,8 @@ const paymentMethodLabels = {
   transfer: "Transferencia",
   qr: "QR",
   credit: "Crédito",
-  courtesy: "Cortesía"
+  courtesy: "Cortesía",
+      saldo: "Saldo a favor"
 };
 
 const paymentMethodColors = {

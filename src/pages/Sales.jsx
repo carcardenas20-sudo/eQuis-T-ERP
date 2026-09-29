@@ -174,6 +174,10 @@ export default function SalesPage() {
   };
 
   const handleEditSale = (sale) => {
+    if ((sale.devoluciones || []).length > 0) {
+      alert('Esta factura tiene devoluciones registradas, así que no se puede editar.');
+      return;
+    }
     setEditingSale(sale);
     setShowEditModal(true);
   };
@@ -278,6 +282,11 @@ export default function SalesPage() {
   };
 
   const handleDeleteSale = async (saleToDelete) => {
+    // Con devoluciones, anular devolvería otra vez al inventario lo ya devuelto (doble conteo).
+    if ((saleToDelete.devoluciones || []).length > 0) {
+      alert('Esta factura tiene devoluciones registradas, así que no se puede anular. Si hace falta, registra otra devolución por lo que falta.');
+      return;
+    }
     const confirmationMessage = `
       ¿Estás seguro de que quieres ANULAR esta factura?
 
@@ -628,6 +637,7 @@ export default function SalesPage() {
       {showDetailModal && selectedSale && (
         <SaleDetailModal
           sale={selectedSale}
+          onChanged={() => loadSales()}
           onClose={() => {
             setShowDetailModal(false);
             setSelectedSale(null);

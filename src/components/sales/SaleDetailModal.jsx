@@ -12,13 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { FileText, User, Calendar, DollarSign, Package, Printer, X, Download, Send } from "lucide-react";
+import { FileText, User, Calendar, DollarSign, Package, Printer, X, Download, Send, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import MobilePageHeader from "../layout/MobilePageHeader";
 import { sendInvoiceWhatsApp } from "@/utils/whatsappInvoice";
+import DevolucionModal from "./DevolucionModal";
+import { useSession } from "@/components/providers/SessionProvider";
 
 const statusColors = {
   completed: "bg-green-100 text-green-800",
@@ -36,7 +38,12 @@ const statusLabels = {
   credit: "A Crédito"
 };
 
-export default function SaleDetailModal({ sale, onClose }) {
+export default function SaleDetailModal({ sale, onClose, onChanged }) {
+  // Devoluciones: mismo criterio que anular (quien puede anular ventas, puede devolver)
+  const { isRealAdmin, permissions } = useSession();
+  const canReturn = isRealAdmin || ["sales_returns", "sales_cancel", "pos_delete_sales"].some((p) => (permissions || []).includes(p));
+  const [showDevolucion, setShowDevolucion] = useState(false);
+  const [devolucionMsg, setDevolucionMsg] = useState("");
   const [products, setProducts] = useState([]);
   const [systemSettings, setSystemSettings] = useState(null);
   const activeCompany = useActiveCompany();
@@ -75,7 +82,8 @@ export default function SaleDetailModal({ sale, onClose }) {
       transfer: "Transferencia",
       qr: "QR",
       credit: "Crédito",
-      courtesy: "Cortesía"
+      courtesy: "Cortesía",
+      saldo: "Saldo a favor"
     };
 
     // Use system settings or fallback to defaults
@@ -143,7 +151,8 @@ export default function SaleDetailModal({ sale, onClose }) {
       transfer: "Transferencia",
       qr: "QR",
       credit: "Crédito",
-      courtesy: "Cortesía"
+      courtesy: "Cortesía",
+      saldo: "Saldo a favor"
     };
 
     const companyInfo = buildCompanyInfo(systemSettings, activeCompany, locationNameOf(sale.location_id));
@@ -360,7 +369,8 @@ export default function SaleDetailModal({ sale, onClose }) {
     transfer: "Transferencia",
     qr: "QR",
     credit: "Crédito",
-    courtesy: "Cortesía"
+    courtesy: "Cortesía",
+      saldo: "Saldo a favor"
   };
 
   // Company info for WhatsApp/PDF when needed outside specific handlers
@@ -566,8 +576,40 @@ export default function SaleDetailModal({ sale, onClose }) {
           <Button variant="outline" onClick={() => sendInvoiceWhatsApp({ sale, items: enrichedItems, companyInfo: derivedCompanyInfo, defaultPhone: sale.customer_phone })} className="gap-2 select-none" disabled={isExporting}>
            <Send className="w-4 h-4" /> Enviar WhatsApp
           </Button>
+          {canReturn && !["cancelled", "anulada"].includes(sale.status) && (
+            <Button variant="outline" onClick={() => setShowDevolucion(true)} className="gap-2 select-none text-orange-700 border-orange-300">
+              <RotateCcw className="w-4 h-4" /> Devolución
+            </Button>
+          )}
           <Button onClick={onClose} className="select-none">Cerrar</Button>
         </DialogFooter>
+        {devolucionMsg && <p className="text-sm text-emerald-700 px-1">{devolucionMsg}</p>}
+        {(sale.devoluciones || []).length > 0 && (
+          <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm space-y-1">
+            <p className="font-semibold text-orange-800">Devoluciones de esta factura (total ${Math.round(Number(sale.total_devuelto) || 0).toLocaleString("es-CO")})</p>
+            {sale.devoluciones.map((d) => (
+              <p key={d.id} className="text-xs text-orange-900">
+                • {d.fecha} — ${Math.round(d.total).toLocaleString("es-CO")}
+                {d.aplicado_credito > 0 ? ` · al crédito ${Math.round(d.aplicado_credito).toLocaleString("es-CO")}` : ""}
+                {d.saldo_favor > 0 ? ` · saldo a favor ${Math.round(d.saldo_favor).toLocaleString("es-CO")}` : ""}
+                {d.efectivo > 0 ? ` · efectivo ${Math.round(d.efectivo).toLocaleString("es-CO")}` : ""}
+                {d.registrado_por ? ` · ${d.registrado_por}` : ""}
+              </p>
+            ))}
+          </div>
+        )}
+        {showDevolucion && (
+          <DevolucionModal
+            sale={sale}
+            items={enrichedItems}
+            onClose={() => setShowDevolucion(false)}
+            onDone={(d) => {
+              setShowDevolucion(false);
+              setDevolucionMsg(`✓ Devolución de $${Math.round(d.total).toLocaleString("es-CO")} registrada${d.aplicado_credito > 0 ? ` (crédito: $${Math.round(d.aplicado_credito).toLocaleString("es-CO")})` : ""}${d.saldo_favor > 0 ? ` (saldo a favor: $${Math.round(d.saldo_favor).toLocaleString("es-CO")})` : ""}${d.efectivo > 0 ? ` (efectivo: $${Math.round(d.efectivo).toLocaleString("es-CO")})` : ""}. Productos devueltos al inventario.`);
+              onChanged?.();
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
