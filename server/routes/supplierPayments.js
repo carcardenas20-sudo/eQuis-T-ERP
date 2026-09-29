@@ -151,6 +151,21 @@ router.post('/', async (req, res) => {
   if (!supplier) return res.status(400).json({ error: 'Elige el proveedor.' });
   if (!locationId) return res.status(400).json({ error: 'Tu usuario no tiene un punto de venta asignado. Pídele al administrador que te asigne uno.' });
 
+  // Fecha de la que sale el efectivo (puede ser un día anterior). No futura, máx. 60 días atrás.
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const payDate = /^\d{4}-\d{2}-\d{2}$/.test(String(req.body?.payment_date || '')) ? req.body.payment_date : today;
+  const oldest = new Date(Date.now() - 60 * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  if (payDate > today) return res.status(400).json({ error: 'La fecha no puede ser futura.' });
+  if (payDate < oldest) return res.status(400).json({ error: 'La fecha es muy antigua (máximo 60 días atrás).' });
+  // Si el efectivo de ese día ya se recogió, un gasto nuevo descuadraría un día cerrado.
+  const closed = await query(
+    `SELECT 1 FROM entity_cash_control WHERE company_id = $1 AND location_id = $2 AND LEFT(control_date, 10) = $3 AND cash_collected = true LIMIT 1`,
+    [ctx.companyId, locationId, payDate]
+  ).catch(() => ({ rows: [] }));
+  if (closed.rows.length) {
+    return res.status(400).json({ error: 'El efectivo de ese día ya fue recogido. Elige otra fecha o pídele al administrador que lo reabra.' });
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -169,8 +184,8 @@ router.post('/', async (req, res) => {
 
     const supplierName = accounts[0].data?.supplier_name || '';
     const batchId = uuidv4();
-    const nowIso = new Date().toISOString();
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+    // Hoy: hora real. Día anterior: mediodía de ese día (hora Colombia).
+    const nowIso = payDate === today ? new Date().toISOString() : new Date(`${payDate}T12:00:00-05:00`).toISOString();
     const who = ctx.user.full_name || ctx.user.email;
     let remaining = amount;
     const applied = [];
@@ -186,7 +201,7 @@ router.post('/', async (req, res) => {
         description: `Pago a ${supplierName} - ${acc.data?.description || ''}`.trim(),
         amount: pay,
         category: acc.data?.category || 'otros',
-        expense_date: today,
+        expense_date: payDate,
         location_id: locationId,
         payment_method: 'cash',
         supplier: supplierName,
@@ -219,7 +234,7 @@ router.post('/', async (req, res) => {
     }
 
     await client.query('COMMIT');
-    res.json({ ok: true, supplier_name: supplierName, amount, applied });
+    res.json({ ok: true, supplier_name: supplierName, amount, payment_date: payDate, applied });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('POST /supplier-payments:', err.message);

@@ -17,7 +17,7 @@ export default function PayableForm({ payable, suppliers, locations, userLocatio
     total_amount: "",
     due_date: "",
     invoice_number: "",
-    location_id: payable?.location_id || userLocation?.id || "",
+    location_id: payable?.location_id || "",
     notes: ""
   });
 
@@ -32,7 +32,7 @@ export default function PayableForm({ payable, suppliers, locations, userLocatio
         total_amount: payable.total_amount || "",
         due_date: payable.due_date || "",
         invoice_number: payable.invoice_number || "",
-        location_id: payable.location_id || userLocation?.id || "",
+        location_id: payable.location_id || "",
         notes: payable.notes || ""
       });
     }
@@ -165,12 +165,14 @@ export default function PayableForm({ payable, suppliers, locations, userLocatio
 
             {/* Sucursal */}
             <div className="space-y-2">
-              <Label>Sucursal *</Label>
-              <Select value={formData.location_id} onValueChange={(val) => setFormData({...formData, location_id: val})} disabled={!isAdmin}>
+              <Label>Sucursal</Label>
+              {/* Abierta = cualquier punto puede abonarle (lo normal de ahora en adelante). */}
+              <Select value={formData.location_id || "abierta"} onValueChange={(val) => setFormData({...formData, location_id: val === "abierta" ? "" : val})} disabled={!isAdmin}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="abierta">Abierta (cualquier punto)</SelectItem>
                   {locations.map(location => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name}

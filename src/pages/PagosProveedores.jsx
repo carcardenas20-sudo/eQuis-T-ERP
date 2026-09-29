@@ -46,6 +46,8 @@ export default function PagosProveedores() {
   const [paying, setPaying] = useState(null); // proveedor seleccionado
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
+  const todayStr = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+  const [payDate, setPayDate] = useState(todayStr());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [result, setResult] = useState(null);
@@ -71,7 +73,7 @@ export default function PagosProveedores() {
 
   useEffect(() => { if (!sessionLoading && allowed) load(); }, [sessionLoading, allowed]);
 
-  const openPay = (s) => { setPaying(s); setAmount(""); setNotes(""); setFormError(""); setResult(null); };
+  const openPay = (s) => { setPaying(s); setAmount(""); setNotes(""); setPayDate(todayStr()); setFormError(""); setResult(null); };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -79,7 +81,10 @@ export default function PagosProveedores() {
     const value = Math.round(Number(amount) || 0);
     if (value <= 0) { setFormError("Escribe el valor que se pagó."); return; }
     if (!data?.location && !adminLocationId) { setFormError("Elige el punto de venta de donde sale el efectivo."); return; }
-    if (!window.confirm(`¿Registrar pago en EFECTIVO de ${money(value)} a ${paying.name}?`)) return;
+    const dayText = payDate === todayStr() ? "de hoy" : `del ${fmtDay(payDate)}`;
+    if (!window.confirm(`¿Registrar pago en EFECTIVO de ${money(value)} a ${paying.name}?
+
+Sale del efectivo ${dayText}.`)) return;
     savingRef.current = true;
     setSaving(true);
     setFormError("");
@@ -88,6 +93,7 @@ export default function PagosProveedores() {
         supplier_key: paying.key,
         amount: value,
         notes: notes.trim(),
+        payment_date: payDate,
         ...(adminLocationId ? { location_id: adminLocationId } : {}),
       });
       setResult(r);
@@ -136,6 +142,7 @@ export default function PagosProveedores() {
               <div className="flex items-start justify-between gap-2">
                 <p className="font-semibold text-emerald-800 flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5" /> Pago de {money(result.amount)} a {result.supplier_name} registrado
+                  {result.payment_date && result.payment_date !== todayStr() && <span className="font-normal text-sm">(efectivo del {fmtDay(result.payment_date)})</span>}
                 </p>
                 <button onClick={() => setResult(null)} className="text-emerald-700"><X className="w-4 h-4" /></button>
               </div>
@@ -166,7 +173,11 @@ export default function PagosProveedores() {
                     </select>
                   </div>
                 )}
-                <div className="grid sm:grid-cols-2 gap-3">
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>¿De qué día sale el efectivo? *</Label>
+                    <Input type="date" value={payDate} max={todayStr()} onChange={e => setPayDate(e.target.value)} />
+                  </div>
                   <div className="space-y-1.5">
                     <Label>Valor pagado en efectivo *</Label>
                     <Input type="number" min="1" step="1" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ej: 150000" autoFocus />

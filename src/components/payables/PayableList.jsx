@@ -13,6 +13,7 @@ export default function PayableList({ payables, locations, onEdit, onDelete, onP
 
   const getLocationName = (locationId) => {
     const location = locations.find(l => l.id === locationId);
+    if (!locationId) return "Abierta";
     return location?.name || "N/A";
   };
 
