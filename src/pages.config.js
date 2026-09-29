@@ -38,6 +38,7 @@ import Prod_MateriasPrimas from './pages/Prod_MateriasPrimas';
 import Prod_Colores from './pages/Prod_Colores';
 import Prod_Productos from './pages/Prod_Productos';
 import Prod_Inventario from './pages/Prod_Inventario';
+import Prod_Rollos from './pages/Prod_Rollos';
 import Prod_Proveedores from './pages/Prod_Proveedores';
 import Prod_Compras from './pages/Prod_Compras';
 import Prod_Presupuestos from './pages/Prod_Presupuestos';
@@ -106,6 +107,7 @@ export const PAGES = {
   "Prod_Colores": Prod_Colores,
   "Prod_Productos": Prod_Productos,
   "Prod_Inventario": Prod_Inventario,
+  "Prod_Rollos": Prod_Rollos,
   "Prod_Proveedores": Prod_Proveedores,
   "Prod_Compras": Prod_Compras,
   "Prod_Presupuestos": Prod_Presupuestos,

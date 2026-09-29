@@ -10,7 +10,7 @@ import BottomTabBar from "./components/layout/BottomTabBar";
 import { AnimatePresence, motion } from "framer-motion";
 
 import {
-  Menu, X, LogOut, LayoutDashboard, ShoppingCart, Package, MapPin, Users,
+  Menu, X, LogOut, LayoutDashboard, ShoppingCart, Package, MapPin, Users, Layers,
   FileText, Settings, Building2, UserCheck, CreditCard, Receipt, ShoppingBag,
   BookOpen, ArrowRightLeft, ArrowLeftRight, Sparkles, Wallet, BarChart3,
   ListChecks, Factory, Shirt, Palette, Wrench, Truck, Calculator,
@@ -77,6 +77,7 @@ const produccionGroups = [
       { title: "Colores", url: createPageUrl("Prod_Colores"), icon: Palette, permissions: ["produccion_view"] },
       { title: "Productos Prod.", url: createPageUrl("Prod_Productos"), icon: Shirt, permissions: ["produccion_view"] },
       { title: "Inventario Prod.", url: createPageUrl("Prod_Inventario"), icon: Warehouse, permissions: ["produccion_view"] },
+      { title: "Rollos de Tela", url: createPageUrl("Prod_Rollos"), icon: Layers, permissions: ["produccion_view"] },
     ]
   },
   {

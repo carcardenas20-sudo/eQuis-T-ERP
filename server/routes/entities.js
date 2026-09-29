@@ -150,6 +150,21 @@ async function assignInvoiceNumber(saleId, companyId, idFromClient) {
   }
 }
 
+// Código consecutivo de rollo de tela por empresa (R-0001, R-0002…). Contador atómico
+// en entity_company.data.rollo_next (arranca en 1 si no existe).
+async function assignRollCode(companyId) {
+  const { rows } = await query(
+    `UPDATE entity_company
+       SET data = jsonb_set(data, '{rollo_next}', to_jsonb(COALESCE((data->>'rollo_next')::bigint, 1) + 1)),
+           updated_date = NOW()
+     WHERE id = $1
+     RETURNING (data->>'rollo_next')::bigint - 1 AS n`,
+    [companyId]
+  );
+  const n = rows[0]?.n;
+  return n ? `R-${String(n).padStart(4, '0')}` : null;
+}
+
 router.use('/:type', requireAdminForPrivileged);
 router.use('/:type/:id', requireAdminForPrivileged);
 router.use('/:type/:id', requirePermissionForSensitiveDelete);
@@ -424,6 +439,10 @@ router.post('/:type', async (req, res) => {
 
     const schema = ENTITY_SCHEMAS[type];
     const { id: _id, created_date, updated_date, created_by_id, ...recordData } = req.body;
+
+    if (type === 'RolloTela' && !recordData.codigo && !req.body.id) {
+      recordData.codigo = await assignRollCode(req.companyId);
+    }
 
     if (type === 'Sale' && !recordData.invoice_number) {
       recordData.invoice_number = await assignInvoiceNumber(id, req.companyId, !!req.body.id);

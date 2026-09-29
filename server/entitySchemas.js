@@ -443,6 +443,20 @@ export const ENTITY_SCHEMAS = {
   // PRODUCCION (chaquetas-pro)
   // ============================================================
 
+  // Rollos de tela (materia prima principal): cada rollo con su código (R-0001),
+  // metros y kilos. Se descuentan con los cortes/tendidos.
+  RolloTela: {
+    table: 'entity_rollo_tela',
+    typed: {
+      codigo: 'TEXT',
+      materia_prima_id: 'TEXT',
+      color_id: 'TEXT',
+      estado: 'TEXT',
+      metros_disponibles: 'NUMERIC(14,2)',
+    },
+    indexes: ['codigo', 'materia_prima_id', 'color_id', 'estado'],
+  },
+
   Color: {
     table: 'entity_color',
     typed: {
@@ -729,7 +743,8 @@ export function buildCreateTableSQL(entityType, schema) {
 ${colSection}      data JSONB NOT NULL DEFAULT '{}',
       created_date TIMESTAMPTZ DEFAULT NOW(),
       updated_date TIMESTAMPTZ DEFAULT NOW(),
-      created_by_id TEXT
+      created_by_id TEXT,
+      company_id TEXT DEFAULT 'equist'
     );
   `;
 }
@@ -743,6 +758,7 @@ export function buildIndexSQL(schema) {
     const idxName = `idx_${schema.table}_${col}`;
     stmts.push(`CREATE INDEX IF NOT EXISTS ${idxName} ON ${schema.table}(${col});`);
   }
+  stmts.push(`CREATE INDEX IF NOT EXISTS idx_${schema.table}_company_id ON ${schema.table}(company_id);`);
   return stmts;
 }
 
