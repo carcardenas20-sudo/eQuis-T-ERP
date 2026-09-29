@@ -17,6 +17,16 @@ export function getPortalCompany() {
     return localStorage.getItem(PORTAL_COMPANY_KEY) || '';
   } catch { return ''; }
 }
+// Cambia la empresa del portal (tras validar el PIN de esa empresa) y la deja en la URL.
+export function setPortalCompany(id) {
+  try {
+    if (id && id !== 'equist') localStorage.setItem(PORTAL_COMPANY_KEY, id); else localStorage.removeItem(PORTAL_COMPANY_KEY);
+    const url = new URL(window.location.href);
+    if (id && id !== 'equist') url.searchParams.set('empresa', id); else url.searchParams.set('empresa', '');
+    window.history.replaceState(null, '', url.toString());
+  } catch { /* sin almacenamiento: se queda con la actual */ }
+}
+
 export function portalHeaders(extra = {}) {
   const c = getPortalCompany();
   return { 'Content-Type': 'application/json', ...(c ? { 'X-Portal-Company': c } : {}), ...extra };

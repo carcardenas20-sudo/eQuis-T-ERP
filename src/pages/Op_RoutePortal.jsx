@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Employee, Producto, Dispatch, Delivery, Inventory, Devolucion, AppConfig } from "@/api/publicEntities";
 import { Truck, RotateCcw, PackageCheck } from "lucide-react";
+import PortalCompanySwitcher from "@/components/portal/PortalCompanySwitcher";
 import RouteOperario from "@/components/route/RouteOperario";
 import RouteRegistrosHoy from "@/components/route/RouteRegistrosHoy";
 import RouteDevoluciones from "@/components/route/RouteDevoluciones";
@@ -75,10 +76,11 @@ export default function RoutePortal() {
           <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
             <Truck className="w-5 h-5 text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="font-bold text-slate-900 text-base leading-tight">Portal de Ruta</h1>
-            <p className="text-xs text-slate-500">Planillador · eQuis-T</p>
+            <p className="text-xs text-slate-500">Planillador</p>
           </div>
+          <PortalCompanySwitcher />
         </div>
 
         {/* Tabs */}

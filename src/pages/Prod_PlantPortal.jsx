@@ -13,6 +13,7 @@ import RouteChecklist from "@/components/route/RouteChecklist";
 import RouteRegistrosHoy from "@/components/route/RouteRegistrosHoy";
 import RouteMuestras from "@/components/route/RouteMuestras";
 import { portalClient } from "@/api/portalClient";
+import PortalCompanySwitcher from "@/components/portal/PortalCompanySwitcher";
 
 const ESTADO_CFG = {
   pendiente:  { label: "Pendiente",  color: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -1127,9 +1128,12 @@ export default function PlantPortal() {
             </div>
             <span className="font-bold text-slate-900 text-sm">Portal de Planta</span>
           </div>
+          <div className="flex items-center gap-1.5">
+          <PortalCompanySwitcher />
           <button onClick={loadData} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
+          </div>
         </div>
 
         {/* Tabs en grid 2 columnas */}

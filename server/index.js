@@ -136,6 +136,18 @@ async function portalCompany(req) {
   return (pc && await isValidCompany(pc)) ? pc : 'equist';
 }
 
+// Empresas para el selector del portal (solo id y nombre)
+app.get('/api/portal-companies', async (_req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, name, data->>'display_name' AS display_name FROM entity_company WHERE is_active IS DISTINCT FROM false ORDER BY (id = 'equist') DESC, name`
+    );
+    res.json(rows);
+  } catch {
+    res.json([]);
+  }
+});
+
 app.post('/api/portal-pin-login', async (req, res) => {
   const { pin } = req.body || {};
   if (!pin) return res.status(400).json({ error: 'Falta PIN' });

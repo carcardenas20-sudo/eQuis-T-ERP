@@ -50,6 +50,21 @@ export default function PaymentForm({ employee, payment, pendingDeliveries, adva
     setDeliveryAmounts(Object.fromEntries(validPendingDeliveries.map(d => [d.id, d.pending_amount || 0])));
   };
 
+  // Abono libre: se escribe un valor y se reparte solo, entregas más viejas primero.
+  const [abonoLibre, setAbonoLibre] = useState("");
+  const repartirAbono = () => {
+    let restante = Math.max(0, Number(abonoLibre) || 0);
+    const orden = [...validPendingDeliveries].sort((a, b) => String(a.delivery_date).localeCompare(String(b.delivery_date)));
+    const asign = {};
+    for (const d of orden) {
+      if (restante <= 0) break;
+      const t = Math.min(restante, d.pending_amount || 0);
+      if (t > 0) { asign[d.id] = t; restante -= t; }
+    }
+    setDeliveryAmounts(asign);
+    if (restante > 0.5) alert(`El abono supera lo pendiente por entregas en $${Math.round(restante).toLocaleString('es-CO')}. Se asignó solo lo pendiente.`);
+  };
+
   // ── Anticipos por descontar ──────────────────────────────────────────────
   // Por defecto se propone el descuento de cada anticipo (todo o la cuota), sin
   // pasarse de lo que se está liquidando. El usuario puede quitarlo o cambiar el valor.
@@ -135,9 +150,18 @@ export default function PaymentForm({ employee, payment, pendingDeliveries, adva
                   <p className="text-sm text-slate-500">Indica cuánto pagas de cada entrega (puede ser parcial o total).</p>
                 </div>
                 {validPendingDeliveries.length > 0 && (
-                  <Button type="button" size="sm" variant="outline" onClick={payAllPending} className="shrink-0">
-                    Pagar todo lo pendiente
-                  </Button>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <Button type="button" size="sm" variant="outline" onClick={payAllPending}>
+                      Pagar todo lo pendiente
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Input type="number" min="0" step="1" placeholder="Abono libre $" value={abonoLibre}
+                        onChange={(e) => setAbonoLibre(e.target.value)} className="h-8 w-32 text-sm" />
+                      <Button type="button" size="sm" variant="outline" onClick={repartirAbono} disabled={!(Number(abonoLibre) > 0)}>
+                        Repartir
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             </CardHeader>
