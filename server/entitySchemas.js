@@ -457,6 +457,18 @@ export const ENTITY_SCHEMAS = {
     indexes: ['codigo', 'materia_prima_id', 'color_id', 'estado'],
   },
 
+  // Hojas de corte (producción tipo V-LIVE): referencias/tallas + rollos usados.
+  HojaCorte: {
+    table: 'entity_hoja_corte',
+    typed: {
+      numero: 'TEXT',
+      fecha: 'TEXT',
+      estado: 'TEXT',
+      total_unidades: 'NUMERIC(14,2)',
+    },
+    indexes: ['numero', 'fecha', 'estado'],
+  },
+
   Color: {
     table: 'entity_color',
     typed: {

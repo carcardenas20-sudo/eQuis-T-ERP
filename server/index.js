@@ -12,6 +12,7 @@ import authRoutes from './routes/auth.js';
 import entityRoutes from './routes/entities.js';
 import uploadRoutes from './routes/upload.js';
 import supplierPaymentRoutes from './routes/supplierPayments.js';
+import cutSheetRoutes from './routes/cutSheets.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -392,6 +393,7 @@ app.use('/api/portal', (req, res, next) => {
 app.use('/api/entities', requireAuth, entityRoutes);
 app.use('/api/upload', requireAuth, uploadRoutes);
 app.use('/api/supplier-payments', requireAuth, supplierPaymentRoutes);
+app.use('/api/hojas-corte', requireAuth, cutSheetRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 
 // ─── Reporte: pendientes de despacho y entrega por operario ──────────────────
