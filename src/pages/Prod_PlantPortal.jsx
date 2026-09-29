@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion, Muestra, TareaPlanta } from "@/api/publicEntities";
+import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion, Muestra, TareaPlanta, RolloTela } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
   Play, Check, Layers, Package, ArrowRightLeft, InboxIcon, Send, X, Plus, Building2,
   Lock, Unlock, Truck, RotateCcw, PackageCheck, LogOut, Loader2, MessageCircle, Users, FlaskConical } from "lucide-react";
@@ -287,6 +287,146 @@ function OrdenOpCard({ orden, opId, servicioMap, onUpdate }) {
   );
 }
 
+// ─── Cierre de tendido: rollos de tela usados ────────────────────────────────
+// Por cada color del tendido, el cortador escoge el/los rollos usados y escribe
+// cuántos metros QUEDARON en cada uno. El servidor descuenta lo gastado.
+const nNum = (v) => Number(v) || 0;
+const fmtM = (v) => nNum(v).toLocaleString("es-CO", { maximumFractionDigits: 1 });
+
+function CerrarTendidoPanel({ tendido, onDone, onCancel }) {
+  const [rollos, setRollos] = useState([]);
+  const [estimados, setEstimados] = useState({}); // color (minúsculas) → metros estimados
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const colores = tendido.colores_tendido || [];
+  // filas por color: [{ key, rollo_id, sobrante }]
+  const [filas, setFilas] = useState(() =>
+    Object.fromEntries(colores.map((c) => [c.color_id || c.color_nombre, [{ key: Math.random(), rollo_id: "", sobrante: "" }]]))
+  );
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const rs = await RolloTela.filter({ estado: "disponible" }).catch(() => []);
+        setRollos((rs || []).filter((r) => nNum(r.metros_disponibles) > 0));
+        if (tendido.presupuesto_id) {
+          const pres = await Presupuesto.get(tendido.presupuesto_id).catch(() => null);
+          const est = {};
+          for (const m of pres?.materiales_calculados || []) {
+            if (m.tipo_material !== "tela") continue;
+            const k = String(m.color || "").trim().toLowerCase();
+            est[k] = (est[k] || 0) + nNum(m.cantidad_total);
+          }
+          setEstimados(est);
+        }
+      } catch (e) { console.error(e); }
+      setLoading(false);
+    })();
+  }, [tendido.id]);
+
+  const rollosDeColor = (c) => rollos.filter((r) =>
+    (c.color_id && r.color_id === c.color_id) ||
+    String(r.color_nombre || "").trim().toLowerCase() === String(c.color_nombre || "").trim().toLowerCase()
+  );
+  const setFila = (ck, key, field, value) =>
+    setFilas((f) => ({ ...f, [ck]: f[ck].map((x) => (x.key === key ? { ...x, [field]: value } : x)) }));
+  const addFila = (ck) => setFilas((f) => ({ ...f, [ck]: [...f[ck], { key: Math.random(), rollo_id: "", sobrante: "" }] }));
+  const delFila = (ck, key) => setFilas((f) => ({ ...f, [ck]: f[ck].length > 1 ? f[ck].filter((x) => x.key !== key) : [{ key: Math.random(), rollo_id: "", sobrante: "" }] }));
+
+  const consumos = Object.values(filas).flat().filter((x) => x.rollo_id && x.sobrante !== "");
+  const incompletos = Object.values(filas).flat().filter((x) => x.rollo_id && x.sobrante === "");
+  const usadosIds = new Set(Object.values(filas).flat().map((x) => x.rollo_id).filter(Boolean));
+
+  const confirmar = async () => {
+    if (incompletos.length) { setError("Escribe cuántos metros quedaron en cada rollo escogido (0 si se terminó)."); return; }
+    for (const c of consumos) {
+      const r = rollos.find((x) => x.id === c.rollo_id);
+      if (r && nNum(c.sobrante) > nNum(r.metros_disponibles)) { setError(`El rollo ${r.codigo} tiene ${fmtM(r.metros_disponibles)} m; no puede quedar más de eso.`); return; }
+    }
+    if (!consumos.length && !window.confirm("No escogiste rollos. ¿Cerrar el tendido SIN descontar tela?")) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/portal/functions/cerrarTendido", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tendido_id: tendido.id,
+          consumos: consumos.map((c) => ({ rollo_id: c.rollo_id, sobrante_metros: nNum(c.sobrante) })),
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Error al cerrar el tendido");
+      onDone(d);
+    } catch (e) { setError(e.message); }
+    setSaving(false);
+  };
+
+  if (loading) return <div className="p-4 text-sm text-slate-500 flex items-center gap-2"><RefreshCw className="w-4 h-4 animate-spin" /> Cargando rollos…</div>;
+
+  return (
+    <div className="px-4 pb-4 pt-3 border-t border-indigo-100 bg-indigo-50/40 space-y-3">
+      <p className="text-sm font-bold text-slate-800">Rollos de tela usados</p>
+      <p className="text-xs text-slate-500">Por cada color, escoge el rollo y escribe cuántos metros <b>quedaron</b> (0 si se terminó). Lo gastado se descuenta solo.</p>
+      {colores.map((c) => {
+        const ck = c.color_id || c.color_nombre;
+        const opciones = rollosDeColor(c);
+        const est = estimados[String(c.color_nombre || "").trim().toLowerCase()];
+        const gastoColor = (filas[ck] || []).reduce((s, x) => {
+          const r = rollos.find((y) => y.id === x.rollo_id);
+          return r && x.sobrante !== "" ? s + Math.max(0, nNum(r.metros_disponibles) - nNum(x.sobrante)) : s;
+        }, 0);
+        return (
+          <div key={ck} className="bg-white rounded-lg border border-slate-200 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full border border-slate-300" style={{ backgroundColor: c.codigo_hex || "#ccc" }} />
+              <span className="font-semibold text-sm text-slate-800 flex-1">{c.color_nombre} · {c.hojas} hojas</span>
+              {est > 0 && <span className="text-[11px] text-slate-500">Estimado: {fmtM(est)} m</span>}
+            </div>
+            {opciones.length === 0 ? (
+              <p className="text-xs text-amber-700">No hay rollos disponibles de este color en el inventario.</p>
+            ) : (filas[ck] || []).map((x) => {
+              const r = rollos.find((y) => y.id === x.rollo_id);
+              const gasto = r && x.sobrante !== "" ? Math.max(0, nNum(r.metros_disponibles) - nNum(x.sobrante)) : null;
+              return (
+                <div key={x.key} className="flex flex-wrap items-center gap-2">
+                  <select value={x.rollo_id} onChange={(e) => setFila(ck, x.key, "rollo_id", e.target.value)}
+                    className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm flex-1 min-w-[170px]">
+                    <option value="">Escoge rollo…</option>
+                    {opciones.filter((o) => o.id === x.rollo_id || !usadosIds.has(o.id)).map((o) => (
+                      <option key={o.id} value={o.id}>{o.codigo} · {o.materia_prima_nombre} · {fmtM(o.metros_disponibles)} m</option>
+                    ))}
+                  </select>
+                  <input type="number" min="0" step="any" placeholder="Quedó (m)" value={x.sobrante}
+                    onChange={(e) => setFila(ck, x.key, "sobrante", e.target.value)}
+                    className="h-9 w-28 rounded-md border border-slate-200 px-2 text-sm" />
+                  {gasto !== null && <span className="text-xs text-slate-600">gastó <b>{fmtM(gasto)} m</b></span>}
+                  <button onClick={() => delFila(ck, x.key)} className="text-slate-400 hover:text-red-600 text-xs">quitar</button>
+                </div>
+              );
+            })}
+            {opciones.length > 0 && (
+              <div className="flex items-center justify-between">
+                <button onClick={() => addFila(ck)} className="text-xs text-indigo-600 font-medium">+ otro rollo</button>
+                {gastoColor > 0 && <span className="text-xs text-slate-600">Total {c.color_nombre}: <b>{fmtM(gastoColor)} m</b></span>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button onClick={onCancel} className="px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white">Cancelar</button>
+        <button onClick={confirmar} disabled={saving}
+          className="px-3 py-2 text-sm rounded-lg bg-green-600 text-white font-semibold disabled:opacity-50 flex items-center gap-1">
+          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Tendido listo
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Tarjeta de tendido ───────────────────────────────────────────────────────
 function TendidoCard({ tendido, onUpdate }) {
   const [open, setOpen] = useState(false);
@@ -294,9 +434,12 @@ function TendidoCard({ tendido, onUpdate }) {
   const isListo = tendido.estado === "listo";
   const isEnProceso = tendido.estado === "en_proceso";
   const totalHojas = (tendido.colores_tendido || []).reduce((s, c) => s + (c.hojas || 0), 0);
+  const [cerrando, setCerrando] = useState(false);
 
   const cambiarEstado = async () => {
     if (isListo) return;
+    // Al pasar a "Listo" se registran los rollos usados (descuenta tela).
+    if (isEnProceso) { setCerrando(true); return; }
     setLoading(true);
     try {
       await Remision.update(tendido.id, { estado: isEnProceso ? "listo" : "en_proceso" });
@@ -334,6 +477,18 @@ function TendidoCard({ tendido, onUpdate }) {
           {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
+      {cerrando && (
+        <CerrarTendidoPanel
+          tendido={tendido}
+          onCancel={() => setCerrando(false)}
+          onDone={() => { setCerrando(false); onUpdate(); }}
+        />
+      )}
+      {isListo && (tendido.rollos_usados || []).length > 0 && (
+        <div className="px-4 pb-3 text-xs text-slate-600">
+          🧵 Tela: {(tendido.rollos_usados || []).map((u) => `${u.codigo} (${fmtM(u.metros_gastados)} m)`).join(" · ")}
+        </div>
+      )}
       {open && (
         <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
           {(tendido.filas || []).length > 0 && (

@@ -98,6 +98,8 @@ const PORTAL_PUBLIC_ENTITIES = new Set([
   'RecomendacionCalidad',
   // Muestras de candidatos
   'Muestra',
+  // Rollos de tela (lectura: el cortador escoge los rollos usados en el tendido)
+  'RolloTela',
 ]);
 // Entidades en las que el portal puede escribir
 const PORTAL_WRITE_ENTITIES = new Set([
@@ -187,6 +189,73 @@ app.post('/api/portal/functions/enviarRecomendacionCalidad', async (req, res) =>
     res.json({ ok: true, nombre });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Cerrar tendido y descontar los rollos de tela usados (portal planta) ──────
+// El cortador indica, por cada rollo usado, cuántos metros QUEDARON. Lo gastado
+// = disponible − quedó. Todo en una transacción con los rollos bloqueados.
+// consumos puede venir vacío (aún sin inventario de rollos): el tendido se cierra igual.
+app.post('/api/portal/functions/cerrarTendido', async (req, res) => {
+  const { tendido_id, consumos = [], notas = '' } = req.body || {};
+  if (!tendido_id) return res.status(400).json({ error: 'Falta tendido_id' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: trs } = await client.query(
+      `SELECT id, estado, company_id, data FROM entity_remision WHERE id = $1 AND tipo_remision = 'tendido' FOR UPDATE`,
+      [tendido_id]
+    );
+    const tendido = trs[0];
+    if (!tendido) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Tendido no encontrado' }); }
+    if (tendido.estado === 'listo') { await client.query('ROLLBACK'); return res.status(409).json({ error: 'Este tendido ya estaba cerrado.' }); }
+    const companyId = tendido.company_id || 'equist';
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+    const presNum = tendido.data?.presupuesto_numero || '';
+    const usados = [];
+
+    for (const c of Array.isArray(consumos) ? consumos : []) {
+      const sobrante = Number(c.sobrante_metros);
+      if (!c.rollo_id || !Number.isFinite(sobrante) || sobrante < 0) continue;
+      const { rows } = await client.query(
+        `SELECT id, codigo, metros_disponibles, data FROM entity_rollo_tela WHERE id = $1 AND company_id = $2 FOR UPDATE`,
+        [c.rollo_id, companyId]
+      );
+      const rollo = rows[0];
+      if (!rollo) throw Object.assign(new Error('Rollo no encontrado'), { status: 400 });
+      const disp = Number(rollo.metros_disponibles) || 0;
+      if (sobrante > disp + 0.001) {
+        throw Object.assign(new Error(`El rollo ${rollo.codigo} tenía ${disp} m; no puede quedar ${sobrante} m.`), { status: 400 });
+      }
+      const gastado = Math.round((disp - sobrante) * 100) / 100;
+      const mov = { fecha: today, tipo: 'consumo', metros: gastado, nota: `Tendido ${presNum}`.trim(),
+        referencia_tipo: 'tendido', referencia_id: tendido.id, presupuesto_numero: presNum };
+      await client.query(
+        `UPDATE entity_rollo_tela
+           SET metros_disponibles = $1, estado = $2, updated_date = NOW(),
+               data = jsonb_set(data, '{movimientos}', COALESCE(data->'movimientos', '[]'::jsonb) || $3::jsonb)
+         WHERE id = $4`,
+        [sobrante, sobrante > 0.001 ? 'disponible' : 'agotado', JSON.stringify([mov]), rollo.id]
+      );
+      usados.push({ rollo_id: rollo.id, codigo: rollo.codigo, color: rollo.data?.color_nombre || '',
+        tela: rollo.data?.materia_prima_nombre || '', metros_gastados: gastado, metros_sobrante: sobrante });
+    }
+
+    const totalGastado = usados.reduce((s, u) => s + u.metros_gastados, 0);
+    await client.query(
+      `UPDATE entity_remision SET estado = 'listo', updated_date = NOW(), data = data || $1::jsonb WHERE id = $2`,
+      [JSON.stringify({ estado: 'listo', rollos_usados: usados, metros_tela_gastados: totalGastado,
+        fecha_cierre_tendido: today, notas_tendido: String(notas || '').slice(0, 300) }), tendido.id]
+    );
+    await client.query('COMMIT');
+    res.json({ ok: true, rollos_usados: usados, metros_tela_gastados: totalGastado });
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (e.status) return res.status(e.status).json({ error: e.message });
+    console.error('cerrarTendido error:', e);
+    res.status(500).json({ error: 'No se pudo cerrar el tendido' });
+  } finally {
+    client.release();
   }
 });
 
