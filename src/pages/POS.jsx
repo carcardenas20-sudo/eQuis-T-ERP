@@ -41,6 +41,7 @@ import ExchangeModal from "../components/pos/ExchangeModal";
 import QuoteModal from "../components/pos/QuoteModal";
 import HoldCartManager from "../components/pos/HoldCartManager";
 import { useActiveCompany, buildCompanyInfo } from "@/hooks/useActiveCompany";
+import { isAmbulante, esDiaDeVenta, diasTexto } from "@/utils/locations";
 
 
 
@@ -602,6 +603,17 @@ export default function POS() {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
+
+        {(() => {
+          // Puesto ambulante vendiendo en un día que no es de venta: solo aviso (no bloquea).
+          const loc = locations.find(l => l.id === selectedLocationId);
+          if (!isAmbulante(loc) || esDiaDeVenta(loc)) return null;
+          return (
+            <div className="bg-amber-500 text-white px-4 py-2 text-sm font-medium">
+              ⚠️ Hoy no es día de venta de este puesto ambulante ({diasTexto(loc.dias_venta)}). Verifica que la venta sea correcta.
+            </div>
+          );
+        })()}
 
         {pendingTransferencia && (
           <div className="bg-indigo-600 text-white px-4 py-2 flex items-center justify-between text-sm">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { locationFilterAsync } from "@/utils/locations";
 import { useSession } from "../components/providers/SessionProvider";
 import {
   Sale, Location, Expense, Credit, Dispatch, PaymentRequest, Remision, Presupuesto,
@@ -193,8 +194,8 @@ export default function Dashboard() {
     try {
       const todayStr = todayInColombia();
       const locationFilter = (!isAdmin && userLocation)
-        ? { location_id: userLocation.id }
-        : (isAdmin && selectedLocation !== 'all' ? { location_id: selectedLocation } : {});
+        ? { location_id: await locationFilterAsync(userLocation.id) }
+        : (isAdmin && selectedLocation !== 'all' ? { location_id: await locationFilterAsync(selectedLocation) } : {});
 
       const [allSales, todayExpenses, allCredits, creditPaymentsToday] = await Promise.all([
         // ✅ Incluir ventas a crédito: en una venta mixta (efectivo/transferencia

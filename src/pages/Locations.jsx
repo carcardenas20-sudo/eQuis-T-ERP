@@ -11,11 +11,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { DIAS_CORTOS, isAmbulante, diasTexto } from "@/utils/locations";
 
-const LocationForm = ({ location, onSave, onCancel, isSaving }) => {
+const LocationForm = ({ location, locations = [], onSave, onCancel, isSaving }) => {
   const [formData, setFormData] = useState(location || {
-    name: "", code: "", address: "", city: "", phone: "", is_active: true
+    name: "", code: "", address: "", city: "", phone: "", is_active: true,
+    tipo: "sucursal", parent_location_id: "", dias_venta: [3, 6],
   });
+  const [error, setError] = useState("");
+  const esAmb = formData.tipo === "ambulante";
+  const padres = locations.filter((l) => !isAmbulante(l) && l.id !== location?.id);
+  const toggleDia = (d) => setFormData((p) => {
+    const cur = Array.isArray(p.dias_venta) ? p.dias_venta : [];
+    return { ...p, dias_venta: cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].sort() };
+  });
+  const guardar = () => {
+    if (!String(formData.name || "").trim()) { setError("Escribe el nombre."); return; }
+    if (esAmb && !formData.parent_location_id) { setError("Elige a qué sucursal pertenece el puesto ambulante."); return; }
+    setError("");
+    onSave(esAmb ? formData : { ...formData, tipo: "sucursal", parent_location_id: "", dias_venta: [] });
+  };
 
   const handleChange = (field, value) => setFormData(p => ({...p, [field]: value}));
 
@@ -27,6 +42,39 @@ const LocationForm = ({ location, onSave, onCancel, isSaving }) => {
           <DialogDescription>Rellena los datos de la sucursal.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
+          <div className="space-y-1">
+            <Label>Tipo</Label>
+            <select value={formData.tipo || "sucursal"} onChange={e => handleChange('tipo', e.target.value)}
+              className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 text-sm">
+              <option value="sucursal">Sucursal / bodega</option>
+              <option value="ambulante">Puesto ambulante</option>
+            </select>
+          </div>
+          {esAmb && (
+            <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <div className="space-y-1">
+                <Label>Pertenece a la sucursal *</Label>
+                <select value={formData.parent_location_id || ""} onChange={e => handleChange('parent_location_id', e.target.value)}
+                  className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 text-sm">
+                  <option value="">Selecciona…</option>
+                  {padres.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+                <p className="text-xs text-amber-800">Su inventario y sus ventas se suman a esa sucursal en reportes y filtros.</p>
+              </div>
+              <div className="space-y-1">
+                <Label>Días de venta</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DIAS_CORTOS.map((d, i) => {
+                    const on = (formData.dias_venta || []).includes(i);
+                    return (
+                      <button key={i} type="button" onClick={() => toggleDia(i)}
+                        className={`px-2.5 py-1 rounded-md text-xs border ${on ? "bg-amber-500 text-white border-amber-500" : "bg-white text-slate-600 border-slate-200"}`}>{d}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1"><Label>Nombre</Label><Input value={formData.name} onChange={e => handleChange('name', e.target.value)} /></div>
             <div className="space-y-1"><Label>Código</Label><Input value={formData.code} onChange={e => handleChange('code', e.target.value)} /></div>
@@ -40,10 +88,11 @@ const LocationForm = ({ location, onSave, onCancel, isSaving }) => {
             <Switch id="is_active" checked={formData.is_active} onCheckedChange={v => handleChange('is_active', v)} />
             <Label htmlFor="is_active">Activa</Label>
           </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>Cancelar</Button>
-          <Button onClick={() => onSave(formData)} disabled={isSaving}>
+          <Button onClick={guardar} disabled={isSaving}>
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Guardar'}
           </Button>
         </DialogFooter>
@@ -109,7 +158,7 @@ export default function LocationsPage({ embedded = false }) {
             {!embedded && <p className="text-slate-600 mt-1">Administra tus puntos de venta y bodegas.</p>}
           </div>
           <Button onClick={() => { setEditingLocation(null); setIsFormOpen(true); }} className="gap-2">
-            <Plus className="w-5 h-5" /> Nueva Sucursal
+            <Plus className="w-5 h-5" /> Nueva sucursal o puesto
           </Button>
         </div>
 
@@ -121,7 +170,15 @@ export default function LocationsPage({ embedded = false }) {
                 {isLoading ? <TableRow><TableCell colSpan={4} className="text-center py-12"><Loader2 className="w-8 h-8 mx-auto animate-spin text-blue-600" /></TableCell></TableRow> :
                   locations.map((loc) => (
                     <TableRow key={loc.id}>
-                      <TableCell><div className="font-medium">{loc.name}</div><div className="text-sm text-slate-500">{loc.code}</div></TableCell>
+                      <TableCell>
+                        <div className="font-medium">{loc.name}</div>
+                        <div className="text-sm text-slate-500">{loc.code}</div>
+                        {isAmbulante(loc) && (
+                          <div className="text-xs text-amber-700 mt-0.5">
+                            🛒 Ambulante de {locations.find((l) => l.id === loc.parent_location_id)?.name || "—"} · {diasTexto(loc.dias_venta)}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>{loc.city}</TableCell>
                       <TableCell><Badge variant={loc.is_active ? "default" : "destructive"} className={loc.is_active ? "bg-emerald-500" : ""}>{loc.is_active ? "Activa" : "Inactiva"}</Badge></TableCell>
                       <TableCell className="text-right">
@@ -143,7 +200,7 @@ export default function LocationsPage({ embedded = false }) {
             </Table>
           </CardContent>
         </Card>
-        {isFormOpen && <LocationForm location={editingLocation} onSave={handleSave} onCancel={() => setIsFormOpen(false)} isSaving={isSaving} />}
+        {isFormOpen && <LocationForm location={editingLocation} locations={locations} onSave={handleSave} onCancel={() => setIsFormOpen(false)} isSaving={isSaving} />}
       </div>
     </div>
   );

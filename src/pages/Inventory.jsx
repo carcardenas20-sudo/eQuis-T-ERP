@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { locationFamilyIds } from "@/utils/locations";
 import { Inventory } from "@/entities/Inventory";
 import { InventoryMovement } from "@/entities/InventoryMovement";
 import { Product } from "@/entities/Product";
@@ -65,11 +66,13 @@ export default function InventoryPage() {
       // Apply location filter
       if (!isAdmin && currentUser.location_id) {
         // If not admin, force filter by user's assigned location
-        enrichedAndFilteredInventory = enrichedAndFilteredInventory.filter(inv => inv.location_id === currentUser.location_id);
+        const fam = locationFamilyIds(currentUser.location_id, locationsData);
+        enrichedAndFilteredInventory = enrichedAndFilteredInventory.filter(inv => fam.includes(inv.location_id));
         console.log("🔒 Inventario - Usuario NO-admin, mostrando solo sucursal:", currentUser.location_id);
       } else if (filters.location !== "all") {
         // If admin, apply selected filter location
-        enrichedAndFilteredInventory = enrichedAndFilteredInventory.filter(inv => inv.location_id === filters.location);
+        const fam = locationFamilyIds(filters.location, locationsData);
+        enrichedAndFilteredInventory = enrichedAndFilteredInventory.filter(inv => fam.includes(inv.location_id));
       }
 
       // Apply search filter

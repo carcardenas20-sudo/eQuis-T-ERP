@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ChevronDown, ChevronUp, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import TransferDetail from "@/components/cashcontrol/TransferDetail";
+import { locationFamilyIds } from "@/utils/locations";
 
 function formatDateDisplay(dateStr) {
   if (!dateStr) return '';
@@ -164,6 +165,9 @@ export default function CashControlPage() {
     try {
       const locs = await Location.filter({ is_active: true });
       setLocations(locs);
+      // Sucursal + sus puestos ambulantes
+      const famIds = effectiveLocation !== "all" ? locationFamilyIds(effectiveLocation, locs) : [];
+      const locVal = famIds.length > 1 ? { $in: famIds } : effectiveLocation;
 
       const today = new Date();
       let startDate = new Date(today);
@@ -188,14 +192,14 @@ export default function CashControlPage() {
       let salesFilter = { status: { $in: ['completed', 'credit'] } };
       let expensesFilter = {};
       if (effectiveLocation !== "all") {
-        salesFilter.location_id = effectiveLocation;
-        expensesFilter.location_id = effectiveLocation;
+        salesFilter.location_id = locVal;
+        expensesFilter.location_id = locVal;
       }
       salesFilter.sale_date = { $gte: windowStartStr };
       expensesFilter.expense_date = { $gte: windowStartStr };
 
       let paymentsFilter = { type: 'credit_payment' };
-      if (effectiveLocation !== "all") paymentsFilter.location_id = effectiveLocation;
+      if (effectiveLocation !== "all") paymentsFilter.location_id = locVal;
       paymentsFilter.payment_date = { $gte: windowStartStr };
 
       const [sales, expenses, creditPayments] = await Promise.all([
@@ -283,7 +287,7 @@ export default function CashControlPage() {
         !controlsInArray.has(control.id) &&
         !deletedControlIds.has(control.id) && // no re-agregar los duplicados borrados
         !isFullyClosed(control) && // pendientes de recoger, verificar o faltantes por revisar
-        (effectiveLocation === "all" || control.location_id === effectiveLocation)
+        (effectiveLocation === "all" || famIds.includes(control.location_id))
       );
 
       // Cargar los datos (ventas, abonos y gastos) del rango de esos días antiguos y
@@ -297,7 +301,7 @@ export default function CashControlPage() {
       if (oldestLeftover && oldestLeftover < windowStartStr) {
         const rangeBase = (extra) => {
           const f = { ...extra };
-          if (effectiveLocation !== "all") f.location_id = effectiveLocation;
+          if (effectiveLocation !== "all") f.location_id = locVal;
           return f;
         };
         try {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { locationFilterAsync } from "@/utils/locations";
 import { Sale } from "@/entities/Sale";
 import { SaleItem } from "@/entities/SaleItem";
 import { Payment } from "@/entities/Payment";
@@ -79,10 +80,10 @@ export default function SalesPage() {
       // ✅ CRÍTICO: Restringir por sucursal si no tiene permiso global
       const hasAllLocations = Boolean(permissions?.includes("sales_view_all_locations") || (currentUser?.role === "admin") || (userRole?.name?.toLowerCase().includes("admin")));
       if (!hasAllLocations && (sessionLocation?.id || currentUser?.location_id)) {
-        salesFilter.location_id = sessionLocation?.id || currentUser?.location_id;
+        salesFilter.location_id = await locationFilterAsync(sessionLocation?.id || currentUser?.location_id);
         console.log("🔒 Usuario restringido - Forzando filtro de sucursal:", salesFilter.location_id);
       } else if (filters.location !== "all") {
-        salesFilter.location_id = filters.location;
+        salesFilter.location_id = await locationFilterAsync(filters.location);
       }
 
       // Rango de fechas EN EL SERVIDOR (antes se bajaba TODO y se filtraba en el

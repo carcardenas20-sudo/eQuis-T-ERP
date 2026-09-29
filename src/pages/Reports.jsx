@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { locationFilterAsync } from "@/utils/locations";
 import { Sale } from "@/entities/Sale";
 import { SaleItem } from "@/entities/SaleItem";
 import { Product } from "@/entities/Product";
@@ -122,10 +123,10 @@ export default function Reports() {
       const salesFilter = { sale_date: { $gte: queryStart, $lt: queryEndExcl } };
       const creditsFilter = {};
       if (!isAdmin && currentUser.location_id) {
-        salesFilter.location_id = currentUser.location_id;
-        creditsFilter.location_id = currentUser.location_id;
+        salesFilter.location_id = await locationFilterAsync(currentUser.location_id);
+        creditsFilter.location_id = await locationFilterAsync(currentUser.location_id);
       } else if (filters.location && filters.location !== 'all') {
-        salesFilter.location_id = filters.location;
+        salesFilter.location_id = await locationFilterAsync(filters.location);
       }
 
       const [sales, products, customers, locations, users, priceLists, credits] = await Promise.all([
