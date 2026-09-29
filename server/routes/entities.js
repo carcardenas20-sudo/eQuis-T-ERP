@@ -16,7 +16,26 @@ const isScoped = (type) => !NOT_SCOPED.has(type);
 // Resuelve la empresa activa de la petición: la del usuario, y si es super-admin
 // (rol admin) puede cambiarla con el header X-Company-Id (para el selector).
 // Fail-open a 'equist' (Empresa 1) ante cualquier problema, para no romper nada.
+// Empresas válidas (para el header del portal). Se refresca cada 5 minutos.
+let companyIdsCache = { at: 0, ids: new Set(['equist']) };
+async function isValidCompany(id) {
+  if (Date.now() - companyIdsCache.at > 5 * 60 * 1000) {
+    try {
+      const { rows } = await query('SELECT id FROM entity_company');
+      companyIdsCache = { at: Date.now(), ids: new Set(rows.map(r => r.id)) };
+    } catch { /* se queda con la cache */ }
+  }
+  return companyIdsCache.ids.has(id);
+}
+
 async function resolveCompany(req, res, next) {
+  // Portal público (sin sesión): la empresa viene del enlace del portal (?empresa=…).
+  if (!req.userId) {
+    const pc = String(req.headers['x-portal-company'] || '');
+    req.companyId = (pc && await isValidCompany(pc)) ? pc : 'equist';
+    req.isSuperAdmin = false;
+    return next();
+  }
   try {
     const { rows } = await query('SELECT role, company_id FROM app_users WHERE id = $1', [req.userId]);
     const u = rows[0];
@@ -584,4 +603,5 @@ router.delete('/:type/:id', async (req, res) => {
   }
 });
 
+export { isValidCompany };
 export default router;

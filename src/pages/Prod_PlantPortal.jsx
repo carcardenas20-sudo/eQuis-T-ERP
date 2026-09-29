@@ -1,3 +1,4 @@
+import { portalHeaders } from "@/api/portalClient";
 import React, { useState, useEffect, useMemo } from "react";
 import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion, Muestra, TareaPlanta, RolloTela } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
@@ -350,7 +351,7 @@ function CerrarTendidoPanel({ tendido, onDone, onCancel }) {
     try {
       const res = await fetch("/api/portal/functions/cerrarTendido", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: portalHeaders(),
         body: JSON.stringify({
           tendido_id: tendido.id,
           consumos: consumos.map((c) => ({ rollo_id: c.rollo_id, sobrante_metros: nNum(c.sobrante) })),
@@ -729,7 +730,7 @@ export default function PlantPortal() {
     try {
       const res = await fetch("/api/portal/functions/enviarRecomendacionTodos", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: portalHeaders(),
         body: JSON.stringify({ texto: rec.texto, categoria: rec.categoria, header: rec.header, footer: rec.footer }),
       });
       const d = await res.json();
@@ -744,7 +745,7 @@ export default function PlantPortal() {
     try {
       const res = await fetch("/api/portal-pin-login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: portalHeaders(),
         body: JSON.stringify({ pin }),
       });
       if (!res.ok) { const d = await res.json(); setPinError(d.error || "PIN incorrecto"); setPinForm({ employee_id: "", pin: "" }); return; }

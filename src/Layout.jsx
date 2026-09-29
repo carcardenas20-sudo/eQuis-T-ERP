@@ -326,11 +326,12 @@ function LayoutContent({ children }) {
             const Icon = item.icon;
 
             if (item.isPortal) {
-              const portalUrl = `${window.location.origin}${item.url}`;
+              const empresaQs = activeCompany?.id && activeCompany.id !== "equist" ? `?empresa=${activeCompany.id}` : "";
+              const portalUrl = `${window.location.origin}${item.url}${empresaQs}`;
               return (
                 <div key={item.title} className="flex items-center gap-1 rounded-lg overflow-hidden"
                   style={isActive ? { background: activeStyle.bg } : {}}>
-                  <Link to={item.url} onClick={closeSidebar}
+                  <Link to={`${item.url}${empresaQs}`} onClick={closeSidebar}
                     className="flex items-center gap-2.5 px-3 py-1.5 flex-1 text-sm transition-all duration-150"
                     style={isActive ? { color: activeStyle.text, fontWeight: 500 } : { color: 'rgba(255,255,255,0.40)' }}
                     onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}

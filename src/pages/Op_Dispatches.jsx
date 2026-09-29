@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { base44 } from "@/api/base44Combined";
+import { getActiveCompany } from "@/api/localClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -305,7 +306,7 @@ export default function Dispatches() {
       const token = localStorage.getItem('equist_token') || '';
       const res = await fetch('/api/functions/recalcularStockProduccion', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, ...(getActiveCompany() ? { 'X-Company-Id': getActiveCompany() } : {}) },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);

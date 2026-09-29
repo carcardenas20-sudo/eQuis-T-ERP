@@ -1,3 +1,4 @@
+import { portalHeaders } from "@/api/portalClient";
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { portalClient } from "@/api/portalClient";
@@ -16,7 +17,7 @@ const { Delivery, Dispatch, Payment, PaymentRequest, Producto: ProductoEntity, A
 async function portalLogin(employeeId, pin) {
   const res = await fetch('/api/portal-login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: portalHeaders(),
     body: JSON.stringify({ employee_id: employeeId, pin }),
   });
   if (res.status === 401) throw new Error('PIN_INCORRECTO');

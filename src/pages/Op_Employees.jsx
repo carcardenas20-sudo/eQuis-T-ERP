@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Employee, CertificadoSolicitud } from "@/api/entitiesProduccion";
+import { getActiveCompany } from "@/api/localClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -215,7 +216,9 @@ export default function Employees() {
   };
 
   const handleCopyLink = (employeeId) => {
-    const portalUrl = `${window.location.origin}/Op_EmployeePortal?employee_id=${employeeId}`;
+    // Multiempresa: el enlace lleva la empresa (salvo eQuis-T, para no cambiar los enlaces ya enviados).
+    const empresa = getActiveCompany();
+    const portalUrl = `${window.location.origin}/Op_EmployeePortal?employee_id=${employeeId}${empresa && empresa !== "equist" ? `&empresa=${empresa}` : ""}`;
     navigator.clipboard.writeText(portalUrl);
     setCopiedLink(employeeId);
     setTimeout(() => setCopiedLink(null), 2500);

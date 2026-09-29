@@ -9,7 +9,7 @@ import { pool, query } from './db.js';
 import { JWT_SECRET } from './config.js';
 import { ENTITY_SCHEMAS, buildCreateTableSQL, buildIndexSQL } from './entitySchemas.js';
 import authRoutes from './routes/auth.js';
-import entityRoutes from './routes/entities.js';
+import entityRoutes, { isValidCompany } from './routes/entities.js';
 import uploadRoutes from './routes/upload.js';
 import supplierPaymentRoutes from './routes/supplierPayments.js';
 import cutSheetRoutes from './routes/cutSheets.js';
@@ -82,6 +82,20 @@ const requireAuth = (req, res, next) => {
 app.use(authMiddleware);
 app.use('/api/auth', authRoutes);
 
+// Multiempresa: empresa activa para las funciones del servidor que consultan tablas
+// directamente. Usuario normal → su empresa; admin puede elegir con X-Company-Id.
+async function companyOf(req) {
+  try {
+    const { rows } = await query('SELECT role, company_id FROM app_users WHERE id = $1', [req.userId]);
+    const u = rows[0];
+    const isAdmin = req.userRole === 'admin' || u?.role === 'admin';
+    const requested = req.headers['x-company-id'];
+    return (isAdmin && requested) ? String(requested) : (u?.company_id || 'equist');
+  } catch {
+    return 'equist';
+  }
+}
+
 // ─── Portal público de empleados (sin auth requerida) ────────────────────────
 // Solo permite leer entidades específicas del módulo operarios
 const PORTAL_PUBLIC_ENTITIES = new Set([
@@ -115,14 +129,24 @@ const PORTAL_WRITE_ENTITIES = new Set([
 ]);
 // POST /api/portal-login  → recibe employee_id lógico + pin, devuelve datos del empleado
 // Validar PIN del planillador — PIN único compartido guardado en AppConfig
+// Empresa del portal público (header X-Portal-Company, validado); por defecto eQuis-T.
+async function portalCompany(req) {
+  const pc = String(req.headers['x-portal-company'] || '');
+  return (pc && await isValidCompany(pc)) ? pc : 'equist';
+}
+
 app.post('/api/portal-pin-login', async (req, res) => {
   const { pin } = req.body || {};
   if (!pin) return res.status(400).json({ error: 'Falta PIN' });
   try {
+    const cid = await portalCompany(req);
     const { rows } = await query(
-      `SELECT value FROM entity_app_config WHERE key = 'planillador_pin' LIMIT 1`
+      `SELECT value FROM entity_app_config WHERE key = 'planillador_pin' AND company_id = $1 LIMIT 1`,
+      [cid]
     );
-    const storedPin = rows[0]?.value || '1234';
+    // eQuis-T conserva su comportamiento; las demás empresas deben configurar su PIN.
+    const storedPin = rows[0]?.value || (cid === 'equist' ? '1234' : null);
+    if (!storedPin) return res.status(401).json({ error: 'Esta empresa no tiene PIN de planillador configurado (Configuración → Sistema).' });
     if (String(pin).trim() !== String(storedPin).trim()) {
       return res.status(401).json({ error: 'PIN incorrecto' });
     }
@@ -139,8 +163,8 @@ app.post('/api/portal-login', async (req, res) => {
   try {
     const { rows } = await query(
       `SELECT id, name, is_active, position, phone, hire_date, data, created_date, updated_date
-       FROM entity_employee WHERE data->>'employee_id' = $1 LIMIT 1`,
-      [String(employee_id).trim()]
+       FROM entity_employee WHERE data->>'employee_id' = $1 AND company_id = $2 LIMIT 1`,
+      [String(employee_id).trim(), await portalCompany(req)]
     );
     if (!rows.length) return res.status(404).json({ error: 'Empleado no encontrado' });
     const row = rows[0];
@@ -399,9 +423,10 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 // ─── Reporte: pendientes de despacho y entrega por operario ──────────────────
 app.get('/api/functions/reportePendientes', requireAuth, async (req, res) => {
   try {
-    const { rows: dispatches } = await query(`SELECT id, data, employee_id, quantity, product_reference, status FROM entity_dispatch`);
-    const { rows: deliveries } = await query(`SELECT id, employee_id, quantity, data FROM entity_delivery`);
-    const { rows: employees } = await query(`SELECT id, name, data FROM entity_employee WHERE is_active = true`);
+    const cid = await companyOf(req);
+    const { rows: dispatches } = await query(`SELECT id, data, employee_id, quantity, product_reference, status FROM entity_dispatch WHERE company_id = $1`, [cid]);
+    const { rows: deliveries } = await query(`SELECT id, employee_id, quantity, data FROM entity_delivery WHERE company_id = $1`, [cid]);
+    const { rows: employees } = await query(`SELECT id, name, data FROM entity_employee WHERE is_active = true AND company_id = $1`, [cid]);
 
     const getName = id => {
       const e = employees.find(e => e.id === id || String(e.data?.employee_id || '') === id);
@@ -459,9 +484,9 @@ app.get('/api/functions/buscarBajas/:employee_id', requireAuth, async (req, res)
   try {
     const { rows } = await query(
       `SELECT id, employee_id, delivery_date, quantity, data FROM entity_delivery
-       WHERE employee_id = $1 AND status = 'baja'
+       WHERE employee_id = $1 AND status = 'baja' AND company_id = $2
        ORDER BY delivery_date DESC`,
-      [req.params.employee_id]
+      [req.params.employee_id, await companyOf(req)]
     );
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -469,7 +494,7 @@ app.get('/api/functions/buscarBajas/:employee_id', requireAuth, async (req, res)
 
 app.delete('/api/functions/revertirBaja/:id', requireAuth, async (req, res) => {
   try {
-    const { rows } = await query(`SELECT id, status FROM entity_delivery WHERE id = $1`, [req.params.id]);
+    const { rows } = await query(`SELECT id, status FROM entity_delivery WHERE id = $1 AND company_id = $2`, [req.params.id, await companyOf(req)]);
     if (!rows.length) return res.status(404).json({ error: 'No encontrado' });
     if (rows[0].status !== 'baja') return res.status(400).json({ error: 'El registro no es una baja' });
     await query(`DELETE FROM entity_delivery WHERE id = $1`, [req.params.id]);
@@ -510,20 +535,21 @@ app.post('/api/functions/recalcularStockProduccion', requireAuth, async (req, re
   try {
     // 1. Stock neto por ref desde entity_stock_movement (la única fuente consistente —
     //    entity_dispatch tiene historial pre-tracking que no cuadra con las entradas)
+    const cid = await companyOf(req);
     const { rows: smNeto } = await query(`
       SELECT data->>'product_reference' AS ref,
              COALESCE(SUM(CASE WHEN movement_type='entrada' THEN quantity ELSE -quantity END), 0) AS net
       FROM entity_stock_movement
-      WHERE data->>'product_reference' IS NOT NULL
+      WHERE data->>'product_reference' IS NOT NULL AND company_id = $1
       GROUP BY ref
-    `);
+    `, [cid]);
 
     // 2. Registros de inventario de producción (identificados por product_reference en JSONB)
     const { rows: invRecords } = await query(`
       SELECT id, current_stock, data->>'product_reference' AS ref
       FROM entity_inventory
-      WHERE data->>'product_reference' IS NOT NULL
-    `);
+      WHERE data->>'product_reference' IS NOT NULL AND company_id = $1
+    `, [cid]);
 
     // entity_devolucion = correcciones de calidad de prendas terminadas,
     // NO afectan el stock de producción — se excluye intencionalmente
@@ -673,7 +699,9 @@ app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) =
       `SELECT id FROM entity_dispatch
        WHERE (data->>'lote_remision') IS NOT NULL
          AND (data->>'lote_remision') != ''
-         AND (data->>'employee_id' IS NULL OR data->>'employee_id' = '')`
+         AND (data->>'employee_id' IS NULL OR data->>'employee_id' = '')
+         AND company_id = $1`,
+      [await companyOf(req)]
     );
     const ids = rows.map(r => r.id);
     if (ids.length === 0) return res.json({ deleted: 0, message: 'Nada que limpiar' });
@@ -690,9 +718,10 @@ app.post('/api/functions/cleanOrphanDispatches', requireAuth, async (req, res) =
 // employee that has unpaid balance.
 app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res) => {
   try {
-    const { rows: employees } = await query(`SELECT id, name, data FROM entity_employee WHERE is_active = true`);
-    const { rows: deliveries } = await query(`SELECT id, employee_id, total_amount, status, data FROM entity_delivery`);
-    const { rows: payments } = await query(`SELECT id, employee_id, amount, data FROM entity_payment`);
+    const cid = await companyOf(req);
+    const { rows: employees } = await query(`SELECT id, name, data FROM entity_employee WHERE is_active = true AND company_id = $1`, [cid]);
+    const { rows: deliveries } = await query(`SELECT id, employee_id, total_amount, status, data FROM entity_delivery WHERE company_id = $1`, [cid]);
+    const { rows: payments } = await query(`SELECT id, employee_id, amount, data FROM entity_payment WHERE company_id = $1`, [cid]);
 
     const created = [];
 
@@ -726,8 +755,8 @@ app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res)
 
       // Check if there's already a pending AccountPayable for this employee
       const { rows: existing } = await query(
-        `SELECT id FROM entity_account_payable WHERE supplier_id = $1 AND status != 'paid'`,
-        [empId]
+        `SELECT id FROM entity_account_payable WHERE supplier_id = $1 AND status != 'paid' AND company_id = $2`,
+        [empId, cid]
       );
       if (existing.length > 0) continue;
 
@@ -737,8 +766,8 @@ app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res)
 
       await query(
         `INSERT INTO entity_account_payable
-          (id, supplier_id, status, due_date, pending_amount, paid_amount, data, created_date, updated_date)
-         VALUES ($1,$2,'pending',$3,$4,0,$5,$6,$6)`,
+          (id, supplier_id, status, due_date, pending_amount, paid_amount, data, created_date, updated_date, company_id)
+         VALUES ($1,$2,'pending',$3,$4,0,$5,$6,$6,$7)`,
         [
           id, empId, dueDate, pending,
           JSON.stringify({
@@ -749,6 +778,7 @@ app.post('/api/functions/simulateOperariosSalary', requireAuth, async (req, res)
             total_amount: pending,
           }),
           now,
+          cid,
         ]
       );
       created.push({ employee: empName, amount: pending });

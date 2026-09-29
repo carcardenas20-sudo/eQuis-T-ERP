@@ -4,10 +4,28 @@
  * Usa /api/portal en lugar de /api/entities — solo lectura, entidades limitadas.
  */
 
+// Multiempresa: el enlace del portal trae ?empresa=<id> (V-LIVE, etc.). Se recuerda en el
+// dispositivo para las siguientes visitas. Sin parámetro = eQuis-T (enlaces de siempre).
+const PORTAL_COMPANY_KEY = 'equist_portal_company';
+export function getPortalCompany() {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get('empresa');
+    if (fromUrl !== null) {
+      if (fromUrl) localStorage.setItem(PORTAL_COMPANY_KEY, fromUrl); else localStorage.removeItem(PORTAL_COMPANY_KEY);
+      return fromUrl;
+    }
+    return localStorage.getItem(PORTAL_COMPANY_KEY) || '';
+  } catch { return ''; }
+}
+export function portalHeaders(extra = {}) {
+  const c = getPortalCompany();
+  return { 'Content-Type': 'application/json', ...(c ? { 'X-Portal-Company': c } : {}), ...extra };
+}
+
 async function apiFetch(path, options = {}) {
   const response = await fetch(`/api/portal${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: portalHeaders(options.headers || {}),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: response.statusText }));

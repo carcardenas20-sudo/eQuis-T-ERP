@@ -1,3 +1,5 @@
+import { getActiveCompany } from '@/api/localClient';
+
 export async function simulateOperariosSalary(params) {
   try {
     const response = await fetch('/api/functions/simulateOperariosSalary', {
@@ -5,6 +7,7 @@ export async function simulateOperariosSalary(params) {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${localStorage.getItem('equist_token') || ''}`,
+        ...(getActiveCompany() ? { 'X-Company-Id': getActiveCompany() } : {}),
       },
       body: JSON.stringify(params || {}),
     });

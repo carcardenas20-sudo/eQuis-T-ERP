@@ -1,3 +1,4 @@
+import { portalHeaders } from "@/api/portalClient";
 import React, { useState, useMemo, useEffect } from "react";
 import { Delivery, Dispatch, Inventory, StockMovement, AppConfig, ActivityLog } from "@/api/publicEntities";
 import { portalClient } from "@/api/portalClient";
@@ -52,7 +53,7 @@ export default function RouteOperario({ employees, products, dispatches, deliver
     try {
       const res = await fetch("/api/portal/functions/enviarRecomendacionCalidad", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: portalHeaders(),
         body: JSON.stringify({ employee_id: modalEmp.employee_id, texto: rec.texto, categoria: rec.categoria, header: rec.header, footer: rec.footer }),
       });
       if (!res.ok) { const d = await res.json(); alert(d.error || "Error al enviar"); }

@@ -7,6 +7,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Scissors, Plus, Trash2, X, Save, Loader2, Search, Ban } from "lucide-react";
+import { computeTraceability } from "@/utils/trazabilidad";
+
+// Flujo de una hoja: cortado → en bodega → con operarios → entregado → en locales.
+function Trazabilidad({ t, empName }) {
+  if (!t) return null;
+  const despachado = Object.values(t.despachos).reduce((s, q) => s + q, 0);
+  const bodega = Math.max(0, t.cortado - despachado);
+  const conOperarios = Math.max(0, despachado - t.entregado);
+  const pasos = [
+    { label: "Cortado", v: t.cortado, cls: "bg-blue-50 text-blue-800 border-blue-200" },
+    { label: "En bodega (sin despachar)", v: bodega, cls: "bg-slate-50 text-slate-700 border-slate-200" },
+    { label: "Con operarios", v: conOperarios, cls: "bg-amber-50 text-amber-800 border-amber-200" },
+    { label: "Entregado", v: t.entregado, cls: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+    { label: "En locales", v: t.enLocales, cls: "bg-purple-50 text-purple-800 border-purple-200" },
+  ];
+  return (
+    <div className="mt-3 space-y-2">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {pasos.map((p) => (
+          <div key={p.label} className={`rounded-lg border px-2 py-1.5 ${p.cls}`}>
+            <p className="text-[10px] leading-tight">{p.label}</p>
+            <p className="font-bold tabular-nums">{fmt(p.v, 0)}</p>
+          </div>
+        ))}
+      </div>
+      {Object.keys(t.despachos).length > 0 && (
+        <p className="text-xs text-slate-600">
+          Despachado a: {Object.entries(t.despachos).map(([e, q]) => `${empName(e)} (${fmt(q, 0)})`).join(" · ")}
+        </p>
+      )}
+    </div>
+  );
+}
 
 // Hojas de corte: el cortador registra referencias (tallas y cantidades) y los rollos
 // usados (hojas y metros que QUEDARON). Al guardar: se descuenta la tela y las unidades
@@ -203,6 +236,8 @@ export default function Prod_HojasCorte() {
   const [msg, setMsg] = useState("");
   const [q, setQ] = useState("");
   const [fFecha, setFFecha] = useState("");
+  const [traza, setTraza] = useState({});
+  const [empleados, setEmpleados] = useState([]);
 
   const load = async () => {
     setLoading(true);
@@ -215,6 +250,23 @@ export default function Prod_HojasCorte() {
       setHojas(hs || []);
       setProductos((ps || []).filter((p) => p.reference));
       setRollos((rs || []).filter((r) => n(r.metros_disponibles) > 0));
+      // Trazabilidad (se calcula a partir de despachos y entregas; solo lectura)
+      if ((hs || []).length) {
+        const [ds, dls, inv, emps] = await Promise.all([
+          base44.entities.Dispatch.list("dispatch_date", 20000).catch(() => []),
+          base44.entities.Delivery.list("delivery_date", 20000).catch(() => []),
+          base44.entities.Inventory.list().catch(() => []),
+          base44.entities.Employee.list().catch(() => []),
+        ]);
+        const stockByRef = {};
+        for (const i of inv || []) {
+          if (i.product_id || !i.product_reference) continue;
+          const k = String(i.product_reference).toUpperCase();
+          stockByRef[k] = (stockByRef[k] || 0) + n(i.current_stock);
+        }
+        setTraza(computeTraceability({ hojas: hs, dispatches: ds, deliveries: dls, stockByRef }));
+        setEmpleados(emps || []);
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -290,6 +342,7 @@ export default function Prod_HojasCorte() {
                       <Badge className="bg-slate-100 text-slate-700">{fmt(h.total_metros_gastados)} m{n(h.total_kilos_gastados) > 0 ? ` · ${fmt(h.total_kilos_gastados)} kg` : ""}</Badge>
                       {h.colores && <Badge className="bg-amber-100 text-amber-800">{h.colores}</Badge>}
                     </div>
+                    {!anulada && <Trazabilidad t={traza[h.id]} empName={(id) => empleados.find((e) => e.employee_id === id)?.name || id} />}
                     <details className="mt-3">
                       <summary className="text-sm text-slate-600 cursor-pointer">Ver detalle</summary>
                       <div className="mt-2 space-y-2 text-sm">
