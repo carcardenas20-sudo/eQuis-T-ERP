@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { isOjaleteo } from "@/utils/ojaleteo";
 import { localClient } from "@/api/localClient";
 import { Location } from "@/entities/Location";
 import { Inventory } from "@/entities/Inventory";
@@ -39,7 +40,7 @@ export default function MerchandiseAssignment() {
         Product.list(),
       ]);
       const allDeliveries = deliveriesData || [];
-      setDeliveries(allDeliveries.filter(d => !d.inventory_assigned));
+      setDeliveries(allDeliveries.filter(d => !d.inventory_assigned && !isOjaleteo(d)));
       // Entregas ya asignadas desde 2026-04-09 para revertir
       setAssignedDeliveries(allDeliveries.filter(d => d.inventory_assigned && (d.delivery_date || '') >= '2026-04-09'));
       setLocations(locationsData || []);

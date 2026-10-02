@@ -12,6 +12,8 @@ import _ from 'lodash';
 
 import FormularioPresupuesto from "../components/presupuestos/FormularioPresupuesto";
 import TarjetaPresupuesto from "../components/presupuestos/TarjetaPresupuesto";
+import RecibirOjaleteado from "../components/presupuestos/RecibirOjaleteado";
+import { resumenOjaleteoPorPresupuesto, isOjaleteo } from "@/utils/ojaleteo";
 import ModalTendido from "../components/presupuestos/ModalTendido";
 
 export default function Presupuestos() {
@@ -49,6 +51,19 @@ const [showSugerencias, setShowSugerencias] = useState(false);
       clearTimeout(handler);
     };
   }, [searchTerm, presupuestos]);
+
+  // Ojaleteado externo: recepciones (entregas de la ojaleteadora) y lo pagado, por presupuesto
+  const [ojaleteo, setOjaleteo] = useState({});
+  const [recibiendoOj, setRecibiendoOj] = useState(null);
+  const loadOjaleteo = async () => {
+    try {
+      const entregas = (await base44.entities.Delivery.filter({ tipo_entrega: 'ojaletear' })) || [];
+      const empIds = [...new Set(entregas.filter(isOjaleteo).map(d => d.employee_id))];
+      const pagos = (await Promise.all(empIds.map(id => base44.entities.Payment.filter({ employee_id: id }).catch(() => [])))).flat();
+      setOjaleteo(resumenOjaleteoPorPresupuesto(entregas, pagos));
+    } catch (e) { console.error('ojaleteo', e); }
+  };
+  useEffect(() => { loadOjaleteo(); }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -529,11 +544,21 @@ const [showSugerencias, setShowSugerencias] = useState(false);
                 onCopy={() => handleCopy(presupuesto)}
                 onDelete={handleDelete}
                 onOjaletearPago={handleOjaletearPago}
+                ojaleteo={ojaleteo[presupuesto.id]}
+                onRecibirOjaleteado={() => setRecibiendoOj(presupuesto)}
               />
             ))
           )}
         </div>
       </div>
+      {recibiendoOj && (
+        <RecibirOjaleteado
+          presupuesto={recibiendoOj}
+          productos={productos}
+          onClose={() => setRecibiendoOj(null)}
+          onDone={() => { setRecibiendoOj(null); loadOjaleteo(); }}
+        />
+      )}
     </div>
   );
 }

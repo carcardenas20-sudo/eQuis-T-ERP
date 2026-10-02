@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { isOjaleteo } from "@/utils/ojaleteo";
 import { base44 } from "@/api/base44Combined";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FileText, Trash2, Clock, RefreshCw, ChevronUp, ChevronDown, Plus, Minus, Save, Image, Truck, PackageCheck, CheckCircle2, X } from "lucide-react";
@@ -119,13 +120,14 @@ export default function Pending() {
 
   const loadData = async () => {
     setLoading(true);
-    const [employees, productsData, deliveries, dispatches, inventoryData] = await Promise.all([
+    const [employees, productsData, deliveriesAll, dispatches, inventoryData] = await Promise.all([
       base44.entities.Employee.list(),
       base44.entities.Producto.list(),
       base44.entities.Delivery.list(),
       base44.entities.Dispatch.list(),
       base44.entities.Inventory.list(),
     ]);
+    const deliveries = (deliveriesAll || []).filter(d => !isOjaleteo(d));
     const normProductos = (productsData || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra }));
     setAllProducts(normProductos);
     setInventory(inventoryData);

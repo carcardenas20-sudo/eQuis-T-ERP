@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { isOjaleteo } from "@/utils/ojaleteo";
 import { Product, Sale, SaleItem, Inventory, PriceList, ProductPrice, Credit, Payment, Location, SystemSettings } from "@/entities/all";
 import { Producto as ProductoFab } from "@/api/entitiesChaquetas";
 import { Dispatch, Delivery } from "@/api/entitiesProduccion";
@@ -321,7 +322,7 @@ export default function POS() {
       Dispatch.list(),
       Delivery.list(),
     ]);
-    setIngresosData({ productos: (productos || []).filter(p => p.reference), dispatches: dispatches || [], deliveries: deliveries || [] });
+    setIngresosData({ productos: (productos || []).filter(p => p.reference), dispatches: dispatches || [], deliveries: (deliveries || []).filter(d => !isOjaleteo(d)) });
     setIngresosLoaded(true);
     setIngresosLoading(false);
   };

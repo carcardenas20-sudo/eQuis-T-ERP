@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { isOjaleteo } from "@/utils/ojaleteo";
 import { base44 } from "@/api/base44Combined";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export default function DailyOperations() {
       setProducts((productsData || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra })));
       setInventory(inventoryData || []);
       setAllDispatches(dispatchesData || []);
-      setAllDeliveries(deliveriesData || []);
+      setAllDeliveries((deliveriesData || []).filter(d => !isOjaleteo(d)));
       // Lotes pendientes: despachos creados desde Asignaciones sin operario aún
       const pendientes = (dispatchesData || []).filter(
         d => (d.estado_lote === "pendiente" || d.lote_remision) && !d.employee_id

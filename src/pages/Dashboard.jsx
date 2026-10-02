@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { isOjaleteo } from "@/utils/ojaleteo";
 import { locationFilterAsync } from "@/utils/locations";
 import { useSession } from "../components/providers/SessionProvider";
 import {
@@ -497,7 +498,7 @@ export default function Dashboard() {
             ) : operariosStats ? (
               <Stagger className="space-y-4" stagger={0.08}>
                 <StaggerItem className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <DeliveredUnits deliveries={operariosStats.deliveries} />
+                  <DeliveredUnits deliveries={(operariosStats.deliveries || []).filter(d => !isOjaleteo(d))} />
                   <PaymentRequestsWidget
                     paymentRequests={operariosStats.paymentRequests}
                     onRefresh={loadOperarios}

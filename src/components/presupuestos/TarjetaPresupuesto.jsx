@@ -25,7 +25,7 @@ const getStatusColor = (estado) => {
   return colors[estado] || colors.borrador;
 };
 
-function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, onOjaletearPago }) {
+function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, onOjaletearPago, ojaleteo, onRecibirOjaleteado }) {
   // Ojaletear EXTERNO: suma unidades y monto de los productos con ojaletear externo.
   // El pago de este trabajo se marca desde la tarjeta (no en Cuentas por Pagar).
   const ojaletearExterno = (() => {
@@ -380,6 +380,20 @@ function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, 
             {/* Ojaletear externo: control de pago del trabajo externo, con fecha/hora */}
             {ojaletearExterno && (
               <div className={`mt-3 rounded-lg px-2.5 py-2 border ${ojPagado ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                {/* Recepción por partes (entregas de la ojaleteadora) y lo pagado */}
+                {ojaleteo && (
+                  <div className="text-xs mb-1.5 pb-1.5 border-b border-amber-200">
+                    <div className="flex justify-between"><span>Recibido</span><b>{ojaleteo.uds} / {ojaletearExterno.uds} uds</b></div>
+                    <div className="flex justify-between"><span>Pagado a la ojaleteadora</span><b className={ojaleteo.pagado >= ojaleteo.valor - 0.5 ? 'text-green-700' : 'text-amber-700'}>${Math.round(ojaleteo.pagado).toLocaleString()} / ${Math.round(ojaleteo.valor).toLocaleString()}</b></div>
+                  </div>
+                )}
+                {onRecibirOjaleteado && (!ojaleteo || ojaleteo.uds < ojaletearExterno.uds) && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs w-full mb-1.5"
+                    onClick={(e) => { e.stopPropagation(); onRecibirOjaleteado(); }}>
+                    Recibir ojaleteado
+                  </Button>
+                )}
+                {!ojaleteo && (
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs min-w-0">
                     <div className={`font-semibold ${ojPagado ? 'text-green-700' : 'text-amber-700'}`}>Ojaletear externo</div>
@@ -397,6 +411,7 @@ function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, 
                     </Button>
                   )}
                 </div>
+                )}
                 {ojPagado && ojFecha && (
                   <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-green-200">
                     <span className="text-[11px] text-green-700">

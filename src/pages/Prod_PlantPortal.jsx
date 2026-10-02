@@ -1,4 +1,5 @@
 import { portalHeaders } from "@/api/portalClient";
+import { isOjaleteo } from "@/utils/ojaleteo";
 import React, { useState, useEffect, useMemo } from "react";
 import { Remision, Operacion, Presupuesto, Producto, Servicio, OrdenServicio, AppConfig, Traslado, ProductoPOS, LocationPub, Inventory, Employee, Dispatch, Delivery, Devolucion, Muestra, TareaPlanta, RolloTela } from "@/api/publicEntities";
 import { Factory, Wrench, RefreshCw, ChevronDown, ChevronUp, CheckCircle2,
@@ -781,7 +782,7 @@ export default function PlantPortal() {
         employees: orderedEmployees,
         products: (products || []).filter(p => p.reference).map(p => ({ ...p, name: p.nombre, is_active: true, manufacturing_price: p.costo_mano_obra })),
         dispatches: dispatches || [],
-        deliveries: deliveries || [],
+        deliveries: (deliveries || []).filter(d => !isOjaleteo(d)),
         inventory: inventory || [],
         devoluciones: devoluciones || [],
         muestras: muestras || [],
