@@ -640,11 +640,13 @@ export default function AccountsPayablePage() {
     const emp = opEmployees.find(e => e.employee_id === op.employee_id);
     return {
       id: `op_${op.id}`, _opPaymentId: op.id, _isOperario: true,
-      supplier_name: emp?.name || op.employee_id,
-      description: `Pago operario — ${emp?.name || op.employee_id}`,
+      supplier_name: emp?.name || op.employee_name || op.employee_id,
+      description: op.payment_type === 'ojaleteado'
+        ? `Ojaleteado — ${op.presupuesto_numero || ''} (${op.employee_name || 'ojaleteadora'})`
+        : `Pago operario — ${emp?.name || op.employee_name || op.employee_id}`,
       type: 'manufacturing_salary', category: 'salarios_manufactura',
       status: 'pending', total_amount: op.amount, pending_amount: op.amount,
-      paid_amount: 0, due_date: op.payment_date, created_date: op.payment_date,
+      paid_amount: 0, due_date: op.fecha_limite || op.payment_date, created_date: op.payment_date,
     };
   }), [opPayments, opEmployees]);
 

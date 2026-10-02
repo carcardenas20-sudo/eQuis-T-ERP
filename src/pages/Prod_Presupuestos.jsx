@@ -12,8 +12,7 @@ import _ from 'lodash';
 
 import FormularioPresupuesto from "../components/presupuestos/FormularioPresupuesto";
 import TarjetaPresupuesto from "../components/presupuestos/TarjetaPresupuesto";
-import RecibirOjaleteado from "../components/presupuestos/RecibirOjaleteado";
-import { resumenOjaleteoPorPresupuesto, isOjaleteo } from "@/utils/ojaleteo";
+import { syncPagoOjaleteo, OJALETEO_PAYMENT_TYPE } from "@/utils/ojaleteo";
 import ModalTendido from "../components/presupuestos/ModalTendido";
 
 export default function Presupuestos() {
@@ -52,16 +51,20 @@ const [showSugerencias, setShowSugerencias] = useState(false);
     };
   }, [searchTerm, presupuestos]);
 
-  // Ojaleteado externo: recepciones (entregas de la ojaleteadora) y lo pagado, por presupuesto
-  const [ojaleteo, setOjaleteo] = useState({});
-  const [recibiendoOj, setRecibiendoOj] = useState(null);
+  // Ojaleteado externo: pago automático por presupuesto (en Transferencias, vence 10 días después)
+  const [pagosOjaleteo, setPagosOjaleteo] = useState({});
   const loadOjaleteo = async () => {
     try {
-      const entregas = (await base44.entities.Delivery.filter({ tipo_entrega: 'ojaletear' })) || [];
-      const empIds = [...new Set(entregas.filter(isOjaleteo).map(d => d.employee_id))];
-      const pagos = (await Promise.all(empIds.map(id => base44.entities.Payment.filter({ employee_id: id }).catch(() => [])))).flat();
-      setOjaleteo(resumenOjaleteoPorPresupuesto(entregas, pagos));
+      const pagos = (await base44.entities.Payment.filter({ payment_type: OJALETEO_PAYMENT_TYPE })) || [];
+      setPagosOjaleteo(Object.fromEntries(pagos.map(p => [p.presupuesto_id, p])));
     } catch (e) { console.error('ojaleteo', e); }
+  };
+  const programarOjaleteo = async (presupuesto) => {
+    try {
+      const r = await syncPagoOjaleteo(presupuesto);
+      if (r.aviso) alert(r.aviso);
+      await loadOjaleteo();
+    } catch (e) { alert('No se pudo programar el pago del ojaleteado: ' + e.message); }
   };
   useEffect(() => { loadOjaleteo(); }, []);
 
@@ -266,6 +269,15 @@ const [showSugerencias, setShowSugerencias] = useState(false);
       // TarjetaPresupuesto). Así el pago del trabajo externo queda junto a su
       // presupuesto, no mezclado en Cuentas por Pagar.
 
+      // Ojaleteado externo: crear/actualizar su pago automático (Transferencias, +10 días)
+      try {
+        const r = await syncPagoOjaleteo(presupuestoActualizado);
+        if (r.aviso) alert(r.aviso);
+        loadOjaleteo();
+      } catch (err) {
+        console.error('Error programando el pago del ojaleteado:', err);
+      }
+
       setShowForm(false);
       setEditingPresupuesto(null);
       loadData();
@@ -331,6 +343,9 @@ const [showSugerencias, setShowSugerencias] = useState(false);
 
   const handleDelete = async (presupuestoId) => {
     try {
+      // Si tenía pago de ojaleteado aún sin transferir, se quita
+      const pres = presupuestos.find(p => p.id === presupuestoId);
+      if (pres) await syncPagoOjaleteo({ ...pres, estado: 'eliminado' }).catch(() => {});
       await Presupuesto.delete(presupuestoId);
       loadData();
     } catch (error) {
@@ -544,21 +559,13 @@ const [showSugerencias, setShowSugerencias] = useState(false);
                 onCopy={() => handleCopy(presupuesto)}
                 onDelete={handleDelete}
                 onOjaletearPago={handleOjaletearPago}
-                ojaleteo={ojaleteo[presupuesto.id]}
-                onRecibirOjaleteado={() => setRecibiendoOj(presupuesto)}
+                pagoOjaleteo={pagosOjaleteo[presupuesto.id]}
+                onProgramarOjaleteo={programarOjaleteo}
               />
             ))
           )}
         </div>
       </div>
-      {recibiendoOj && (
-        <RecibirOjaleteado
-          presupuesto={recibiendoOj}
-          productos={productos}
-          onClose={() => setRecibiendoOj(null)}
-          onDone={() => { setRecibiendoOj(null); loadOjaleteo(); }}
-        />
-      )}
     </div>
   );
 }

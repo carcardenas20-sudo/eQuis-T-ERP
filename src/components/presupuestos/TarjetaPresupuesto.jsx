@@ -25,7 +25,7 @@ const getStatusColor = (estado) => {
   return colors[estado] || colors.borrador;
 };
 
-function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, onOjaletearPago, ojaleteo, onRecibirOjaleteado }) {
+function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, onOjaletearPago, pagoOjaleteo, onProgramarOjaleteo }) {
   // Ojaletear EXTERNO: suma unidades y monto de los productos con ojaletear externo.
   // El pago de este trabajo se marca desde la tarjeta (no en Cuentas por Pagar).
   const ojaletearExterno = (() => {
@@ -377,56 +377,44 @@ function TarjetaPresupuesto({ presupuesto, productos, onEdit, onDelete, onCopy, 
               );
             })()}
 
-            {/* Ojaletear externo: control de pago del trabajo externo, con fecha/hora */}
-            {ojaletearExterno && (
-              <div className={`mt-3 rounded-lg px-2.5 py-2 border ${ojPagado ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-                {/* Recepción por partes (entregas de la ojaleteadora) y lo pagado */}
-                {ojaleteo && (
-                  <div className="text-xs mb-1.5 pb-1.5 border-b border-amber-200">
-                    <div className="flex justify-between"><span>Recibido</span><b>{ojaleteo.uds} / {ojaletearExterno.uds} uds</b></div>
-                    <div className="flex justify-between"><span>Pagado a la ojaleteadora</span><b className={ojaleteo.pagado >= ojaleteo.valor - 0.5 ? 'text-green-700' : 'text-amber-700'}>${Math.round(ojaleteo.pagado).toLocaleString()} / ${Math.round(ojaleteo.valor).toLocaleString()}</b></div>
+            {/* Ojaletear externo: pago automático a la ojaleteadora (Transferencias, vence 10 días después) */}
+            {ojaletearExterno && (() => {
+              const fmtD = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
+              const transferido = pagoOjaleteo?.status === 'ejecutado' || ojPagado;
+              const vencido = pagoOjaleteo && !transferido && pagoOjaleteo.fecha_limite && pagoOjaleteo.fecha_limite < new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+              return (
+                <div className={`mt-3 rounded-lg px-2.5 py-2 border text-xs ${transferido ? 'bg-green-50 border-green-200' : vencido ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className={`font-semibold ${transferido ? 'text-green-700' : vencido ? 'text-red-700' : 'text-amber-700'}`}>Ojaletear externo</div>
+                      <div className="text-slate-500">{ojaletearExterno.uds} uds · ${ojaletearExterno.total.toLocaleString()}</div>
+                    </div>
+                    {transferido ? (
+                      <span className="text-green-700 font-semibold whitespace-nowrap">✓ {pagoOjaleteo?.status === 'ejecutado' ? 'Transferido' : 'Pagado'}</span>
+                    ) : pagoOjaleteo ? (
+                      <span className={`font-semibold whitespace-nowrap ${vencido ? 'text-red-700' : 'text-amber-700'}`}>
+                        {vencido ? 'Vencido' : 'Por transferir'} · {fmtD(pagoOjaleteo.fecha_limite)}
+                      </span>
+                    ) : presupuesto.estado === 'aprobado' && onProgramarOjaleteo ? (
+                      <Button size="sm" className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap shrink-0"
+                        onClick={(e) => { e.stopPropagation(); onProgramarOjaleteo(presupuesto); }}>
+                        Enviar a transferencias
+                      </Button>
+                    ) : (
+                      <span className="text-slate-400 whitespace-nowrap">Se programa al aprobar</span>
+                    )}
                   </div>
-                )}
-                {onRecibirOjaleteado && (!ojaleteo || ojaleteo.uds < ojaletearExterno.uds) && (
-                  <Button size="sm" variant="outline" className="h-7 text-xs w-full mb-1.5"
-                    onClick={(e) => { e.stopPropagation(); onRecibirOjaleteado(); }}>
-                    Recibir ojaleteado
-                  </Button>
-                )}
-                {!ojaleteo && (
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs min-w-0">
-                    <div className={`font-semibold ${ojPagado ? 'text-green-700' : 'text-amber-700'}`}>Ojaletear externo</div>
-                    <div className="text-slate-500">{ojaletearExterno.uds} uds · ${ojaletearExterno.total.toLocaleString()}</div>
-                  </div>
-                  {ojPagado ? (
-                    <span className="flex items-center gap-1 text-green-700 text-xs font-semibold whitespace-nowrap">✓ Pagado</span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap shrink-0"
-                      onClick={(e) => { e.stopPropagation(); if (window.confirm(`¿Marcar el ojaletear externo como PAGADO ahora?\n${ojaletearExterno.uds} uds · $${ojaletearExterno.total.toLocaleString()}`)) onOjaletearPago?.(presupuesto, true); }}
-                    >
-                      Marcar pagado
-                    </Button>
+                  {pagoOjaleteo?.status === 'ejecutado' && pagoOjaleteo.transfer_executed_date && (
+                    <div className="mt-1 text-[11px] text-green-700">Transferido el {fmtD(pagoOjaleteo.transfer_executed_date)}</div>
+                  )}
+                  {!pagoOjaleteo && ojPagado && ojFecha && (
+                    <div className="mt-1 text-[11px] text-green-700">
+                      Pagado (registro manual) el {(() => { try { return format(new Date(ojFecha), "dd/MM/yyyy"); } catch { return ''; } })()}
+                    </div>
                   )}
                 </div>
-                )}
-                {ojPagado && ojFecha && (
-                  <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-green-200">
-                    <span className="text-[11px] text-green-700">
-                      Pagado el {(() => { try { return format(new Date(ojFecha), "dd/MM/yyyy 'a las' HH:mm"); } catch { return ''; } })()}
-                    </span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); if (window.confirm('¿Quitar la marca de pagado del ojaletear?')) onOjaletearPago?.(presupuesto, false); }}
-                      className="text-[11px] text-slate-400 hover:text-red-600 underline"
-                    >
-                      Deshacer
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+              );
+            })()}
 
           </div>
 

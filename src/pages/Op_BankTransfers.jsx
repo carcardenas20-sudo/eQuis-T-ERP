@@ -41,7 +41,7 @@ export default function BankTransfers() {
   };
 
   const getLastDeliveryDate = (payment) => {
-    if (payment.payment_type === 'anticipo') {
+    if (payment.payment_type === 'anticipo' || payment.payment_type === 'ojaleteado') {
       const d = new Date(String(payment.payment_date).slice(0, 10) + 'T12:00:00');
       return isNaN(d) ? null : d;
     }
@@ -82,6 +82,10 @@ export default function BankTransfers() {
   };
 
   const getDeadline = (payment) => {
+    if (payment.fecha_limite) {
+      const d = new Date(String(payment.fecha_limite).slice(0, 10) + 'T12:00:00');
+      if (!isNaN(d)) return d;
+    }
     // Un anticipo no depende de entregas: se transfiere de inmediato (vence el día que se dio).
     if (payment.payment_type === 'anticipo') {
       const d = new Date(String(payment.payment_date).slice(0, 10) + 'T12:00:00');
@@ -100,7 +104,9 @@ export default function BankTransfers() {
 
   const getEmployeeName = (employeeId) => {
     const emp = employees.find(e => e.employee_id === employeeId);
-    return emp ? emp.name : employeeId;
+    if (emp) return emp.name;
+    const p = payments.find(x => x.employee_id === employeeId && x.employee_name);
+    return p ? p.employee_name : employeeId;
   };
 
   // Abonos parciales de transferencia (guardados en data.transfer_payments).
@@ -339,7 +345,7 @@ export default function BankTransfers() {
                            <CardContent className="p-4 sm:p-6">
                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-4">
                                <div className="min-w-0">
-                                 <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}{payment.payment_type === 'anticipo' && <span className="ml-2 align-middle text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Anticipo</span>}</h3>
+                                 <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}{payment.payment_type === 'anticipo' && <span className="ml-2 align-middle text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Anticipo</span>}{payment.payment_type === 'ojaleteado' && <span className="ml-2 align-middle text-xs font-semibold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">Ojaleteado · {payment.presupuesto_numero}</span>}</h3>
                                  <p className="text-xs sm:text-sm text-slate-600">Registro: {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                                </div>
                                <div className="sm:text-right">
@@ -399,7 +405,7 @@ export default function BankTransfers() {
                            <CardContent className="p-4 sm:p-6">
                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-4">
                                <div className="min-w-0">
-                                 <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}{payment.payment_type === 'anticipo' && <span className="ml-2 align-middle text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Anticipo</span>}</h3>
+                                 <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}{payment.payment_type === 'anticipo' && <span className="ml-2 align-middle text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Anticipo</span>}{payment.payment_type === 'ojaleteado' && <span className="ml-2 align-middle text-xs font-semibold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">Ojaleteado · {payment.presupuesto_numero}</span>}</h3>
                                  <p className="text-xs sm:text-sm text-slate-600">Registro: {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                                </div>
                                <div className="sm:text-right">
@@ -456,7 +462,7 @@ export default function BankTransfers() {
                            <CardContent className="p-4 sm:p-6">
                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0 mb-4">
                                <div className="min-w-0">
-                                 <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}{payment.payment_type === 'anticipo' && <span className="ml-2 align-middle text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Anticipo</span>}</h3>
+                                 <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}{payment.payment_type === 'anticipo' && <span className="ml-2 align-middle text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Anticipo</span>}{payment.payment_type === 'ojaleteado' && <span className="ml-2 align-middle text-xs font-semibold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">Ojaleteado · {payment.presupuesto_numero}</span>}</h3>
                                  <p className="text-xs sm:text-sm text-slate-600">Registro: {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                                </div>
                                <div className="sm:text-right">
@@ -533,7 +539,7 @@ export default function BankTransfers() {
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-0">
                         <div className="min-w-0">
-                          <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}{payment.payment_type === 'anticipo' && <span className="ml-2 align-middle text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Anticipo</span>}</h3>
+                          <h3 className="font-bold text-base sm:text-lg text-slate-900">{getEmployeeName(payment.employee_id)}{payment.payment_type === 'anticipo' && <span className="ml-2 align-middle text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Anticipo</span>}{payment.payment_type === 'ojaleteado' && <span className="ml-2 align-middle text-xs font-semibold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">Ojaleteado · {payment.presupuesto_numero}</span>}</h3>
                           <p className="text-xs sm:text-sm text-slate-600">Fecha: {format(new Date(payment.payment_date + 'T00:00:00'), 'dd/MM/yyyy')}</p>
                         </div>
                         <div className="sm:text-right flex flex-col items-end gap-2">

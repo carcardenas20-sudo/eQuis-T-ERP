@@ -1,67 +1,83 @@
-// Ojaleteado EXTERNO (Claudia): cada recepción parcial se registra como una "entrega" de la
-// ojaleteadora (tipo_entrega 'ojaletear', ligada al presupuesto). Así se paga con el mismo
-// flujo de operarios (saldo, solicitud de pago desde su portal, transferencias).
-// OJO: estas entregas NO son prendas terminadas → se excluyen de inventario/asignación/pendientes.
+// Ojaleteado EXTERNO (Claudia): se paga POR PRESUPUESTO.
+// Al aprobar un presupuesto con ojaleteado externo, se crea automáticamente un pago
+// (Payment payment_type 'ojaleteado', status 'registrado') que aparece en Transferencias
+// bancarias con fecha límite = fecha del presupuesto + 10 días. Claudia no tiene que cobrar.
+import { base44 } from "@/api/base44Client";
 
 const n = (v) => Number(v) || 0;
 
-export const isOjaleteo = (d) => d?.tipo_entrega === "ojaletear";
-export const OJALETEADOR_CONFIG_KEY = "ojaleteador_employee_id";
+export const OJALETEO_PAYMENT_TYPE = "ojaleteado";
+export const OJALETEADORA_ID = "ojaleteadora-externa";
+export const OJALETEADORA_NOMBRE = "Claudia Montoya";
+export const DIAS_PARA_PAGO = 10;
 
-// Lo que se espera ojaletear en un presupuesto: por referencia y talla (solo productos con externo).
-export function esperadoOjaleteo(presupuesto, productos) {
-  const map = {};
+// (Compatibilidad: entregas de ojaleteado registradas con el esquema anterior)
+export const isOjaleteo = (d) => d?.tipo_entrega === "ojaletear";
+
+// Unidades y valor del ojaleteado externo de un presupuesto (precio por producto).
+export function ojaleteoDePresupuesto(presupuesto) {
+  let uds = 0, total = 0, precio = 0;
   for (const p of presupuesto?.productos || []) {
     const oj = p.ojaletear;
     if (!oj || oj.tipo !== "externo") continue;
-    const prod = (productos || []).find((x) => x.id === p.producto_id);
-    const reference = String(prod?.reference || p.producto_id || "").toUpperCase();
-    for (const comb of p.combinaciones || []) {
-      for (const tc of comb.tallas_cantidades || []) {
-        const talla = String(tc.talla || "").toUpperCase();
-        const k = `${reference}|${talla}`;
-        if (!map[k]) map[k] = { key: k, reference, nombre: prod?.nombre || "", talla, esperado: 0, precio: n(oj.precio_unit) || 80 };
-        map[k].esperado += n(tc.cantidad);
-      }
+    const pu = n(oj.precio_unit) || 80;
+    const u = (p.combinaciones || []).reduce((s, c) => s + (c.tallas_cantidades || []).reduce((ss, tc) => ss + n(tc.cantidad), 0), 0);
+    uds += u; total += u * pu; precio = pu;
+  }
+  return uds > 0 ? { uds, total: Math.round(total), precio } : null;
+}
+
+const bogotaDay = (iso) => new Date(iso || Date.now()).toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+const addDays = (day, d) => {
+  const x = new Date(`${day}T12:00:00`);
+  x.setDate(x.getDate() + d);
+  return x.toISOString().slice(0, 10);
+};
+
+// Crea / actualiza / quita el pago automático del ojaleteado de un presupuesto.
+// Devuelve { estado, aviso } para informar al usuario si algo no se pudo ajustar.
+export async function syncPagoOjaleteo(presupuesto) {
+  const oj = ojaleteoDePresupuesto(presupuesto);
+  const existentes = (await base44.entities.Payment.filter({ payment_type: OJALETEO_PAYMENT_TYPE, presupuesto_id: presupuesto.id })) || [];
+  const pago = existentes[0];
+  const debePagarse = presupuesto.estado === "aprobado" && oj && !presupuesto.ojaletear_pagado;
+
+  if (!debePagarse) {
+    // Ya no aplica (no aprobado, sin ojaleteado externo o pagado a mano): quitar si aún no se transfirió
+    if (pago && pago.status !== "ejecutado" && !(pago.transfer_payments || []).length) {
+      await base44.entities.Payment.delete(pago.id);
+      return { estado: "eliminado" };
     }
+    return pago && pago.status === "ejecutado" && !oj ? { estado: "ejecutado", aviso: "El ojaleteado ya se había transferido." } : { estado: "sin_pago" };
   }
-  return Object.values(map).filter((x) => x.esperado > 0);
-}
 
-// Recibido por referencia|talla en las entregas de ojaleteado de un presupuesto.
-export function recibidoOjaleteo(entregas) {
-  const map = {};
-  for (const d of entregas || []) {
-    if (!isOjaleteo(d)) continue;
-    for (const it of d.items || []) {
-      const k = `${String(it.product_reference || "").toUpperCase()}|${String(it.talla || "").toUpperCase()}`;
-      map[k] = (map[k] || 0) + n(it.quantity);
-    }
-  }
-  return map;
-}
+  const fechaPres = bogotaDay(presupuesto.created_date);
+  const datos = {
+    employee_id: OJALETEADORA_ID,
+    employee_name: OJALETEADORA_NOMBRE,
+    amount: oj.total,
+    payment_date: fechaPres,
+    fecha_limite: addDays(fechaPres, DIAS_PARA_PAGO),
+    payment_type: OJALETEO_PAYMENT_TYPE,
+    presupuesto_id: presupuesto.id,
+    presupuesto_numero: presupuesto.numero_presupuesto || "",
+    unidades: oj.uds,
+    precio_unit: oj.precio,
+    description: `Ojaleteado externo · ${presupuesto.numero_presupuesto || ""} · ${oj.uds} uds × $${oj.precio}`,
+  };
 
-// Pagado por entrega (pagos con delivery_payments o pago_completo con delivery_ids).
-export function pagadoPorEntrega(payments) {
-  const map = {};
-  for (const p of payments || []) {
-    for (const dp of p.delivery_payments || []) map[dp.delivery_id] = (map[dp.delivery_id] || 0) + n(dp.amount);
+  if (!pago) {
+    await base44.entities.Payment.create({ ...datos, status: "registrado" });
+    return { estado: "creado" };
   }
-  return map;
-}
-
-// Resumen por presupuesto: unidades y valor recibidos, y cuánto de eso ya se pagó.
-export function resumenOjaleteoPorPresupuesto(entregas, payments) {
-  const pag = pagadoPorEntrega(payments);
-  const completos = new Set((payments || []).filter((p) => p.payment_type === "pago_completo").flatMap((p) => p.delivery_ids || []));
-  const res = {};
-  for (const d of entregas || []) {
-    if (!isOjaleteo(d) || !d.presupuesto_id) continue;
-    const r = (res[d.presupuesto_id] = res[d.presupuesto_id] || { uds: 0, valor: 0, pagado: 0, entregas: 0 });
-    r.entregas += 1;
-    r.uds += (d.items || []).reduce((s, i) => s + n(i.quantity), 0);
-    r.valor += n(d.total_amount);
-    r.pagado += completos.has(d.id) || d.status === "pagado" ? n(d.total_amount) : Math.min(n(d.total_amount), pag[d.id] || 0);
+  if (pago.status === "ejecutado") {
+    return Math.round(n(pago.amount)) === oj.total
+      ? { estado: "ejecutado" }
+      : { estado: "ejecutado", aviso: `El ojaleteado ya se transfirió por $${Math.round(n(pago.amount)).toLocaleString("es-CO")} y ahora vale $${oj.total.toLocaleString("es-CO")}. Ajusta la diferencia a mano.` };
   }
-  return res;
+  if (Math.round(n(pago.amount)) !== oj.total || pago.fecha_limite !== datos.fecha_limite) {
+    await base44.entities.Payment.update(pago.id, datos);
+    return { estado: "actualizado" };
+  }
+  return { estado: "igual" };
 }

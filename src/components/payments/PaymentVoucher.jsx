@@ -115,7 +115,14 @@ export default function PaymentVoucher({ payment, deliveries, products, employee
       ? `en cuotas de ${fmtMoney(payment.advance_installment)} por pago`
       : 'completo en el próximo pago';
 
-    const deliveriesSectionHtml = isAdvance ? `
+    const isOjaleteado = payment.payment_type === 'ojaleteado';
+    const deliveriesSectionHtml = isOjaleteado ? `
+        <div style="padding:24px 32px">
+          <div style="background:#eef2ff;border:1px solid #a5b4fc;border-radius:10px;padding:16px 18px">
+            <div style="font-size:12px;font-weight:700;color:#3730a3;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Ojaleteado externo</div>
+            <div style="font-size:14px;color:#312e81">Presupuesto <b>${payment.presupuesto_numero || ''}</b>: ${payment.unidades || ''} unidades × ${fmtMoney(payment.precio_unit)}</div>
+          </div>
+        </div>` : isAdvance ? `
         <div style="padding:24px 32px">
           <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:16px 18px">
             <div style="font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Anticipo sobre próximos pagos</div>
