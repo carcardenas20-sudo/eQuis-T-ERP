@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ChevronDown, ChevronUp, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import TransferDetail from "@/components/cashcontrol/TransferDetail";
 import { locationFamilyIds } from "@/utils/locations";
+import EntregasEfectivo from "@/components/cashcontrol/EntregasEfectivo";
 
 function formatDateDisplay(dateStr) {
   if (!dateStr) return '';
@@ -604,6 +605,17 @@ export default function CashControlPage() {
           </div>
         )}
 
+        {c.entrega_estado === 'pendiente' && !c.cash_collected && (
+          <div className="mb-3 text-xs sm:text-sm bg-amber-50 border border-amber-300 text-amber-800 rounded-lg px-3 py-2">
+            🤝 Efectivo entregado en el acta <b>{c.entrega_numero}</b> · pendiente de que el receptor confirme.
+          </div>
+        )}
+        {(c.entrega_estado === 'confirmada' || c.entrega_estado === 'con_diferencia') && (
+          <div className={`mb-3 text-xs sm:text-sm rounded-lg px-3 py-2 border ${c.entrega_estado === 'confirmada' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            {c.entrega_estado === 'confirmada' ? '✓' : '⚠'} Acta <b>{c.entrega_numero}</b> {c.entrega_estado === 'confirmada' ? 'confirmada: el efectivo coincide' : 'confirmada con diferencia'}.
+          </div>
+        )}
+
         {/* Summary */}
         <div className="mb-4 p-4 bg-white rounded-lg border border-slate-200">
           <h4 className="text-sm font-bold text-slate-700 mb-3">📊 Resumen del Día</h4>
@@ -801,9 +813,18 @@ export default function CashControlPage() {
 
         {!canManage && (
           <div className="text-xs sm:text-sm bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-3 py-2">
-            👁️ Modo lectura: ves los cierres de caja de tu sucursal. El administrador marca el efectivo como recogido/verificado.
+            👁️ Ves los cierres de caja de tu sucursal. Para entregar el efectivo, usa "Registrar entrega": queda un acta y el receptor confirma lo que recibió.
           </div>
         )}
+        <EntregasEfectivo
+          controls={controls.map(c => ({ ...c, netCash: netCashOf(c) }))}
+          locations={locations}
+          canManage={canManage}
+          currentUser={currentUser}
+          userLocation={userLocation}
+          onChanged={loadData}
+        />
+
         {!canViewAll && !userLocation?.id && (
           <div className="text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
             No tienes una sucursal asignada. Pídele al administrador que te asigne una para ver tu control de efectivo.

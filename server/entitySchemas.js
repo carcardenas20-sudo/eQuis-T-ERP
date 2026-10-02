@@ -294,6 +294,18 @@ export const ENTITY_SCHEMAS = {
     indexes: ['activo'],
   },
 
+  // Actas de entrega de efectivo (líder de punto → receptor que confirma)
+  EntregaEfectivo: {
+    table: 'entity_entrega_efectivo',
+    typed: {
+      numero: 'TEXT',
+      location_id: 'TEXT',
+      estado: 'TEXT',
+      monto_entregado: 'NUMERIC(14,2)',
+    },
+    indexes: ['location_id', 'estado'],
+  },
+
   CashControl: {
     table: 'entity_cash_control',
     typed: {
