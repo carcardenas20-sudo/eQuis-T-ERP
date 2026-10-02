@@ -18,6 +18,7 @@ import { createPageUrl } from "@/utils";
 import { Stagger, StaggerItem, AnimatedNumber, FadeIn, scaleIn } from "@/components/motion";
 import KpiCard from "@/components/ui/KpiCard";
 import DeliveredUnits from "../components/dashboard/DeliveredUnits";
+import ComercialDashboard from "../components/dashboard/ComercialDashboard";
 import PaymentRequestsWidget from "../components/dashboard/PaymentRequests";
 import PendingDeliveriesByEmployee from "../components/dashboard/PendingDeliveriesByEmployee";
 import AvailableForDispatch from "../components/dashboard/AvailableForDispatch";
@@ -178,8 +179,6 @@ export default function Dashboard() {
   useEffect(() => {
     if (isSessionLoading || !currentUser) return;
     setComercialStats(null);
-    if (!hasComercial) return;
-    loadComercial();
   }, [selectedLocation, isSessionLoading, currentUser, previewRoleId]);
 
   useEffect(() => {
@@ -367,72 +366,9 @@ export default function Dashboard() {
         {/* ── SECCIÓN COMERCIAL ──────────────────────────────── */}
         {hasComercial && (
           <section className="space-y-4">
-            <SectionHeader title="Comercial" subtitle="Ventas, caja y créditos del día" color="blue" />
+            <SectionHeader title="Comercial" subtitle={isAdmin ? "Ventas, caja y créditos" : `Hoy en ${userLocation?.name || 'tu punto'}`} color="blue" />
 
-            {isAdmin && locations.length > 0 && (
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Filtrar por sucursal:</label>
-                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                  <SelectTrigger className="w-full sm:w-64">
-                    <SelectValue placeholder="Seleccionar sucursal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las Sucursales</SelectItem>
-                    {locations.map(loc => (
-                      <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {!isAdmin && userLocation && (
-              <Alert className="border-blue-200 bg-blue-50 py-2 px-3">
-                <Building2 className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-700 text-sm ml-2">
-                  Datos de <strong>{userLocation.name}</strong>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {loadingComercial ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {[...Array(6)].map((_, i) => <div key={i} className="h-24 shimmer rounded-xl" />)}
-              </div>
-            ) : comercialStats ? (
-              <>
-                <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-3" stagger={0.08}>
-                  <StaggerItem variant={scaleIn}><StatCard label="Efectivo en Caja" value={comercialStats.netCashInDrawer} format={fmtCOP} icon={Wallet} tone="emerald" /></StaggerItem>
-                  <StaggerItem variant={scaleIn}><StatCard label="Ingresos Hoy" value={comercialStats.totalIncome} format={fmtCOP} icon={DollarSign} tone="blue" /></StaggerItem>
-                  <StaggerItem variant={scaleIn}><StatCard label="Gastos Hoy" value={comercialStats.totalExpenses} format={fmtCOP} icon={Package} tone="purple" /></StaggerItem>
-                  <StaggerItem variant={scaleIn}><StatCard label="Balance" value={comercialStats.totalIncome - comercialStats.totalExpenses} format={fmtCOP} icon={TrendingUp} tone="amber" /></StaggerItem>
-                  <StaggerItem variant={scaleIn}><StatCard label="Por Cobrar" value={comercialStats.pendingCredits} format={fmtCOP} icon={CreditCard} tone="orange" /></StaggerItem>
-                  <StaggerItem variant={scaleIn}><StatCard label="Créditos Vencidos" value={comercialStats.overdueCredits} icon={AlertTriangle} tone="red" sub="créditos" /></StaggerItem>
-                </Stagger>
-
-                <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3">Cierre de Caja del Día</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-xs text-green-700 mb-1">Efectivo</p>
-                      <p className="text-lg font-bold text-green-900 tabular-nums">{fmtCOP(comercialStats.cashIncome)}</p>
-                    </div>
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-xs text-blue-700 mb-1">Tarjeta</p>
-                      <p className="text-lg font-bold text-blue-900 tabular-nums">{fmtCOP(comercialStats.cardIncome)}</p>
-                    </div>
-                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <p className="text-xs text-purple-700 mb-1">Transferencia</p>
-                      <p className="text-lg font-bold text-purple-900 tabular-nums">{fmtCOP(comercialStats.transferIncome)}</p>
-                    </div>
-                    <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                      <p className="text-xs text-red-700 mb-1">Gastos</p>
-                      <p className="text-lg font-bold text-red-900 tabular-nums">{fmtCOP(comercialStats.totalExpenses)}</p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : null}
+            <ComercialDashboard isAdmin={isAdmin} locations={locations} userLocation={userLocation} />
           </section>
         )}
 
