@@ -171,7 +171,12 @@ export default function PaymentForm({ employee, payment, pendingDeliveries, adva
                 return (
                   <div key={delivery.id} className="p-3 bg-slate-50 rounded-lg border">
                     <div className="mb-2">
-                      <p className="font-medium text-sm">{format(new Date(delivery.delivery_date + 'T00:00:00'), 'dd/MM/yyyy')} - {delivery.quantity} unidades</p>
+                      <p className="font-medium text-sm">
+                        {(() => { try { return format(new Date(String(delivery.delivery_date).slice(0, 10) + 'T00:00:00'), 'dd/MM/yyyy'); } catch { return '—'; } })()} - {delivery.quantity || (delivery.items || []).reduce((s, i) => s + (Number(i.quantity) || 0), 0)} unidades
+                        {delivery.tipo_entrega === 'ojaletear' && (
+                          <span className="ml-2 text-xs font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">Ojaleteado · {delivery.presupuesto_numero || 'presupuesto'}</span>
+                        )}
+                      </p>
                       <p className="text-xs text-orange-600 font-medium">Pendiente: ${pendingAmt.toLocaleString()}</p>
                     </div>
                     <div className="flex items-center gap-2">

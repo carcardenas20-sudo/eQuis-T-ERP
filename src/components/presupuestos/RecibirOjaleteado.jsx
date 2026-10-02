@@ -96,6 +96,12 @@ export default function RecibirOjaleteado({ presupuesto, productos, onClose, onD
                 <Input type="date" value={fecha} max={today()} onChange={(e) => setFecha(e.target.value)} />
               </div>
             </div>
+            {filas.some((f) => f.esperado > (recibido[f.key] || 0)) && (
+              <Button type="button" variant="outline" size="sm" className="w-full"
+                onClick={() => setCant(Object.fromEntries(filas.map((f) => [f.key, Math.max(0, f.esperado - (recibido[f.key] || 0))])))}>
+                Recibir todo lo que falta
+              </Button>
+            )}
             {filas.length === 0 ? (
               <p className="text-sm text-slate-500">Este presupuesto no tiene productos con ojaleteado externo.</p>
             ) : (

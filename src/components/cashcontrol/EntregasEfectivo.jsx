@@ -60,6 +60,15 @@ export default function EntregasEfectivo({ controls, locations, canManage, curre
   const locName = (id) => locations.find((l) => l.id === id)?.name || "—";
   const porConfirmar = actas.filter((a) => a.estado === "pendiente" && (canManage || a.receptor_id === currentUser?.id) && a.entregado_por_id !== currentUser?.id);
   const lista = verTodas ? actas : actas.slice(0, 8);
+  const faltantes = actas.filter((a) => n(a.faltante) > 0 && !a.faltante_revisado);
+  const revisarFaltante = async (a) => {
+    const nota = window.prompt(`Faltante de ${money(a.faltante)} en el acta ${a.numero} (${a.entregado_por}).
+
+¿Cómo se resolvió? (ej. se descontó de nómina, apareció, se asumió como pérdida)`);
+    if (nota === null) return;
+    if (!nota.trim()) { alert("Escribe cómo se resolvió."); return; }
+    try { await api(`/${a.id}/revisar-faltante`, "POST", { nota }); await load(); } catch (e) { alert(e.message); }
+  };
 
   const anular = async (a) => {
     if (!window.confirm(`¿Anular el acta ${a.numero}? Los días vuelven a quedar pendientes de entregar.`)) return;
@@ -86,6 +95,21 @@ export default function EntregasEfectivo({ controls, locations, canManage, curre
                   <span className="block text-xs text-slate-600">Entregó {a.entregado_por} el {fmtDT(a.fecha_entrega)} · días {(a.dias || []).map((d) => fmtDay(d.fecha)).join(", ")}</span>
                 </div>
                 <Button size="sm" onClick={() => setConfirmando(a)} className="bg-amber-600 hover:bg-amber-700">Confirmar recepción</Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {faltantes.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-red-700">Faltantes por revisar ({faltantes.length}) · {money(faltantes.reduce((s, a) => s + n(a.faltante), 0))}</p>
+            {faltantes.map((a) => (
+              <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                <div className="text-sm">
+                  <b>{a.numero}</b> · {locName(a.location_id)} · faltaron <b className="text-red-700">{money(a.faltante)}</b>
+                  <span className="block text-xs text-slate-600">Entregó {a.entregado_por} · confirmó {a.confirmado_por} el {fmtDT(a.fecha_confirmacion)}{a.nota_recepcion ? ` · "${a.nota_recepcion}"` : ""}</span>
+                </div>
+                {canManage && <Button size="sm" variant="outline" className="text-red-700 border-red-300" onClick={() => revisarFaltante(a)}>Marcar revisado</Button>}
               </div>
             ))}
           </div>
@@ -120,6 +144,11 @@ export default function EntregasEfectivo({ controls, locations, canManage, curre
                       </p>
                     )}
                     {a.estado === "anulada" && <p className="text-slate-500">Anulada por {a.anulada_por} el {fmtDT(a.fecha_anulacion)}</p>}
+                    {n(a.faltante) > 0 && (
+                      <p className={a.faltante_revisado ? "text-slate-600" : "text-red-700 font-semibold"}>
+                        Faltante {money(a.faltante)}: {a.faltante_revisado ? `revisado por ${a.faltante_revisado_por} el ${fmtDT(a.faltante_revisado_fecha)} · "${a.faltante_nota}"` : "pendiente de revisar"}
+                      </p>
+                    )}
                     {a.estado === "pendiente" && (a.entregado_por_id === currentUser?.id || currentUser?.role === "admin") && (
                       <button onClick={() => anular(a)} className="text-red-600 underline">Anular esta acta</button>
                     )}

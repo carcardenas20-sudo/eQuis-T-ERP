@@ -201,7 +201,9 @@ router.post('/:id/confirmar', async (req, res) => {
     await client.query(
       `UPDATE entity_entrega_efectivo SET estado = $1, updated_date = NOW(), data = data || $2::jsonb WHERE id = $3`,
       [estado, JSON.stringify({ estado, monto_recibido: recibido, diferencia_recepcion: diferencia, nota_recepcion: nota,
-        confirmado_por_id: ctx.user.id, confirmado_por: ctx.name, fecha_confirmacion: now }), ent.id]
+        confirmado_por_id: ctx.user.id, confirmado_por: ctx.name, fecha_confirmacion: now,
+        // Faltó dinero → queda pendiente de revisar hasta que alguien diga cómo se resolvió
+        ...(diferencia <= -1 ? { faltante: -diferencia, faltante_revisado: false } : {}) }), ent.id]
     );
     const ids = (ent.data?.dias || []).map((d) => d.control_id);
     await client.query(
@@ -220,6 +222,22 @@ router.post('/:id/confirmar', async (req, res) => {
   } finally {
     client.release();
   }
+});
+
+// Marcar el faltante de un acta como revisado (admin/contabilidad), con nota obligatoria
+router.post('/:id/revisar-faltante', async (req, res) => {
+  const ctx = await loadContext(req).catch(() => null);
+  if (!ctx?.canManage) return res.status(403).json({ error: 'Solo administración puede revisar faltantes.' });
+  const nota = String(req.body?.nota || '').trim().slice(0, 300);
+  if (!nota) return res.status(400).json({ error: 'Escribe cómo se resolvió el faltante.' });
+  const { rowCount } = await query(
+    `UPDATE entity_entrega_efectivo SET updated_date = NOW(),
+       data = data || jsonb_build_object('faltante_revisado', true, 'faltante_nota', $1::text, 'faltante_revisado_por', $2::text, 'faltante_revisado_fecha', $3::text)
+     WHERE id = $4 AND company_id = $5 AND (data->>'faltante')::numeric > 0`,
+    [nota, ctx.name, new Date().toISOString(), req.params.id, ctx.companyId]
+  );
+  if (!rowCount) return res.status(404).json({ error: 'Acta sin faltante' });
+  res.json({ ok: true });
 });
 
 // Anular (solo mientras está pendiente: quien la hizo o un administrador)
